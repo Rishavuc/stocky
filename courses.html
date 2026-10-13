@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free Stock Market Courses — Curated financial education from YouTube, Zerodha Varsity, NSE Academy, Coursera and top educators.">
+    <title>Learn & Free Courses — Investor's EYE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="theme.js"></script>
+    <style>
+        /* Learn / Courses Dashboard Styles */
+        .learn-hero {
+            background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(0,208,156,0.08) 100%);
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: var(--r-xl);
+            padding: 32px;
+            margin-bottom: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .learn-hero__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--r-pill);
+            background: rgba(99,102,241,0.2);
+            color: #818cf8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+        .learn-hero__title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .learn-hero__desc { font-size: 14px; color: var(--c-text-secondary); max-width: 720px; line-height: 1.6; margin-bottom: 24px; }
+        
+        .learn-stats-strip {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .learn-stat { display: flex; flex-direction: column; }
+        .learn-stat__num { font-size: 22px; font-weight: 800; font-family: var(--ff-mono); color: var(--c-accent); }
+        .learn-stat__lbl { font-size: 12px; color: var(--c-text-secondary); }
+
+        /* Learning Tracks Roadmap */
+        .tracks-section { margin-bottom: 32px; }
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .track-card {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .track-card:hover {
+            border-color: var(--c-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .track-card__icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+        .track-card__level {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--c-accent);
+            margin-bottom: 4px;
+        }
+        .track-card__title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+        .track-card__desc { font-size: 12px; color: var(--c-text-secondary); line-height: 1.5; margin-bottom: 14px; }
+        .track-card__steps {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--c-text-tertiary);
+        }
+
+        /* Filter & Search Bar */
+        .filter-bar {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .filter-bar__top {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-courses-input {
+            flex: 1;
+            min-width: 240px;
+            padding: 10px 16px;
+            border-radius: var(--r-sm);
+            border: 1px solid var(--c-border);
+            background: rgba(255,255,255,0.03);
+            color: var(--c-text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: border-color var(--t-fast);
+        }
+        .search-courses-input:focus {
+            border-color: var(--c-accent);
+        }
+        .filter-select {
+            padding: 10px 14px;
+            border-radius: var(--r-sm);
+            border: 1px solid var(--c-border);
+            background: var(--c-bg-secondary);
+            color: var(--c-text-primary);
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Category Chips */
+        .category-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cat-chip {
+            padding: 6px 14px;
+            border-radius: var(--r-pill);
+            border: 1px solid var(--c-border);
+            background: rgba(255,255,255,0.03);
+            color: var(--c-text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .cat-chip:hover {
+            color: var(--c-text-primary);
+            border-color: var(--c-border-hover);
+        }
+        .cat-chip.active {
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+            border-color: var(--c-accent);
+        }
+
+        /* Course Cards Grid */
+        .courses-arena {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .course-card-premium {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all var(--t-fast);
+            position: relative;
+        }
+        .course-card-premium:hover {
+            border-color: var(--c-border-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+        .course-card-premium__header {
+            padding: 18px 20px 12px;
+            border-bottom: 1px solid var(--c-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .platform-badge-lg {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .platform-yt { background: rgba(255, 68, 68, 0.15); color: #ff5252; }
+        .platform-varsity { background: rgba(0, 208, 156, 0.15); color: var(--c-accent); }
+        .platform-coursera { background: rgba(0, 86, 210, 0.15); color: #60a5fa; }
+        .platform-nse { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .platform-edx { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+
+        .btn-bookmark {
+            background: transparent;
+            border: none;
+            color: var(--c-text-tertiary);
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform var(--t-fast), color var(--t-fast);
+        }
+        .btn-bookmark:hover { transform: scale(1.2); color: var(--c-accent); }
+        .btn-bookmark.bookmarked { color: var(--c-accent); }
+
+        .course-card-premium__body {
+            padding: 18px 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .course-instructor {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c-accent);
+            margin-bottom: 6px;
+        }
+        .course-title-main {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 8px;
+            color: var(--c-text-primary);
+        }
+        .course-desc-snip {
+            font-size: 12px;
+            color: var(--c-text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+            flex: 1;
+        }
+        .course-meta-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .c-tag {
+            font-size: 11px;
+            padding: 2px 7px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 4px;
+            color: var(--c-text-tertiary);
+        }
+        .course-card-premium__footer {
+            padding: 12px 20px 16px;
+            border-top: 1px solid var(--c-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .course-rating-wrap {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        /* Quiz Widget */
+        .quiz-section {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .quiz-question { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+        .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 600px) {
+            .quiz-options { grid-template-columns: 1fr; }
+        }
+        .quiz-option-btn {
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            color: var(--c-text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .quiz-option-btn:hover {
+            border-color: var(--c-accent);
+            color: var(--c-text-primary);
+        }
+        .quiz-option-btn.correct {
+            background: var(--c-positive-bg);
+            border-color: var(--c-positive);
+            color: var(--c-positive);
+            font-weight: 700;
+        }
+        .quiz-option-btn.wrong {
+            background: var(--c-negative-bg);
+            border-color: var(--c-negative);
+            color: var(--c-negative);
+        }
+
+        /* Modal for Syllabus */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--c-bg-secondary);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-xl);
+            width: 100%;
+            max-width: 640px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 28px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: var(--c-text-tertiary);
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .modal-syllabus-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--c-border);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .modal-syllabus-item:last-child { border-bottom: none; }
+        .modal-mod-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="dashboard">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="dashSidebar">
+            <div class="sidebar__header">
+                <a href="index.html" class="sidebar__logo">
+                    <div class="sidebar__logo-icon">
+                        <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#00d09c" stroke-width="2.5" fill="none"/><path d="M12 26L18 16L23 21L28 12" stroke="#00d09c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28" cy="12" r="2.5" fill="#00d09c"/></svg>
+                    </div>
+                    <div class="sidebar__logo-text">
+                        <span class="sidebar__logo-name">Investor's</span>
+                        <span class="sidebar__logo-accent">EYE</span>
+                    </div>
+                </a>
+                <button class="sidebar__close" id="sidebarClose">✕</button>
+            </div>
+            <nav class="sidebar__nav">
+                <div class="sidebar__section-label">Main</div>
+                <a href="markets.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 17L8 10L12 14L17 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    Markets
+                </a>
+                <a href="analysis.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="3" height="7" rx="1" fill="currentColor" opacity="0.5"/><rect x="8.5" y="6" width="3" height="11" rx="1" fill="currentColor" opacity="0.75"/><rect x="14" y="3" width="3" height="14" rx="1" fill="currentColor"/></svg></span>
+                    Analysis
+                </a>
+                <a href="predictions.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15L8 8L12 12L15 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 7L17 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 2"/><circle cx="17" cy="5" r="1.5" fill="currentColor"/></svg></span>
+                    Predictions
+                    <span class="sidebar__link-badge">AI</span>
+                </a>
+                <a href="mock-trading.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8H17" stroke="currentColor" stroke-width="1" opacity="0.3"/><text x="10" y="14" text-anchor="middle" fill="currentColor" font-size="6" font-weight="700">MOCK</text></svg></span>
+                    Mock Trading
+                    <span class="sidebar__link-badge--new sidebar__link-badge">New</span>
+                </a>
+                <a href="courses.html" class="sidebar__link active">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M2 7L10 3L18 7L10 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 8.5V14C5 14 7 16 10 16C13 16 15 14 15 14V8.5" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                    Learn & Courses
+                </a>
+                <div class="sidebar__section-label">Quick Tools</div>
+                <a href="markets.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6V10L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    Watchlist
+                </a>
+                <a href="analysis.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 10H13M10 7V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    SIP Calculator
+                </a>
+            </nav>
+            <div class="sidebar__footer">
+                <div class="sidebar__user">
+                    <div class="sidebar__avatar">IE</div>
+                    <div class="sidebar__user-info">
+                        <span class="sidebar__user-name">Guest Student</span>
+                        <span class="sidebar__user-plan">Free Access Pass</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div class="topbar__left">
+                    <button class="topbar__hamburger" id="topbarHamburger">☰</button>
+                    <div class="topbar__breadcrumb">
+                        <a href="index.html">Home</a>
+                        <span class="topbar__breadcrumb-sep">›</span>
+                        <span class="topbar__breadcrumb-current">Learning Hub</span>
+                    </div>
+                </div>
+                <div class="topbar__right">
+                    <div class="topbar__search">
+                        <svg class="topbar__search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        <input type="text" class="topbar__search-input" placeholder="Search courses, instructors (Ctrl+K)..." id="dashSearchInput">
+                        <kbd class="topbar__search-kbd">Ctrl+K</kbd>
+                    </div>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
+                        <span class="theme-toggle-icon theme-toggle-sun">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-icon theme-toggle-moon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
+                    </button>
+                    <button class="btn btn--outline btn--sm" id="btnToggleSaved">
+                        ⭐ Saved (<span id="savedCountBadge">0</span>)
+                    </button>
+                </div>
+            </div>
+
+            <div class="dash-content">
+                <!-- HERO BANNER -->
+                <div class="learn-hero fade-in">
+                    <div class="learn-hero__badge">📚 100% Free Open Education</div>
+                    <h1 class="learn-hero__title">Curated Stock Market Courses</h1>
+                    <p class="learn-hero__desc">
+                        No expensive ₹25,000 trading workshops needed. We curated the highest-rated free courses from YouTube, Zerodha Varsity, Yale University, NSE Academy, and edX to take you from a complete beginner to an analytical trader.
+                    </p>
+                    <div class="learn-stats-strip">
+                        <div class="learn-stat">
+                            <span class="learn-stat__num">50+</span>
+                            <span class="learn-stat__lbl">Verified Free Courses</span>
+                        </div>
+                        <div class="learn-stat">
+                            <span class="learn-stat__num">6</span>
+                            <span class="learn-stat__lbl">Guided Roadmaps</span>
+                        </div>
+                        <div class="learn-stat">
+                            <span class="learn-stat__num">250+</span>
+                            <span class="learn-stat__lbl">Video & Text Lessons</span>
+                        </div>
+                        <div class="learn-stat">
+                            <span class="learn-stat__num">₹0</span>
+                            <span class="learn-stat__lbl">Subscription Cost</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LEARNING PATHWAYS ROADMAP -->
+                <div class="tracks-section fade-in stagger-1">
+                    <div class="page-header" style="margin-bottom:12px;">
+                        <div>
+                            <h2 class="page-header__title" style="font-size:20px;">Structured Learning Roadmaps</h2>
+                            <p class="page-header__sub">Choose a path tailored to your financial goals</p>
+                        </div>
+                    </div>
+
+                    <div class="tracks-grid">
+                        <div class="track-card" onclick="filterByTopic('basics')">
+                            <span class="track-card__icon">🌱</span>
+                            <div class="track-card__level">Stage 1 — Fundamentals</div>
+                            <h3 class="track-card__title">Market Basics & Investing</h3>
+                            <p class="track-card__desc">Understand stock exchanges (NSE/BSE), Demat accounts, compounding, and building long-term portfolios.</p>
+                            <div class="track-card__steps"><span>12 Modules</span> • <span>Beginner Friendly</span></div>
+                        </div>
+
+                        <div class="track-card" onclick="filterByTopic('technical')">
+                            <span class="track-card__icon">📊</span>
+                            <div class="track-card__level">Stage 2 — Chart Reading</div>
+                            <h3 class="track-card__title">Technical Analysis & Price Action</h3>
+                            <p class="track-card__desc">Candlestick patterns, support & resistance, moving averages, RSI, MACD, and breakout trade setups.</p>
+                            <div class="track-card__steps"><span>18 Modules</span> • <span>Intermediate</span></div>
+                        </div>
+
+                        <div class="track-card" onclick="filterByTopic('fno')">
+                            <span class="track-card__icon">⚡</span>
+                            <div class="track-card__level">Stage 3 — Derivatives</div>
+                            <h3 class="track-card__title">Futures & Options (F&O) Mastery</h3>
+                            <p class="track-card__desc">Option Greeks (Delta, Theta, Gamma, Vega), open interest analysis, PCR, straddles, strangles & iron condors.</p>
+                            <div class="track-card__steps"><span>15 Modules</span> • <span>Advanced</span></div>
+                        </div>
+
+                        <div class="track-card" onclick="filterByTopic('fundamental')">
+                            <span class="track-card__icon">🔍</span>
+                            <div class="track-card__level">Stage 4 — Valuation</div>
+                            <h3 class="track-card__title">Fundamental & Financial Statement Analysis</h3>
+                            <p class="track-card__desc">Read Balance Sheets, P&L statements, calculate DCF valuations, ROCE, ROE, and competitive moats.</p>
+                            <div class="track-card__steps"><span>14 Modules</span> • <span>Value Investor</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILTER & SEARCH BAR -->
+                <div class="filter-bar fade-in stagger-2">
+                    <div class="filter-bar__top">
+                        <input type="text" class="search-courses-input" placeholder="🔍 Search courses by title, topic, or mentor..." id="courseSearchInput">
+                        <select class="filter-select" id="platformSelect">
+                            <option value="all">All Platforms</option>
+                            <option value="YouTube">YouTube</option>
+                            <option value="Zerodha Varsity">Zerodha Varsity</option>
+                            <option value="Coursera">Coursera</option>
+                            <option value="NSE Academy">NSE Academy</option>
+                            <option value="edX">edX</option>
+                        </select>
+                        <select class="filter-select" id="langSelect">
+                            <option value="all">All Languages</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="English">English</option>
+                        </select>
+                    </div>
+
+                    <div class="category-chips" id="catChips">
+                        <button class="cat-chip active" data-topic="all">All Courses</button>
+                        <button class="cat-chip" data-topic="basics">Stock Basics</button>
+                        <button class="cat-chip" data-topic="technical">Technical Analysis</button>
+                        <button class="cat-chip" data-topic="fno">F&O & Derivatives</button>
+                        <button class="cat-chip" data-topic="fundamental">Fundamental Analysis</button>
+                        <button class="cat-chip" data-topic="crypto">Crypto & Web3</button>
+                        <button class="cat-chip" data-topic="algo">Algorithmic Trading</button>
+                    </div>
+                </div>
+
+                <!-- COURSE CARDS GRID -->
+                <div class="courses-arena fade-in stagger-3" id="coursesGridContainer">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- DAILY FINANCIAL IQ MINI QUIZ -->
+                <div class="quiz-section fade-in">
+                    <div class="quiz-header">
+                        <div>
+                            <h3 style="font-size:18px; font-weight:700;">🧠 Quick Knowledge Check</h3>
+                            <p style="font-size:12px; color:var(--c-text-secondary);">Test your market terminology comprehension</p>
+                        </div>
+                        <span class="badge-type" id="quizScoreBadge">Question 1 of 3</span>
+                    </div>
+
+                    <div id="quizContent">
+                        <div class="quiz-question" id="quizQuestionText">What does a P/E (Price-to-Earnings) Ratio of 25 indicate?</div>
+                        <div class="quiz-options" id="quizOptionsWrap">
+                            <button class="quiz-option-btn" onclick="answerQuiz(0)">Investors are paying ₹25 for every ₹1 of company earnings</button>
+                            <button class="quiz-option-btn" onclick="answerQuiz(1)">The stock will pay 25% dividend yield annually</button>
+                            <button class="quiz-option-btn" onclick="answerQuiz(2)">The stock price has grown 25 times in 5 years</button>
+                            <button class="quiz-option-btn" onclick="answerQuiz(3)">The company has 25% profit margin</button>
+                        </div>
+                    </div>
+                    <div id="quizFeedback" style="font-size:13px; font-weight:600; min-height:20px;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL FOR SYLLABUS -->
+    <div class="modal-overlay" id="syllabusModal">
+        <div class="modal-card">
+            <button class="modal-close" id="modalCloseBtn">✕</button>
+            <div id="modalSyllabusContent">
+                <!-- Dynamically injected -->
+            </div>
+        </div>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        // =============================================
+        // COURSES DIRECTORY DATA
+        // =============================================
+        const COURSES_DATA = [
+            {
+                id: 'course-1',
+                title: 'Stock Market for Beginners Complete Playlist',
+                instructor: 'CA Rachana Phadke Ranade',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'basics',
+                language: 'Hindi',
+                duration: '14 Hours',
+                lessons: 22,
+                rating: 4.9,
+                reviews: '48K',
+                desc: 'Comprehensive step-by-step masterclass covering stock market mechanism, IPOs, market indices, fundamental metrics, and portfolio construction.',
+                syllabus: [
+                    'Module 1: How does the Stock Market work? (NSE/BSE)',
+                    'Module 2: What is an IPO & primary vs secondary markets',
+                    'Module 3: Understanding Market Capitalization & Indices',
+                    'Module 4: Reading Balance Sheets & P&L Statements',
+                    'Module 5: Key ratios: PE, PB, ROE, ROCE explained',
+                    'Module 6: Building a diversified beginner portfolio'
+                ],
+                link: 'https://www.youtube.com/@CARachanaRanade'
+            },
+            {
+                id: 'course-2',
+                title: 'Zerodha Varsity — Complete Modules 1-13',
+                instructor: 'Karthik Rangappa (Zerodha)',
+                platform: 'Zerodha Varsity',
+                platformClass: 'platform-varsity',
+                topic: 'basics',
+                language: 'English',
+                duration: '40 Hours (Self-paced)',
+                lessons: 96,
+                rating: 5.0,
+                reviews: '120K',
+                desc: 'India’s most celebrated stock market education portal covering everything from basic investing to complex options strategies with in-depth illustrations.',
+                syllabus: [
+                    'Module 1: Introduction to Stock Markets',
+                    'Module 2: Technical Analysis & Charting',
+                    'Module 3: Fundamental Analysis & Valuation',
+                    'Module 4: Futures Trading Mechanics',
+                    'Module 5: Options Theory for Professional Trading',
+                    'Module 6: Option Strategies & Hedging'
+                ],
+                link: 'https://zerodha.com/varsity/'
+            },
+            {
+                id: 'course-3',
+                title: 'Technical Analysis & Candlestick Masterclass',
+                instructor: 'Asset Yogi',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'technical',
+                language: 'Hindi',
+                duration: '8 Hours',
+                lessons: 14,
+                rating: 4.8,
+                reviews: '28K',
+                desc: 'Master the psychology of candlesticks, support/resistance breakouts, RSI divergence, MACD crossovers, and volume price confirmation.',
+                syllabus: [
+                    'Module 1: Candlestick Anatomy: Hammer, Doji, Engulfing',
+                    'Module 2: Trendlines, Support & Resistance drawing',
+                    'Module 3: Moving Averages: EMA 20, 50, 200 strategies',
+                    'Module 4: Momentum Oscillators (RSI & Stochastic)',
+                    'Module 5: Risk-to-reward ratio and trade entry/exit rules'
+                ],
+                link: 'https://www.youtube.com/@AssetYogi'
+            },
+            {
+                id: 'course-4',
+                title: 'Options Trading: Understanding The Greeks & Strategies',
+                instructor: 'PR Sundar / Sensibull Academy',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'fno',
+                language: 'English',
+                duration: '11 Hours',
+                lessons: 18,
+                rating: 4.7,
+                reviews: '19K',
+                desc: 'Deconstruct Delta, Gamma, Theta decay, and Vega volatility. Learn non-directional income strategies like Iron Condors, Straddles, and Credit Spreads.',
+                syllabus: [
+                    'Module 1: Call & Put Basics: Buyers vs Sellers perspective',
+                    'Module 2: Open Interest (OI) & Put-Call Ratio (PCR) analysis',
+                    'Module 3: Option Greeks demystified: Theta decay mechanics',
+                    'Module 4: Directional strategies: Bull Call / Bear Put spreads',
+                    'Module 5: Non-directional strategies: Short Straddle & Iron Condor',
+                    'Module 6: Capital allocation & Stop-loss management in F&O'
+                ],
+                link: 'https://www.sensibull.com'
+            },
+            {
+                id: 'course-5',
+                title: 'Valuation & Corporate Finance Masterclass',
+                instructor: 'Prof. Aswath Damodaran (NYU Stern)',
+                platform: 'Coursera',
+                platformClass: 'platform-coursera',
+                topic: 'fundamental',
+                language: 'English',
+                duration: '32 Hours',
+                lessons: 26,
+                rating: 4.9,
+                reviews: '64K',
+                desc: 'Taught by the legendary "Dean of Valuation", learn Discounted Cash Flow (DCF), Cost of Capital (WACC), terminal value, and narrative vs numbers.',
+                syllabus: [
+                    'Module 1: The Foundations of Value: Cash flows and risk',
+                    'Module 2: Estimating Discount Rates & Cost of Equity',
+                    'Module 3: Forecasting Free Cash Flow to Firm (FCFF)',
+                    'Module 4: Terminal Value calculation and common pitfalls',
+                    'Module 5: Relative Valuation: PE, EV/EBITDA, EV/Sales',
+                    'Module 6: Real-world valuation of tech and legacy companies'
+                ],
+                link: 'https://pages.stern.nyu.edu/~adamodar/'
+            },
+            {
+                id: 'course-6',
+                title: 'Financial Markets Course',
+                instructor: 'Prof. Robert Shiller (Yale University)',
+                platform: 'Coursera',
+                platformClass: 'platform-coursera',
+                topic: 'basics',
+                language: 'English',
+                duration: '33 Hours',
+                lessons: 28,
+                rating: 4.8,
+                reviews: '110K',
+                desc: 'Nobel laureate Robert Shiller provides an overview of ideas, methods, and institutions that permit human society to manage risks and foster enterprise.',
+                syllabus: [
+                    'Module 1: Basics of financial markets and insurance',
+                    'Module 2: Behavioral Finance & Market Bubbles',
+                    'Module 3: Debt and equity instruments',
+                    'Module 4: Forward and futures markets',
+                    'Module 5: Financial crises and regulation'
+                ],
+                link: 'https://www.coursera.org/learn/financial-markets-global'
+            },
+            {
+                id: 'course-7',
+                title: 'Certification in Capital Markets & Derivatives',
+                instructor: 'NSE India Academy',
+                platform: 'NSE Academy',
+                platformClass: 'platform-nse',
+                topic: 'fno',
+                language: 'English',
+                duration: '20 Hours',
+                lessons: 16,
+                rating: 4.9,
+                reviews: '35K',
+                desc: 'Official curriculum from the National Stock Exchange of India. Covers clearing, settlement, risk management, and regulatory frameworks.',
+                syllabus: [
+                    'Module 1: Structure of Indian Financial System',
+                    'Module 2: Trading operations at NSE NEAT platform',
+                    'Module 3: Risk management system & margin requirements',
+                    'Module 4: Clearing and settlement processes at NSCCL'
+                ],
+                link: 'https://www.nseindia.com/learn'
+            },
+            {
+                id: 'course-8',
+                title: 'Algorithmic Trading & Quantitative Backtesting with Python',
+                instructor: 'MIT OpenCourseWare / edX',
+                platform: 'edX',
+                platformClass: 'platform-edx',
+                topic: 'algo',
+                language: 'English',
+                duration: '24 Hours',
+                lessons: 20,
+                rating: 4.8,
+                reviews: '18K',
+                desc: 'Build algorithmic trading strategies using Pandas, NumPy, Backtrader, and machine learning models for stock price forecasting.',
+                syllabus: [
+                    'Module 1: Fetching financial data via Yahoo Finance & AlphaVantage',
+                    'Module 2: Vectorized backtesting of MA crossover strategies',
+                    'Module 3: Calculating Sharpe, Sortino ratios and Max Drawdown',
+                    'Module 4: Machine Learning & LSTM architectures for price forecast',
+                    'Module 5: Live API order placement and risk checks'
+                ],
+                link: 'https://www.edx.org'
+            },
+            {
+                id: 'course-9',
+                title: 'Crypto, Bitcoin & Blockchain Technology Decoded',
+                instructor: 'Gary Gensler (MIT Sloan)',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'crypto',
+                language: 'English',
+                duration: '26 Hours',
+                lessons: 24,
+                rating: 4.9,
+                reviews: '42K',
+                desc: 'MIT Course 15.S12 on Blockchain and Money: Cryptography, smart contracts, decentralized finance (DeFi), tokenomics, and regulatory landscape.',
+                syllabus: [
+                    'Module 1: Money, Ledger Systems and Bitcoin Genesis',
+                    'Module 2: Cryptographic Hash Functions & Consensus Mechanisms',
+                    'Module 3: Ethereum and Smart Contract Architecture',
+                    'Module 4: Decentralized Finance (DeFi) & AMM Liquidity Pools',
+                    'Module 5: Central Bank Digital Currencies (CBDCs) and Global Policy'
+                ],
+                link: 'https://ocw.mit.edu'
+            }
+        ];
+
+        let savedCourses = JSON.parse(localStorage.getItem('investors_eye_saved_courses') || '[]');
+        let activeTopic = 'all';
+        let showOnlySaved = false;
+
+        // Elements
+        const grid = document.getElementById('coursesGridContainer');
+        const searchInput = document.getElementById('courseSearchInput');
+        const platformSelect = document.getElementById('platformSelect');
+        const langSelect = document.getElementById('langSelect');
+        const catChips = document.querySelectorAll('.cat-chip');
+        const savedBadge = document.getElementById('savedCountBadge');
+        const btnToggleSaved = document.getElementById('btnToggleSaved');
+
+        function updateSavedBadge() {
+            savedBadge.textContent = savedCourses.length;
+        }
+
+        window.toggleBookmark = function(id) {
+            const idx = savedCourses.indexOf(id);
+            if (idx === -1) {
+                savedCourses.push(id);
+            } else {
+                savedCourses.splice(idx, 1);
+            }
+            localStorage.setItem('investors_eye_saved_courses', JSON.stringify(savedCourses));
+            updateSavedBadge();
+            renderCourses();
+        };
+
+        window.openSyllabusModal = function(id) {
+            const course = COURSES_DATA.find(c => c.id === id);
+            if (!course) return;
+
+            const modalContent = document.getElementById('modalSyllabusContent');
+            modalContent.innerHTML = `
+                <div style="margin-bottom:16px;">
+                    <span class="platform-badge-lg ${course.platformClass}">${course.platform}</span>
+                    <h2 style="font-size:22px; font-weight:800; margin-top:8px; margin-bottom:4px;">${course.title}</h2>
+                    <p style="font-size:13px; color:var(--c-accent); font-weight:600;">Instructor: ${course.instructor}</p>
+                </div>
+                <div style="font-size:13px; color:var(--c-text-secondary); line-height:1.6; margin-bottom:20px;">
+                    ${course.desc}
+                </div>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:12px; border-bottom:1px solid var(--c-border); padding-bottom:6px;">Course Curriculum & Modules</h3>
+                <div>
+                    ${course.syllabus.map((mod, idx) => `
+                        <div class="modal-syllabus-item">
+                            <span class="modal-mod-num">${idx + 1}</span>
+                            <div>
+                                <strong style="font-size:13px;">${mod}</strong>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="margin-top:24px; display:flex; gap:10px;">
+                    <a href="${course.link}" target="_blank" rel="noopener noreferrer" class="btn btn--primary" style="flex:1; text-align:center;">
+                        Go to Platform & Start Learning →
+                    </a>
+                </div>
+            `;
+
+            document.getElementById('syllabusModal').classList.add('active');
+        };
+
+        document.getElementById('modalCloseBtn').addEventListener('click', () => {
+            document.getElementById('syllabusModal').classList.remove('active');
+        });
+
+        document.getElementById('syllabusModal').addEventListener('click', (e) => {
+            if (e.target.id === 'syllabusModal') {
+                document.getElementById('syllabusModal').classList.remove('active');
+            }
+        });
+
+        function renderCourses() {
+            const q = searchInput.value.toLowerCase().trim();
+            const platform = platformSelect.value;
+            const lang = langSelect.value;
+
+            const filtered = COURSES_DATA.filter(c => {
+                if (showOnlySaved && !savedCourses.includes(c.id)) return false;
+                if (activeTopic !== 'all' && c.topic !== activeTopic) return false;
+                if (platform !== 'all' && c.platform !== platform) return false;
+                if (lang !== 'all' && c.language !== lang) return false;
+                if (q) {
+                    const matchTitle = c.title.toLowerCase().includes(q);
+                    const matchInst = c.instructor.toLowerCase().includes(q);
+                    const matchDesc = c.desc.toLowerCase().includes(q);
+                    if (!matchTitle && !matchInst && !matchDesc) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align:center; padding: 48px 20px; background:var(--c-bg-card); border:1px solid var(--c-border); border-radius:var(--r-lg);">
+                        <p style="font-size:18px; font-weight:700; margin-bottom:8px;">No courses found matching your criteria</p>
+                        <p style="font-size:13px; color:var(--c-text-secondary); margin-bottom:16px;">Try clearing filters or search terms</p>
+                        <button class="btn btn--outline btn--sm" onclick="resetFilters()">Reset All Filters</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(c => {
+                const isSaved = savedCourses.includes(c.id);
+                return `
+                    <div class="course-card-premium">
+                        <div class="course-card-premium__header">
+                            <span class="platform-badge-lg ${c.platformClass}">${c.platform}</span>
+                            <button class="btn-bookmark ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${c.id}')" title="${isSaved ? 'Remove from Saved' : 'Save course'}">
+                                ${isSaved ? '★' : '☆'}
+                            </button>
+                        </div>
+                        <div class="course-card-premium__body">
+                            <div class="course-instructor">${c.instructor}</div>
+                            <h3 class="course-title-main">${c.title}</h3>
+                            <p class="course-desc-snip">${c.desc}</p>
+                            <div class="course-meta-tags">
+                                <span class="c-tag">⏱ ${c.duration}</span>
+                                <span class="c-tag">📖 ${c.lessons} Lessons</span>
+                                <span class="c-tag">🗣 ${c.language}</span>
+                                <span class="c-tag">🆓 100% Free</span>
+                            </div>
+                        </div>
+                        <div class="course-card-premium__footer">
+                            <div class="course-rating-wrap">
+                                <span>★</span>
+                                <span>${c.rating}</span>
+                                <span style="color:var(--c-text-tertiary); font-size:11px;">(${c.reviews})</span>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn--glass btn--sm" onclick="openSyllabusModal('${c.id}')">Syllabus</button>
+                                <a href="${c.link}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm">Start →</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.filterByTopic = function(topic) {
+            activeTopic = topic;
+            catChips.forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.topic === topic);
+            });
+            renderCourses();
+            document.getElementById('coursesGridContainer').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.resetFilters = function() {
+            activeTopic = 'all';
+            showOnlySaved = false;
+            btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+            catChips.forEach(chip => chip.classList.toggle('active', chip.dataset.topic === 'all'));
+            searchInput.value = '';
+            platformSelect.value = 'all';
+            langSelect.value = 'all';
+            renderCourses();
+        };
+
+        // Event listeners
+        catChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                filterByTopic(chip.dataset.topic);
+            });
+        });
+
+        searchInput.addEventListener('input', renderCourses);
+        platformSelect.addEventListener('change', renderCourses);
+        langSelect.addEventListener('change', renderCourses);
+
+        btnToggleSaved.addEventListener('click', () => {
+            showOnlySaved = !showOnlySaved;
+            if (showOnlySaved) {
+                btnToggleSaved.innerHTML = `⬅ Show All Courses`;
+            } else {
+                btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+            }
+            renderCourses();
+        });
+
+        // QUIZ LOGIC
+        const QUIZ_QUESTIONS = [
+            {
+                q: 'What does a P/E (Price-to-Earnings) Ratio of 25 indicate?',
+                options: [
+                    'Investors are paying ₹25 for every ₹1 of company earnings',
+                    'The stock will pay 25% dividend yield annually',
+                    'The stock price has grown 25 times in 5 years',
+                    'The company has 25% profit margin'
+                ],
+                correct: 0,
+                explanation: 'Correct! P/E ratio measures current share price relative to its per-share earnings.'
+            },
+            {
+                q: 'In Options Trading, what does "Theta" (θ) measure?',
+                options: [
+                    'The sensitivity of option price to underlying stock price',
+                    'The rate of time decay of the option premium over time',
+                    'The volatility sensitivity of the option contract',
+                    'The interest rate effect on future pricing'
+                ],
+                correct: 1,
+                explanation: 'Correct! Theta represents the rate at which an option’s value declines as expiration approaches.'
+            },
+            {
+                q: 'What is the primary difference between Intraday (MIS) and Delivery (CNC)?',
+                options: [
+                    'MIS offers 5x leverage and positions must be squared off on the same day',
+                    'CNC orders cannot be sold for 1 full year',
+                    'MIS orders do not incur any securities transaction tax',
+                    'CNC is exclusively for crypto trading'
+                ],
+                correct: 0,
+                explanation: 'Correct! MIS is Margin Intraday Square-off, auto-squared before market close.'
+            }
+        ];
+
+        let curQIdx = 0;
+
+        window.answerQuiz = function(optIdx) {
+            const q = QUIZ_QUESTIONS[curQIdx];
+            const feedback = document.getElementById('quizFeedback');
+            const btns = document.querySelectorAll('.quiz-option-btn');
+
+            btns.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.correct) btn.classList.add('correct');
+                else if (idx === optIdx) btn.classList.add('wrong');
+            });
+
+            if (optIdx === q.correct) {
+                feedback.innerHTML = `<span style="color:var(--c-positive);">✓ ${q.explanation}</span>`;
+            } else {
+                feedback.innerHTML = `<span style="color:var(--c-negative);">✕ Incorrect. ${q.explanation}</span>`;
+            }
+
+            setTimeout(() => {
+                curQIdx = (curQIdx + 1) % QUIZ_QUESTIONS.length;
+                loadQuizQuestion(curQIdx);
+            }, 3000);
+        };
+
+        function loadQuizQuestion(idx) {
+            const q = QUIZ_QUESTIONS[idx];
+            document.getElementById('quizScoreBadge').textContent = `Question ${idx + 1} of ${QUIZ_QUESTIONS.length}`;
+            document.getElementById('quizQuestionText').textContent = q.q;
+            document.getElementById('quizFeedback').innerHTML = '';
+            const wrap = document.getElementById('quizOptionsWrap');
+            wrap.innerHTML = q.options.map((opt, oIdx) => `
+                <button class="quiz-option-btn" onclick="answerQuiz(${oIdx})">${opt}</button>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSavedBadge();
+            renderCourses();
+            loadQuizQuestion(0);
+        });
+    </script>
+</body>
+</html>

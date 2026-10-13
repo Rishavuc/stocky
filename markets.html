@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Live market overview — Track NIFTY, SENSEX, global indices, crypto & sector performance in real-time.">
+    <title>Markets — Investor's EYE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="theme.js"></script>
+    <style>
+        .market-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: var(--r-pill); }
+        .market-status--open { background: var(--c-positive-bg); color: var(--c-positive); }
+        .market-status--closed { background: var(--c-negative-bg); color: var(--c-negative); }
+        .market-status__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+
+        .index-big-card { display: flex; flex-direction: column; gap: 10px; }
+        .index-big-card__top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .index-big-card__name { font-size: 12px; font-weight: 700; color: var(--c-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+        .index-big-card__val { font-size: 30px; font-weight: 800; font-family: var(--ff-mono); }
+        .index-big-card__change { font-size: 14px; font-family: var(--ff-mono); font-weight: 600; }
+        .index-big-card__chart { width: 100%; height: 80px; }
+
+        .sector-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+        .sector-row:last-child { border-bottom: none; }
+        .sector-row__name { flex: 1; font-size: 13px; font-weight: 600; }
+        .sector-row__bar-wrap { flex: 2; }
+        .sector-row__bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+        .sector-row__bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+        .sector-row__pct { width: 60px; text-align: right; font-size: 13px; font-family: var(--ff-mono); font-weight: 600; }
+
+        .breadth-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--c-border); font-size: 13px; }
+        .breadth-row:last-child { border-bottom: none; }
+        .breadth-row__label { color: var(--c-text-secondary); }
+        .breadth-row__value { font-family: var(--ff-mono); font-weight: 700; }
+
+        .fii-dii-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .fii-dii-card { background: rgba(255,255,255,0.02); border-radius: var(--r-sm); padding: 16px; text-align: center; }
+        .fii-dii-card__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--c-text-tertiary); margin-bottom: 8px; }
+        .fii-dii-card__value { font-size: 22px; font-weight: 800; font-family: var(--ff-mono); }
+        .fii-dii-card__sub { font-size: 12px; color: var(--c-text-tertiary); margin-top: 4px; }
+
+        .heatmap-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .heatmap-cell { border-radius: 6px; padding: 12px 10px; text-align: center; cursor: pointer; transition: transform var(--t-fast), box-shadow var(--t-fast); }
+        .heatmap-cell:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .heatmap-cell__sym { font-size: 11px; font-weight: 700; color: #fff; opacity: 0.9; }
+        .heatmap-cell__pct { font-size: 14px; font-weight: 800; font-family: var(--ff-mono); color: #fff; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="dashboard">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="dashSidebar">
+            <div class="sidebar__header">
+                <a href="index.html" class="sidebar__logo">
+                    <div class="sidebar__logo-icon">
+                        <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#00d09c" stroke-width="2.5" fill="none"/><path d="M12 26L18 16L23 21L28 12" stroke="#00d09c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28" cy="12" r="2.5" fill="#00d09c"/></svg>
+                    </div>
+                    <div class="sidebar__logo-text">
+                        <span class="sidebar__logo-name">Investor's</span>
+                        <span class="sidebar__logo-accent">EYE</span>
+                    </div>
+                </a>
+                <button class="sidebar__close" id="sidebarClose">✕</button>
+            </div>
+            <nav class="sidebar__nav">
+                <div class="sidebar__section-label">Main</div>
+                <a href="markets.html" class="sidebar__link active">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 17L8 10L12 14L17 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    Markets
+                </a>
+                <a href="analysis.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="3" height="7" rx="1" fill="currentColor" opacity="0.5"/><rect x="8.5" y="6" width="3" height="11" rx="1" fill="currentColor" opacity="0.75"/><rect x="14" y="3" width="3" height="14" rx="1" fill="currentColor"/></svg></span>
+                    Analysis
+                </a>
+                <a href="predictions.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15L8 8L12 12L15 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 7L17 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 2"/><circle cx="17" cy="5" r="1.5" fill="currentColor"/></svg></span>
+                    Predictions
+                    <span class="sidebar__link-badge">AI</span>
+                </a>
+                <a href="mock-trading.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8H17" stroke="currentColor" stroke-width="1" opacity="0.3"/><text x="10" y="14" text-anchor="middle" fill="currentColor" font-size="6" font-weight="700">MOCK</text></svg></span>
+                    Mock Trading
+                    <span class="sidebar__link-badge--new sidebar__link-badge">New</span>
+                </a>
+                <a href="courses.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M2 7L10 3L18 7L10 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 8.5V14C5 14 7 16 10 16C13 16 15 14 15 14V8.5" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                    Learn
+                </a>
+                <div class="sidebar__section-label">Quick Tools</div>
+                <a href="#" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6V10L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    Watchlist
+                </a>
+                <a href="#" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 10H13M10 7V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    SIP Calculator
+                </a>
+            </nav>
+            <div class="sidebar__footer">
+                <div class="sidebar__user">
+                    <div class="sidebar__avatar">IE</div>
+                    <div class="sidebar__user-info">
+                        <span class="sidebar__user-name">Guest User</span>
+                        <span class="sidebar__user-plan">Free Plan</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            <div class="topbar">
+                <div class="topbar__left">
+                    <button class="topbar__hamburger" id="topbarHamburger">☰</button>
+                    <div class="topbar__breadcrumb">
+                        <a href="index.html">Home</a>
+                        <span class="topbar__breadcrumb-sep">›</span>
+                        <span class="topbar__breadcrumb-current">Markets</span>
+                    </div>
+                </div>
+                <div class="topbar__right">
+                    <div class="topbar__search">
+                        <svg class="topbar__search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        <input type="text" class="topbar__search-input" placeholder="Search stocks, indices..." id="dashSearchInput">
+                        <kbd class="topbar__search-kbd">Ctrl+K</kbd>
+                    </div>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
+                        <span class="theme-toggle-icon theme-toggle-sun">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-icon theme-toggle-moon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
+                    </button>
+                    <button class="topbar__icon-btn" aria-label="Notifications">
+                        <svg viewBox="0 0 20 20" fill="none"><path d="M10 2C7.24 2 5 4.24 5 7V11L3 14H17L15 11V7C15 4.24 12.76 2 10 2Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 14V15C8 16.1 8.9 17 10 17C11.1 17 12 16.1 12 15V14" stroke="currentColor" stroke-width="1.5"/></svg>
+                        <span class="topbar__notif-dot"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dash-content">
+                <!-- Page Header -->
+                <div class="page-header fade-in">
+                    <div>
+                        <h1 class="page-header__title">Market Overview</h1>
+                        <p class="page-header__subtitle">Real-time market data & performance tracking</p>
+                    </div>
+                    <div class="page-header__actions">
+                        <div class="market-status market-status--open">
+                            <span class="market-status__dot"></span>
+                            Markets Open
+                        </div>
+                        <div class="dash-tabs" id="marketRegionTabs">
+                            <button class="dash-tab active" data-tab="indian">India</button>
+                            <button class="dash-tab" data-tab="global">Global</button>
+                            <button class="dash-tab" data-tab="crypto">Crypto</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Major Indices -->
+                <div class="dash-grid dash-grid--4" id="majorIndicesGrid" style="margin-bottom: 24px;">
+                    <!-- Filled by JS -->
+                </div>
+
+                <!-- Middle Row: Heatmap + Sectors -->
+                <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
+                    <div class="dash-card fade-in stagger-3">
+                        <div class="dash-card__header">
+                            <div>
+                                <div class="dash-card__title">Market Heatmap</div>
+                                <div class="dash-card__subtitle">NIFTY 50 stocks by performance</div>
+                            </div>
+                        </div>
+                        <div class="heatmap-grid" id="heatmapGrid">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <div class="dash-card fade-in stagger-4">
+                        <div class="dash-card__header">
+                            <div class="dash-card__title">Sector Performance</div>
+                            <div class="dash-tabs" id="sectorTimeTabs">
+                                <button class="dash-tab active" data-tab="1d">1D</button>
+                                <button class="dash-tab" data-tab="1w">1W</button>
+                                <button class="dash-tab" data-tab="1m">1M</button>
+                            </div>
+                        </div>
+                        <div id="sectorList">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Breadth + FII/DII -->
+                <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
+                    <div class="dash-card fade-in stagger-5">
+                        <div class="dash-card__header">
+                            <div class="dash-card__title">Market Breadth</div>
+                            <span class="dash-card__action">View Details →</span>
+                        </div>
+                        <div class="chart-area" style="height: 180px; margin-bottom: 16px;">
+                            <canvas id="breadthChart"></canvas>
+                        </div>
+                        <div id="breadthStats">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <div class="dash-card fade-in stagger-6">
+                        <div class="dash-card__header">
+                            <div class="dash-card__title">FII / DII Activity</div>
+                            <span class="dash-card__subtitle">Cash segment (₹ Cr)</span>
+                        </div>
+                        <div class="fii-dii-grid" id="fiiDiiGrid">
+                            <!-- Filled by JS -->
+                        </div>
+                        <div class="chart-area" style="height: 140px; margin-top: 16px;">
+                            <canvas id="fiiDiiChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Major Indices Data (Real Live Feed with fallback)
+        const indicesFallback = [
+            { name: 'NIFTY 50', value: 22456.80, change: 278.45, change_pct: 1.24, positive: true },
+            { name: 'SENSEX', value: 73890.45, change: 718.32, change_pct: 0.98, positive: true },
+            { name: 'BANK NIFTY', value: 47234.15, change: -198.70, change_pct: -0.42, positive: false },
+            { name: 'NIFTY IT', value: 34567.20, change: 728.15, change_pct: 2.15, positive: true },
+        ];
+
+        function renderIndices(indicesList) {
+            const grid = document.getElementById('majorIndicesGrid');
+            if (!grid) return;
+            grid.innerHTML = indicesList.map((idx, i) => `
+                <div class="dash-card index-big-card fade-in stagger-${i+1}">
+                    <div class="index-big-card__top">
+                        <span class="index-big-card__name">${idx.name}</span>
+                        <span class="index-big-card__change ${idx.positive ? 'positive' : 'negative'}">${idx.change_pct > 0 ? '+' : ''}${idx.change_pct}%</span>
+                    </div>
+                    <div class="index-big-card__val">${typeof idx.val === 'string' ? idx.val : (idx.value ? idx.value.toLocaleString('en-IN') : idx.val)}</div>
+                    <div class="index-big-card__change ${idx.positive ? 'positive' : 'negative'}">${idx.change > 0 ? '+' : ''}${idx.change} (${idx.change_pct > 0 ? '+' : ''}${idx.change_pct}%)</div>
+                    <div class="index-big-card__chart"><canvas id="indexChart${i}"></canvas></div>
+                </div>
+            `).join('');
+
+            requestAnimationFrame(() => {
+                indicesList.forEach((idx, i) => {
+                    const data = idx.sparkline && idx.sparkline.length > 0 ? idx.sparkline : generateChartData(1000, 15, 30, idx.positive ? 'up' : 'down');
+                    const color = idx.positive ? '#00d09c' : '#f6465d';
+                    drawSparkline(`indexChart${i}`, data, color, idx.positive ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
+                });
+            });
+        }
+
+        if (window.apiClient) {
+            window.apiClient.getIndices().then(data => {
+                if (data && data.length > 0) renderIndices(data);
+                else renderIndices(indicesFallback);
+            }).catch(() => renderIndices(indicesFallback));
+        } else {
+            renderIndices(indicesFallback);
+        }
+
+        // Tabs: Market Region Switcher
+        const globalIndices = [
+            { name: 'S&P 500', value: 5214.20, change: 48.30, change_pct: 0.94, positive: true },
+            { name: 'NASDAQ 100', value: 18240.15, change: 210.45, change_pct: 1.17, positive: true },
+            { name: 'DOW JONES', value: 38980.50, change: -120.30, change_pct: -0.31, positive: false },
+            { name: 'FTSE 100', value: 7930.25, change: 35.80, change_pct: 0.45, positive: true }
+        ];
+
+        const cryptoIndices = [
+            { name: 'BTC / USDT', value: 81480.00, change: 1680.00, change_pct: 2.10, positive: true },
+            { name: 'ETH / USDT', value: 2145.50, change: 38.20, change_pct: 1.81, positive: true },
+            { name: 'SOL / USDT', value: 142.80, change: 6.40, change_pct: 4.69, positive: true },
+            { name: 'BNB / USDT', value: 582.40, change: -4.50, change_pct: -0.77, positive: false }
+        ];
+
+        initTabSwitcher('marketRegionTabs', (tab) => {
+            if (tab === 'global') renderIndices(globalIndices);
+            else if (tab === 'crypto') renderIndices(cryptoIndices);
+            else {
+                if (window.apiClient) {
+                    window.apiClient.getIndices().then(data => {
+                        if (data && data.length > 0) renderIndices(data);
+                        else renderIndices(indicesFallback);
+                    }).catch(() => renderIndices(indicesFallback));
+                } else {
+                    renderIndices(indicesFallback);
+                }
+            }
+        });
+
+        // Heatmap
+        const heatmapStocks = [
+            { sym: 'RELIANCE', pct: 2.4 }, { sym: 'TCS', pct: 3.1 }, { sym: 'INFY', pct: 5.6 }, { sym: 'HDFCBANK', pct: 1.8 }, { sym: 'ICICIBANK', pct: -0.9 },
+            { sym: 'BHARTIART', pct: 1.2 }, { sym: 'SBIN', pct: -1.5 }, { sym: 'ITC', pct: 2.7 }, { sym: 'LT', pct: -0.3 }, { sym: 'KOTAKBANK', pct: 0.8 },
+            { sym: 'HINDUNILVR', pct: -2.1 }, { sym: 'BAJFINANCE', pct: 3.0 }, { sym: 'MARUTI', pct: 1.6 }, { sym: 'ASIANPAINT', pct: -1.8 }, { sym: 'TATAMOTORS', pct: 7.5 },
+            { sym: 'AXISBANK', pct: 0.5 }, { sym: 'WIPRO', pct: 4.0 }, { sym: 'SUNPHARMA', pct: -3.0 }, { sym: 'ONGC', pct: -5.0 }, { sym: 'TITAN', pct: 1.1 },
+        ];
+
+        function getHeatColor(pct) {
+            if (pct >= 3) return 'rgba(0,208,156,0.7)';
+            if (pct >= 1) return 'rgba(0,208,156,0.4)';
+            if (pct >= 0) return 'rgba(0,208,156,0.2)';
+            if (pct >= -1) return 'rgba(255,82,82,0.2)';
+            if (pct >= -3) return 'rgba(255,82,82,0.4)';
+            return 'rgba(255,82,82,0.7)';
+        }
+
+        const heatmapGrid = document.getElementById('heatmapGrid');
+        heatmapGrid.innerHTML = heatmapStocks.map(s => `
+            <div class="heatmap-cell" style="background: ${getHeatColor(s.pct)}; cursor:pointer;" onclick="window.location.href='predictions.html?symbol=${s.sym}'" title="Click to predict ${s.sym}">
+                <div class="heatmap-cell__sym">${s.sym}</div>
+                <div class="heatmap-cell__pct">${s.pct > 0 ? '+' : ''}${s.pct}%</div>
+            </div>
+        `).join('');
+
+        // Sectors
+        const sectorDataSets = {
+            '1d': [
+                { name: 'IT', pct: 2.15, color: '#00d09c' }, { name: 'Pharma', pct: 1.56, color: '#00d09c' },
+                { name: 'Auto', pct: 1.32, color: '#00d09c' }, { name: 'FMCG', pct: 0.87, color: '#00d09c' },
+                { name: 'Financial', pct: 0.76, color: '#00d09c' }, { name: 'Metal', pct: -0.31, color: '#ff5252' },
+                { name: 'Energy', pct: -0.89, color: '#ff5252' }, { name: 'Realty', pct: -1.45, color: '#ff5252' }
+            ],
+            '1w': [
+                { name: 'IT', pct: 4.32, color: '#00d09c' }, { name: 'Auto', pct: 3.10, color: '#00d09c' },
+                { name: 'Metal', pct: 2.45, color: '#00d09c' }, { name: 'Financial', pct: 1.84, color: '#00d09c' },
+                { name: 'Energy', pct: 0.95, color: '#00d09c' }, { name: 'Pharma', pct: -0.42, color: '#ff5252' },
+                { name: 'FMCG', pct: -1.15, color: '#ff5252' }, { name: 'Realty', pct: -2.30, color: '#ff5252' }
+            ],
+            '1m': [
+                { name: 'Auto', pct: 8.64, color: '#00d09c' }, { name: 'IT', pct: 7.20, color: '#00d09c' },
+                { name: 'Financial', pct: 5.12, color: '#00d09c' }, { name: 'Metal', pct: 4.30, color: '#00d09c' },
+                { name: 'Pharma', pct: 2.80, color: '#00d09c' }, { name: 'Energy', pct: 1.45, color: '#00d09c' },
+                { name: 'Realty', pct: 0.60, color: '#00d09c' }, { name: 'FMCG', pct: -0.85, color: '#ff5252' }
+            ]
+        };
+
+        function renderSectors(tf = '1d') {
+            const sectors = sectorDataSets[tf] || sectorDataSets['1d'];
+            const maxPct = Math.max(...sectors.map(s => Math.abs(s.pct)));
+            document.getElementById('sectorList').innerHTML = sectors.map(s => `
+                <div class="sector-row">
+                    <span class="sector-row__name">${s.name}</span>
+                    <div class="sector-row__bar-wrap">
+                        <div class="sector-row__bar">
+                            <div class="sector-row__bar-fill" style="width: ${(Math.abs(s.pct) / maxPct * 100)}%; background: ${s.color};"></div>
+                        </div>
+                    </div>
+                    <span class="sector-row__pct ${s.pct >= 0 ? 'positive' : 'negative'}">${s.pct > 0 ? '+' : ''}${s.pct}%</span>
+                </div>
+            `).join('');
+        }
+
+        renderSectors('1d');
+        initTabSwitcher('sectorTimeTabs', (tab) => renderSectors(tab));
+
+        // Market Breadth
+        const breadthLabels = ['9:15', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '15:30'];
+        const advData = [1200, 1800, 2200, 2400, 2600, 2700, 2800, 2841];
+        drawAreaChart('breadthChart', advData, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+
+        document.getElementById('breadthStats').innerHTML = `
+            <div class="breadth-row"><span class="breadth-row__label">Advancing</span><span class="breadth-row__value positive">2,841</span></div>
+            <div class="breadth-row"><span class="breadth-row__label">Declining</span><span class="breadth-row__value negative">1,204</span></div>
+            <div class="breadth-row"><span class="breadth-row__label">Unchanged</span><span class="breadth-row__value">198</span></div>
+            <div class="breadth-row"><span class="breadth-row__label">A/D Ratio</span><span class="breadth-row__value positive">2.36</span></div>
+        `;
+
+        // FII/DII
+        document.getElementById('fiiDiiGrid').innerHTML = `
+            <div class="fii-dii-card">
+                <div class="fii-dii-card__label">FII Net</div>
+                <div class="fii-dii-card__value positive">+₹2,456 Cr</div>
+                <div class="fii-dii-card__sub">Buy: ₹12,890 | Sell: ₹10,434</div>
+            </div>
+            <div class="fii-dii-card">
+                <div class="fii-dii-card__label">DII Net</div>
+                <div class="fii-dii-card__value negative">-₹1,234 Cr</div>
+                <div class="fii-dii-card__sub">Buy: ₹8,567 | Sell: ₹9,801</div>
+            </div>
+        `;
+
+        const fiiLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        const fiiVals = [2456, -1890, 3200, -560, 2456];
+        drawBarChart('fiiDiiChart', fiiLabels, fiiVals);
+    });
+    </script>
+</body>
+</html>

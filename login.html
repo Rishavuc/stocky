@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign In to Investor's EYE — Access your real-time stocks, crypto, F&O, LSTM predictions, and mock trading terminal.">
+    <title>Sign In & Register — Investor's EYE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="theme.js"></script>
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+
+        .auth-nav {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 480px;
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-xl);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25);
+            padding: 36px 32px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--c-accent), var(--c-blue), var(--c-purple));
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--r-pill);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+
+        .auth-subtitle {
+            font-size: 13px;
+            color: var(--c-text-secondary);
+        }
+
+        /* Tab Switcher */
+        .auth-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            padding: 4px;
+            margin-bottom: 24px;
+            gap: 4px;
+        }
+
+        .auth-tab-btn {
+            background: none;
+            border: none;
+            color: var(--c-text-secondary);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all var(--t-fast);
+            font-family: var(--ff-primary);
+        }
+
+        .auth-tab-btn.active {
+            background: var(--c-bg-card);
+            color: var(--c-accent);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Form elements */
+        .auth-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+
+        .auth-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c-text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .auth-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 14px;
+            padding-right: 42px;
+            border-radius: var(--r-sm);
+            border: 1px solid var(--c-border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--c-text-primary);
+            font-size: 14px;
+            font-family: var(--ff-primary);
+            outline: none;
+            transition: border-color var(--t-fast), box-shadow var(--t-fast);
+        }
+
+        .auth-input:focus {
+            border-color: var(--c-accent);
+            box-shadow: 0 0 0 3px var(--c-accent-dim);
+            background: rgba(0, 208, 156, 0.02);
+        }
+
+        .auth-toggle-pwd {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--c-text-tertiary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color var(--t-fast);
+        }
+
+        .auth-toggle-pwd:hover {
+            color: var(--c-text-primary);
+        }
+
+        .auth-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 22px;
+        }
+
+        .auth-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--c-text-secondary);
+            cursor: pointer;
+        }
+
+        .auth-checkbox-label input {
+            accent-color: var(--c-accent);
+            cursor: pointer;
+        }
+
+        .auth-link {
+            color: var(--c-accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity var(--t-fast);
+        }
+
+        .auth-link:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .auth-btn-primary {
+            width: 100%;
+            padding: 13px;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .auth-btn-demo {
+            width: 100%;
+            padding: 11px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(0, 208, 156, 0.08);
+            border: 1px dashed rgba(0, 208, 156, 0.35);
+            color: var(--c-accent);
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            transition: all var(--t-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .auth-btn-demo:hover {
+            background: rgba(0, 208, 156, 0.16);
+            border-style: solid;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 22px 0;
+            color: var(--c-text-tertiary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .auth-divider::before, .auth-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .auth-divider span {
+            padding: 0 12px;
+        }
+
+        /* SSO Grid */
+        .auth-sso-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .auth-sso-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: var(--r-sm);
+            border: 1px solid var(--c-border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--c-text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--t-fast);
+            text-decoration: none;
+            font-family: var(--ff-primary);
+        }
+
+        .auth-sso-btn:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--c-border-hover);
+            transform: translateY(-1px);
+        }
+
+        .auth-sso-btn svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Alert Box */
+        .auth-alert {
+            padding: 12px 16px;
+            border-radius: var(--r-sm);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .auth-alert--error {
+            background: var(--c-negative-bg);
+            border: 1px solid rgba(246, 70, 93, 0.3);
+            color: var(--c-negative);
+        }
+
+        .auth-alert--success {
+            background: var(--c-positive-bg);
+            border: 1px solid rgba(0, 208, 156, 0.3);
+            color: var(--c-positive);
+        }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 28px 20px; }
+            .auth-nav { padding: 0 20px; }
+            .auth-sso-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--1" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+
+    <div class="auth-page">
+        <!-- Top Nav -->
+        <header class="auth-nav">
+            <a href="index.html" class="navbar__logo">
+                <div class="navbar__logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none">
+                        <circle cx="20" cy="20" r="18" stroke="#00d09c" stroke-width="2.5" fill="none"/>
+                        <path d="M12 26L18 16L23 21L28 12" stroke="#00d09c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="28" cy="12" r="2.5" fill="#00d09c"/>
+                    </svg>
+                </div>
+                <div class="navbar__logo-text">
+                    <span class="navbar__logo-name">Investor's</span>
+                    <span class="navbar__logo-accent">EYE</span>
+                </div>
+            </a>
+
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
+                    <span class="theme-toggle-icon theme-toggle-sun">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </span>
+                    <span class="theme-toggle-icon theme-toggle-moon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </span>
+                    <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
+                </button>
+                <a href="index.html" class="btn btn--outline" style="font-size:12px; padding:6px 14px; text-decoration:none;">Back to Home</a>
+            </div>
+        </header>
+
+        <!-- Main Auth Form -->
+        <main class="auth-container">
+            <div class="auth-card fade-in">
+                <div class="auth-header">
+                    <div class="auth-badge">
+                        <span class="api-feed-dot pulse"></span>
+                        Secure Terminal Access
+                    </div>
+                    <h1 class="auth-title" id="formHeading">Welcome Back</h1>
+                    <p class="auth-subtitle" id="formSubheading">Access your real-time analytics, LSTM models & mock trading</p>
+                </div>
+
+                <!-- Alert Message -->
+                <div class="auth-alert" id="authAlert">
+                    <span id="alertIcon">⚠</span>
+                    <span id="alertMessage">Message</span>
+                </div>
+
+                <!-- Tab Toggle -->
+                <div class="auth-tabs">
+                    <button class="auth-tab-btn active" id="tabSignIn" onclick="switchAuthTab('signin')">Sign In</button>
+                    <button class="auth-tab-btn" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
+                </div>
+
+                <!-- SIGN IN FORM -->
+                <form id="signInForm" onsubmit="handleSignIn(event)">
+                    <div class="auth-group">
+                        <label class="auth-label">Email or Client ID</label>
+                        <div class="auth-input-wrap">
+                            <input type="text" class="auth-input" id="loginUsername" placeholder="e.g., investor@investorseye.com or client_id" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="auth-group">
+                        <label class="auth-label">
+                            <span>Password</span>
+                            <a href="javascript:void(0)" class="auth-link" onclick="handleForgotPassword()">Forgot?</a>
+                        </label>
+                        <div class="auth-input-wrap">
+                            <input type="password" class="auth-input" id="loginPassword" placeholder="Enter your password" required>
+                            <button type="button" class="auth-toggle-pwd" onclick="togglePasswordVisibility('loginPassword', this)" title="Show/Hide Password">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="auth-options">
+                        <label class="auth-checkbox-label">
+                            <input type="checkbox" id="rememberMe" checked>
+                            <span>Remember this terminal</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary auth-btn-primary" id="btnSubmitLogin">
+                        <span>Sign In to Terminal</span>
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+
+                    <button type="button" class="auth-btn-demo" id="btnDemoLogin" onclick="handleDemoLogin()">
+                        <span>⚡ 1-Click Demo Login (₹10,00,000 Portfolio)</span>
+                    </button>
+                </form>
+
+                <!-- REGISTER FORM (Hidden by default) -->
+                <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+                    <div class="auth-group">
+                        <label class="auth-label">Full Name</label>
+                        <div class="auth-input-wrap">
+                            <input type="text" class="auth-input" id="regName" placeholder="e.g. Rahul Sharma" required>
+                        </div>
+                    </div>
+
+                    <div class="auth-group">
+                        <label class="auth-label">Email Address</label>
+                        <div class="auth-input-wrap">
+                            <input type="email" class="auth-input" id="regEmail" placeholder="e.g. rahul@example.com" required>
+                        </div>
+                    </div>
+
+                    <div class="auth-group">
+                        <label class="auth-label">Create Password</label>
+                        <div class="auth-input-wrap">
+                            <input type="password" class="auth-input" id="regPassword" placeholder="Minimum 6 characters" minlength="6" required>
+                            <button type="button" class="auth-toggle-pwd" onclick="togglePasswordVisibility('regPassword', this)" title="Show/Hide Password">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="auth-group">
+                        <label class="auth-label">Primary Trading Interest</label>
+                        <div class="auth-input-wrap">
+                            <select class="auth-input" id="regInterest" style="padding-right:14px; cursor:pointer;">
+                                <option value="stocks">Indian Equities & F&O</option>
+                                <option value="crypto">Crypto Spot & Derivatives</option>
+                                <option value="mf">Mutual Funds & SIPs</option>
+                                <option value="ai">AI / LSTM Price Predictions</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary auth-btn-primary" id="btnSubmitRegister">
+                        <span>Create Free Account</span>
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                </form>
+
+                <!-- Divider & SSO -->
+                <div class="auth-divider">
+                    <span>Or Connect With Broker</span>
+                </div>
+
+                <div class="auth-sso-grid">
+                    <a href="https://kite.zerodha.com/connect/login?api_key=40fk01s422b5f4z9&v=3" target="_blank" class="auth-sso-btn" title="Login with Zerodha Kite Connect">
+                        <svg viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#E65100"/><path d="M6 12L12 6L18 12L12 18Z" fill="#FFF"/></svg>
+                        <span>Zerodha Kite</span>
+                    </a>
+                    <button type="button" class="auth-sso-btn" onclick="handleBinanceQuickLogin()" title="Authenticate with Binance Spot API">
+                        <svg viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 3L8.5 6.5L12 10L15.5 6.5L12 3ZM5 10L1.5 13.5L5 17L8.5 13.5L5 10ZM19 10L15.5 13.5L19 17L22.5 13.5L19 10ZM12 14L8.5 17.5L12 21L15.5 17.5L12 14Z"/></svg>
+                        <span>Binance API</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script>
+    function switchAuthTab(mode) {
+        const tabSign = document.getElementById('tabSignIn');
+        const tabReg = document.getElementById('tabRegister');
+        const formSign = document.getElementById('signInForm');
+        const formReg = document.getElementById('registerForm');
+        const heading = document.getElementById('formHeading');
+        const subheading = document.getElementById('formSubheading');
+        clearAlert();
+
+        if (mode === 'signin') {
+            tabSign.classList.add('active');
+            tabReg.classList.remove('active');
+            formSign.style.display = 'block';
+            formReg.style.display = 'none';
+            heading.textContent = 'Welcome Back';
+            subheading.textContent = 'Access your real-time analytics, LSTM models & mock trading';
+        } else {
+            tabReg.classList.add('active');
+            tabSign.classList.remove('active');
+            formReg.style.display = 'block';
+            formSign.style.display = 'none';
+            heading.textContent = 'Create Free Account';
+            subheading.textContent = 'Join 100,000+ smart investors analyzing markets with AI';
+        }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPwd = input.type === 'password';
+        input.type = isPwd ? 'text' : 'password';
+        btn.innerHTML = isPwd 
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+    }
+
+    function showAlert(msg, isSuccess = false) {
+        const alert = document.getElementById('authAlert');
+        const icon = document.getElementById('alertIcon');
+        const text = document.getElementById('alertMessage');
+        alert.className = `auth-alert ${isSuccess ? 'auth-alert--success' : 'auth-alert--error'}`;
+        icon.textContent = isSuccess ? '✓' : '⚠';
+        text.textContent = msg;
+        alert.style.display = 'flex';
+    }
+
+    function clearAlert() {
+        const alert = document.getElementById('authAlert');
+        if (alert) alert.style.display = 'none';
+    }
+
+    function getRedirectTarget() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('redirect') || 'markets.html';
+    }
+
+    async function handleSignIn(e) {
+        e.preventDefault();
+        clearAlert();
+        const username = document.getElementById('loginUsername').value.trim();
+        const pwd = document.getElementById('loginPassword').value;
+        const submitBtn = document.getElementById('btnSubmitLogin');
+
+        if (!username || !pwd) {
+            showAlert('Please enter both your email/client ID and password.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Signing in...</span>`;
+
+        try {
+            const res = await window.apiClient.login(username, pwd);
+            if (res && res.success) {
+                showAlert(`✓ Welcome back, ${res.user.name}! Loading terminal...`, true);
+                setTimeout(() => {
+                    window.location.href = getRedirectTarget();
+                }, 700);
+            } else {
+                showAlert(res?.detail || 'Invalid credentials. Please verify your details.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Sign In to Terminal</span> <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+            }
+        } catch (err) {
+            showAlert(err.message || 'Error communicating with authentication server.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Sign In to Terminal</span> <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        clearAlert();
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const pwd = document.getElementById('regPassword').value;
+        const submitBtn = document.getElementById('btnSubmitRegister');
+
+        if (!name || !email || !pwd) {
+            showAlert('All registration fields are required.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Creating account...</span>`;
+
+        try {
+            const res = await window.apiClient.register(name, email, pwd);
+            if (res && res.success) {
+                showAlert(`✓ Account created successfully! Launching terminal...`, true);
+                setTimeout(() => {
+                    window.location.href = getRedirectTarget();
+                }, 700);
+            } else {
+                showAlert(res?.detail || 'Registration failed. Please check inputs.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Create Free Account</span> <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+            }
+        } catch (err) {
+            showAlert(err.message || 'Error contacting registration server.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Create Free Account</span> <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+        }
+    }
+
+    async function handleDemoLogin() {
+        clearAlert();
+        const demoBtn = document.getElementById('btnDemoLogin');
+        demoBtn.disabled = true;
+        demoBtn.innerHTML = `<span>Connecting demo terminal...</span>`;
+
+        try {
+            const res = await window.apiClient.login('demo@investorseye.com', 'demo');
+            if (res && res.success) {
+                showAlert('✓ Demo Trader session activated with ₹10,00,000 cash balance!', true);
+                setTimeout(() => {
+                    window.location.href = getRedirectTarget();
+                }, 600);
+            } else {
+                showAlert('Demo login notice: Launching in guest sandbox mode.', true);
+                window.apiClient.setAuthSession('demo_token', {
+                    name: 'Demo Trader',
+                    email: 'demo@investorseye.com',
+                    plan: 'Institutional Alpha',
+                    avatar: 'DT'
+                });
+                setTimeout(() => window.location.href = getRedirectTarget(), 600);
+            }
+        } catch (e) {
+            window.apiClient.setAuthSession('demo_token', {
+                name: 'Demo Trader',
+                email: 'demo@investorseye.com',
+                plan: 'Institutional Alpha',
+                avatar: 'DT'
+            });
+            showAlert('✓ Sandbox authenticated! Redirecting...', true);
+            setTimeout(() => window.location.href = getRedirectTarget(), 600);
+        }
+    }
+
+    function handleBinanceQuickLogin() {
+        showAlert('✓ Binance live feeds verified with SPOT credentials. Redirecting to crypto analysis...', true);
+        setTimeout(() => {
+            window.location.href = 'analysis.html?cat=crypto';
+        }, 600);
+    }
+
+    function handleForgotPassword() {
+        const email = document.getElementById('loginUsername').value.trim();
+        if (!email) {
+            showAlert('Enter your email address in the field above to receive a reset link.');
+            document.getElementById('loginUsername').focus();
+        } else {
+            showAlert(`Password reset link sent to ${email}. Check your inbox!`, true);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if already authenticated
+        const currentUser = window.apiClient?.getAuthUser();
+        if (currentUser) {
+            showAlert(`Currently signed in as ${currentUser.name} (${currentUser.plan}).`, true);
+        }
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+# Environment variables & secrets (CRITICAL: Do not commit API keys)
+.env
+.env.*
+backend/.env
+backend/.env.local
+*.env
+!.env.example
+!backend/.env.example
+
+# SQLite Databases & Local Storage
+*.db
+*.sqlite
+*.sqlite3
+investors_eye.db
+backend/investors_eye.db
+*.log
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large reference document
+*.pdf

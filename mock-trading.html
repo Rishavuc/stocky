@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mock Trading Dashboard — Practice real-time paper trading with ₹10 Lakh virtual capital across Indian Stocks and Crypto.">
+    <title>Mock Trading — Investor's EYE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="theme.js"></script>
+    <style>
+        /* Mock Trading Specific Styles */
+        .mock-hero {
+            background: linear-gradient(135deg, rgba(0,208,156,0.12) 0%, rgba(99,102,241,0.08) 100%);
+            border: 1px solid rgba(0,208,156,0.2);
+            border-radius: var(--r-xl);
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .mock-hero__left { max-width: 620px; }
+        .mock-hero__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--r-pill);
+            background: rgba(0,208,156,0.15);
+            color: var(--c-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .mock-hero__title { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+        .mock-hero__desc { font-size: 13px; color: var(--c-text-secondary); line-height: 1.5; }
+        .mock-hero__actions { display: flex; align-items: center; gap: 10px; }
+
+        /* Metric Bar */
+        .portfolio-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .portfolio-card {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color var(--t-fast);
+        }
+        .portfolio-card:hover { border-color: var(--c-border-hover); }
+        .portfolio-card__label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--c-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .portfolio-card__value {
+            font-size: 24px;
+            font-weight: 800;
+            font-family: var(--ff-mono);
+            letter-spacing: -0.02em;
+        }
+        .portfolio-card__sub {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Two Column Trading Arena */
+        .trading-arena {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 1100px) {
+            .trading-arena { grid-template-columns: 1fr; }
+        }
+
+        /* Order Form Panel */
+        .order-panel {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .order-panel__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--c-border);
+            padding-bottom: 12px;
+        }
+        .order-panel__title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Buy / Sell Switcher */
+        .trade-side-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: rgba(255,255,255,0.04);
+            border-radius: var(--r-sm);
+            padding: 4px;
+            gap: 4px;
+        }
+        .trade-side-btn {
+            border: none;
+            background: transparent;
+            color: var(--c-text-secondary);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all var(--t-fast);
+            text-transform: uppercase;
+        }
+        .trade-side-btn.active-buy {
+            background: var(--c-positive);
+            color: #071711;
+            box-shadow: 0 2px 10px rgba(0, 208, 156, 0.4);
+        }
+        .trade-side-btn.active-sell {
+            background: var(--c-negative);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(255, 82, 82, 0.4);
+        }
+
+        /* Form Inputs */
+        .trade-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .trade-form-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--c-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+        }
+        .trade-select, .trade-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            color: var(--c-text-primary);
+            font-size: 14px;
+            font-family: var(--ff-primary);
+            outline: none;
+            transition: border-color var(--t-fast);
+        }
+        .trade-input:focus, .trade-select:focus {
+            border-color: var(--c-accent);
+            box-shadow: 0 0 0 2px var(--c-accent-dim);
+        }
+        .quick-chips {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .quick-chip {
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            color: var(--c-text-secondary);
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .quick-chip:hover {
+            color: var(--c-text-primary);
+            border-color: var(--c-accent);
+        }
+
+        /* Order summary breakdown */
+        .order-calc {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .order-calc__row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--c-text-secondary);
+        }
+        .order-calc__row--bold {
+            font-weight: 700;
+            color: var(--c-text-primary);
+            border-top: 1px dashed var(--c-border);
+            padding-top: 6px;
+            font-size: 13px;
+        }
+
+        .btn-order-submit {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 800;
+            border: none;
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            transition: transform var(--t-fast), filter var(--t-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-order-submit.btn-buy {
+            background: var(--c-positive);
+            color: #061e16;
+        }
+        .btn-order-submit.btn-sell {
+            background: var(--c-negative);
+            color: #ffffff;
+        }
+        .btn-order-submit:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Live Mini Quote */
+        .live-quote-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .live-quote-sym { font-weight: 800; font-size: 16px; }
+        .live-quote-name { font-size: 12px; color: var(--c-text-tertiary); }
+        .live-quote-price { font-size: 18px; font-weight: 800; font-family: var(--ff-mono); text-align: right; }
+        .live-quote-change { font-size: 12px; font-weight: 600; text-align: right; }
+
+        /* Tables & Tabs */
+        .trading-tabs-wrap {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .trading-tabs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px 0;
+            border-bottom: 1px solid var(--c-border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .tab-btn-group { display: flex; gap: 8px; }
+        .t-tab {
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--c-text-secondary);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all var(--t-fast);
+        }
+        .t-tab:hover { color: var(--c-text-primary); }
+        .t-tab.active {
+            color: var(--c-accent);
+            border-bottom-color: var(--c-accent);
+        }
+
+        .data-table-container {
+            overflow-x: auto;
+            min-height: 220px;
+        }
+        .custom-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .custom-data-table th {
+            text-align: left;
+            padding: 12px 18px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--c-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--c-border);
+        }
+        .custom-data-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--c-border);
+            vertical-align: middle;
+        }
+        .custom-data-table tr:hover { background: rgba(255,255,255,0.02); }
+        .badge-type {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.07);
+            color: var(--c-text-secondary);
+        }
+        .badge-buy { background: var(--c-positive-bg); color: var(--c-positive); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+        .badge-sell { background: var(--c-negative-bg); color: var(--c-negative); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+        .btn-action-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 4px;
+            border: 1px solid var(--c-border);
+            background: rgba(255,255,255,0.05);
+            color: var(--c-text-primary);
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .btn-action-sm:hover {
+            border-color: var(--c-negative);
+            color: var(--c-negative);
+            background: var(--c-negative-bg);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            padding: 14px 18px;
+            border-radius: var(--r-md);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #111827;
+            color: #ffffff;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border-left: 4px solid var(--c-accent);
+            animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toast--success { border-left-color: var(--c-positive); }
+        .toast--error { border-left-color: var(--c-negative); }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Analytics widgets grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            padding: 20px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            padding: 16px;
+        }
+        .stat-box__title { font-size: 11px; font-weight: 700; color: var(--c-text-tertiary); text-transform: uppercase; margin-bottom: 6px; }
+        .stat-box__num { font-size: 22px; font-weight: 800; font-family: var(--ff-mono); }
+    </style>
+</head>
+<body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="dashboard">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="dashSidebar">
+            <div class="sidebar__header">
+                <a href="index.html" class="sidebar__logo">
+                    <div class="sidebar__logo-icon">
+                        <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#00d09c" stroke-width="2.5" fill="none"/><path d="M12 26L18 16L23 21L28 12" stroke="#00d09c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28" cy="12" r="2.5" fill="#00d09c"/></svg>
+                    </div>
+                    <div class="sidebar__logo-text">
+                        <span class="sidebar__logo-name">Investor's</span>
+                        <span class="sidebar__logo-accent">EYE</span>
+                    </div>
+                </a>
+                <button class="sidebar__close" id="sidebarClose">✕</button>
+            </div>
+            <nav class="sidebar__nav">
+                <div class="sidebar__section-label">Main</div>
+                <a href="markets.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 17L8 10L12 14L17 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    Markets
+                </a>
+                <a href="analysis.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="3" height="7" rx="1" fill="currentColor" opacity="0.5"/><rect x="8.5" y="6" width="3" height="11" rx="1" fill="currentColor" opacity="0.75"/><rect x="14" y="3" width="3" height="14" rx="1" fill="currentColor"/></svg></span>
+                    Analysis
+                </a>
+                <a href="predictions.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15L8 8L12 12L15 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 7L17 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 2"/><circle cx="17" cy="5" r="1.5" fill="currentColor"/></svg></span>
+                    Predictions
+                    <span class="sidebar__link-badge">AI</span>
+                </a>
+                <a href="mock-trading.html" class="sidebar__link active">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8H17" stroke="currentColor" stroke-width="1" opacity="0.3"/><text x="10" y="14" text-anchor="middle" fill="currentColor" font-size="6" font-weight="700">MOCK</text></svg></span>
+                    Mock Trading
+                    <span class="sidebar__link-badge--new sidebar__link-badge">Live Sim</span>
+                </a>
+                <a href="courses.html" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M2 7L10 3L18 7L10 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 8.5V14C5 14 7 16 10 16C13 16 15 14 15 14V8.5" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                    Learn
+                </a>
+                <div class="sidebar__section-label">Quick Tools</div>
+                <a href="markets.html#watchlist" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6V10L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    Watchlist
+                </a>
+                <a href="analysis.html#sip" class="sidebar__link">
+                    <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 10H13M10 7V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                    SIP Calculator
+                </a>
+            </nav>
+            <div class="sidebar__footer">
+                <div class="sidebar__user">
+                    <div class="sidebar__avatar">IE</div>
+                    <div class="sidebar__user-info">
+                        <span class="sidebar__user-name">Guest Trader</span>
+                        <span class="sidebar__user-plan">Paper Portfolio: Active</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div class="topbar__left">
+                    <button class="topbar__hamburger" id="topbarHamburger">☰</button>
+                    <div class="topbar__breadcrumb">
+                        <a href="index.html">Home</a>
+                        <span class="topbar__breadcrumb-sep">›</span>
+                        <span class="topbar__breadcrumb-current">Mock Trading</span>
+                    </div>
+                </div>
+                <div class="topbar__right">
+                    <div class="topbar__search">
+                        <svg class="topbar__search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        <input type="text" class="topbar__search-input" placeholder="Search instruments (Ctrl+K)..." id="dashSearchInput">
+                        <kbd class="topbar__search-kbd">Ctrl+K</kbd>
+                    </div>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
+                        <span class="theme-toggle-icon theme-toggle-sun">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-icon theme-toggle-moon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
+                    </button>
+                    <button class="btn btn--outline btn--sm" id="btnResetPortfolio" title="Reset virtual capital to ₹10,00,000">
+                        🔄 Reset Capital
+                    </button>
+                </div>
+            </div>
+
+            <div class="dash-content">
+                <!-- HERO BANNER -->
+                <div class="mock-hero fade-in">
+                    <div class="mock-hero__left">
+                        <div class="mock-hero__badge">⚡ Zero Risk Simulation</div>
+                        <h1 class="mock-hero__title">Real-time Mock Trading Terminal</h1>
+                        <p class="mock-hero__desc">
+                            Test your trading strategies with ₹10,00,000 in virtual funds. Real-time market execution, live P&L tracking, intraday leverage (5x), and comprehensive trade analytics.
+                        </p>
+                    </div>
+                    <div class="mock-hero__actions">
+                        <button class="btn btn--primary" id="btnFastBuyNifty">⚡ Quick Trade RELIANCE</button>
+                    </div>
+                </div>
+
+                <!-- PORTFOLIO SUMMARY CARDS -->
+                <div class="portfolio-summary fade-in stagger-1">
+                    <div class="portfolio-card">
+                        <div class="portfolio-card__label">
+                            Total Portfolio Value
+                            <span style="color:var(--c-accent);">● Live</span>
+                        </div>
+                        <div class="portfolio-card__value" id="dispTotalVal">₹10,24,680</div>
+                        <div class="portfolio-card__sub positive" id="dispTotalChange">
+                            <span>▲ +₹24,680 (+2.47%)</span>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-card">
+                        <div class="portfolio-card__label">Available Cash / Margin</div>
+                        <div class="portfolio-card__value" id="dispCashVal">₹8,45,200</div>
+                        <div class="portfolio-card__sub" style="color:var(--c-text-tertiary);">
+                            Margin Used: <span id="dispMarginUsed">₹1,54,800</span>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-card">
+                        <div class="portfolio-card__label">Unrealized P&L</div>
+                        <div class="portfolio-card__value positive" id="dispUnrealizedPnl">+₹18,480</div>
+                        <div class="portfolio-card__sub positive" id="dispUnrealizedPnlPct">+3.12% on holdings</div>
+                    </div>
+
+                    <div class="portfolio-card">
+                        <div class="portfolio-card__label">Realized P&L (Booked)</div>
+                        <div class="portfolio-card__value positive" id="dispRealizedPnl">+₹6,200</div>
+                        <div class="portfolio-card__sub" style="color:var(--c-text-tertiary);">
+                            Trades: <span id="dispTotalTradesCount">4 Completed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TRADING ARENA (ORDER ENTRY + EQUITY CURVE) -->
+                <div class="trading-arena fade-in stagger-2">
+                    <!-- ORDER PLACEMENT PANEL -->
+                    <div class="order-panel">
+                        <div class="order-panel__header">
+                            <h2 class="order-panel__title">
+                                <span>🛒 Place Order</span>
+                            </h2>
+                            <span class="badge-type" id="dispMarketStatus">MARKET OPEN</span>
+                        </div>
+
+                        <!-- BUY / SELL TOGGLE -->
+                        <div class="trade-side-toggle">
+                            <button type="button" class="trade-side-btn active-buy" id="btnSideBuy">BUY</button>
+                            <button type="button" class="trade-side-btn" id="btnSideSell">SELL</button>
+                        </div>
+
+                        <!-- LIVE QUOTE PREVIEW -->
+                        <div class="live-quote-card" id="liveQuoteCard">
+                            <div>
+                                <div class="live-quote-sym" id="quoteSymbol">RELIANCE</div>
+                                <div class="live-quote-name" id="quoteName">Reliance Industries Ltd.</div>
+                            </div>
+                            <div>
+                                <div class="live-quote-price positive" id="quoteLtp">₹2,890.40</div>
+                                <div class="live-quote-change positive" id="quoteChange">+₹34.80 (+1.22%)</div>
+                            </div>
+                        </div>
+
+                        <!-- STOCK SELECTOR -->
+                        <div class="trade-form-group">
+                            <label class="trade-form-label" for="stockSelect">Select Instrument</label>
+                            <select class="trade-select" id="stockSelect">
+                                <option value="RELIANCE" data-price="2890.40" data-name="Reliance Industries" selected>RELIANCE (₹2,890.40)</option>
+                                <option value="TCS" data-price="3940.15" data-name="Tata Consultancy Services">TCS (₹3,940.15)</option>
+                                <option value="HDFCBANK" data-price="1485.60" data-name="HDFC Bank Ltd.">HDFCBANK (₹1,485.60)</option>
+                                <option value="INFY" data-price="1520.30" data-name="Infosys Ltd.">INFY (₹1,520.30)</option>
+                                <option value="ICICIBANK" data-price="1090.25" data-name="ICICI Bank Ltd.">ICICIBANK (₹1,090.25)</option>
+                                <option value="TATAMOTORS" data-price="965.80" data-name="Tata Motors Ltd.">TATAMOTORS (₹965.80)</option>
+                                <option value="ITC" data-price="428.50" data-name="ITC Limited">ITC (₹428.50)</option>
+                                <option value="BTCINR" data-price="5560000.00" data-name="Bitcoin (Crypto)">BTC/INR (₹55,60,000)</option>
+                            </select>
+                        </div>
+
+                        <!-- PRODUCT & ORDER TYPE -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="trade-form-group">
+                                <label class="trade-form-label">Product</label>
+                                <select class="trade-select" id="productType">
+                                    <option value="CNC">Delivery (CNC)</option>
+                                    <option value="MIS">Intraday (MIS 5x)</option>
+                                </select>
+                            </div>
+                            <div class="trade-form-group">
+                                <label class="trade-form-label">Order Type</label>
+                                <select class="trade-select" id="orderType">
+                                    <option value="MARKET">Market</option>
+                                    <option value="LIMIT">Limit</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- QUANTITY & PRICE -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="trade-form-group">
+                                <label class="trade-form-label">Quantity</label>
+                                <input type="number" class="trade-input" id="tradeQty" value="10" min="1" step="1">
+                                <div class="quick-chips">
+                                    <span class="quick-chip" onclick="setQty(5)">+5</span>
+                                    <span class="quick-chip" onclick="setQty(10)">+10</span>
+                                    <span class="quick-chip" onclick="setQty(50)">+50</span>
+                                    <span class="quick-chip" onclick="setQty(100)">+100</span>
+                                </div>
+                            </div>
+                            <div class="trade-form-group">
+                                <label class="trade-form-label">Price (₹)</label>
+                                <input type="number" class="trade-input" id="tradePrice" value="2890.40" step="0.05" readonly>
+                                <span style="font-size:10px; color:var(--c-text-tertiary); margin-top:4px;" id="priceHint">Executing at Market LTP</span>
+                            </div>
+                        </div>
+
+                        <!-- MARGIN & COST SUMMARY -->
+                        <div class="order-calc">
+                            <div class="order-calc__row">
+                                <span>Order Value:</span>
+                                <span id="calcOrderValue" style="font-family:var(--ff-mono);">₹28,904.00</span>
+                            </div>
+                            <div class="order-calc__row">
+                                <span>Brokerage & Taxes (Simulated):</span>
+                                <span style="font-family:var(--ff-mono); color:var(--c-positive);">₹0 (Free)</span>
+                            </div>
+                            <div class="order-calc__row order-calc__row--bold">
+                                <span>Margin Required:</span>
+                                <span id="calcMarginReq" style="font-family:var(--ff-mono); color:var(--c-accent);">₹28,904.00</span>
+                            </div>
+                        </div>
+
+                        <!-- EXECUTE BUTTON -->
+                        <button type="button" class="btn-order-submit btn-buy" id="btnSubmitOrder">
+                            <span>Execute BUY Order</span>
+                        </button>
+                    </div>
+
+                    <!-- CHART & PERFORMANCE PANEL -->
+                    <div class="chart-card" style="display:flex; flex-direction:column;">
+                        <div class="chart-card__header">
+                            <div>
+                                <h3 class="chart-card__title">Portfolio Equity Curve</h3>
+                                <p class="chart-card__subtitle">Net worth growth over simulated trading sessions</p>
+                            </div>
+                            <div class="chart-timeframes" id="chartTfBtns">
+                                <button class="tf-btn" data-tf="1D">1D</button>
+                                <button class="tf-btn" data-tf="1W">1W</button>
+                                <button class="tf-btn active" data-tf="1M">1M</button>
+                                <button class="tf-btn" data-tf="ALL">ALL</button>
+                            </div>
+                        </div>
+                        <div style="flex:1; min-height: 280px; position:relative; width: 100%;">
+                            <canvas id="equityChartCanvas" style="width:100%; height:100%;"></canvas>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:14px; border-top:1px solid var(--c-border); font-size:12px; color:var(--c-text-secondary); margin-top:10px;">
+                            <span>Initial Capital: <strong style="color:var(--c-text-primary);">₹10,00,000</strong></span>
+                            <span>Max Drawdown: <strong class="positive">-1.2%</strong></span>
+                            <span>Profit Factor: <strong class="positive">2.84</strong></span>
+                            <span>Win Rate: <strong class="positive">75%</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POSITIONS, ORDERS & WATCHLIST TABS -->
+                <div class="trading-tabs-wrap fade-in stagger-3">
+                    <div class="trading-tabs-header">
+                        <div class="tab-btn-group">
+                            <button class="t-tab active" data-tab="holdings">Holdings & Positions (<span id="countPositions">2</span>)</button>
+                            <button class="t-tab" data-tab="orders">Order Book (<span id="countOrders">4</span>)</button>
+                            <button class="t-tab" data-tab="watchlist">Market Watchlist</button>
+                            <button class="t-tab" data-tab="analytics">Performance Analytics</button>
+                        </div>
+                        <div>
+                            <button class="btn btn--outline btn--sm" id="btnRefreshPrices">⚡ Simulate Live Tick</button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: HOLDINGS & POSITIONS -->
+                    <div class="data-table-container" id="tabContentHoldings">
+                        <table class="custom-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Instrument</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Avg Buy</th>
+                                    <th>LTP</th>
+                                    <th>Current Value</th>
+                                    <th>P&L (₹)</th>
+                                    <th>Net Return</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="holdingsTableBody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB 2: ORDER BOOK -->
+                    <div class="data-table-container" id="tabContentOrders" style="display:none;">
+                        <table class="custom-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Side</th>
+                                    <th>Symbol</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Price (₹)</th>
+                                    <th>Total Value</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB 3: WATCHLIST -->
+                    <div class="data-table-container" id="tabContentWatchlist" style="display:none;">
+                        <table class="custom-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Company</th>
+                                    <th>LTP (₹)</th>
+                                    <th>24h Change</th>
+                                    <th>Day High / Low</th>
+                                    <th>Quick Trade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="watchlistTableBody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB 4: ANALYTICS -->
+                    <div id="tabContentAnalytics" style="display:none;">
+                        <div class="analytics-grid">
+                            <div class="stat-box">
+                                <div class="stat-box__title">Win / Loss Ratio</div>
+                                <div class="stat-box__num positive">3 : 1 (75%)</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">3 profitable trades, 1 loss trade</p>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-box__title">Best Trade</div>
+                                <div class="stat-box__num positive">+₹14,200</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">RELIANCE (+4.91% return)</p>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-box__title">Max Single Loss</div>
+                                <div class="stat-box__num negative">-₹2,100</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">ITC intraday stop-loss hit</p>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-box__title">Average Return / Trade</div>
+                                <div class="stat-box__num" style="color:var(--c-accent);">+₹4,620</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">Consistent risk-to-reward ratio 1:2.5</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="api-client.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        // =============================================
+        // MOCK TRADING ENGINE LOGIC
+        // =============================================
+
+        const STOCK_CATALOG = {
+            'RELIANCE': { name: 'Reliance Industries Ltd.', price: 2890.40, change: 1.22, high: 2910.00, low: 2860.10 },
+            'TCS': { name: 'Tata Consultancy Services', price: 3940.15, change: 0.85, high: 3965.00, low: 3910.00 },
+            'HDFCBANK': { name: 'HDFC Bank Ltd.', price: 1485.60, change: -0.45, high: 1498.00, low: 1475.20 },
+            'INFY': { name: 'Infosys Ltd.', price: 1520.30, change: 1.64, high: 1535.00, low: 1502.00 },
+            'ICICIBANK': { name: 'ICICI Bank Ltd.', price: 1090.25, change: 0.38, high: 1098.50, low: 1082.00 },
+            'TATAMOTORS': { name: 'Tata Motors Ltd.', price: 965.80, change: 2.15, high: 978.00, low: 950.00 },
+            'ITC': { name: 'ITC Limited', price: 428.50, change: -0.28, high: 432.00, low: 425.50 },
+            'BTCINR': { name: 'Bitcoin (Crypto)', price: 5560000.00, change: 3.42, high: 5620000.00, low: 5410000.00 }
+        };
+
+        const STORAGE_KEY = 'investors_eye_mock_portfolio_v1';
+
+        function getDefaultPortfolio() {
+            return {
+                cash: 845200,
+                initialCapital: 1000000,
+                realizedPnl: 6200,
+                positions: [
+                    { symbol: 'RELIANCE', product: 'CNC', qty: 30, buyPrice: 2810.00 },
+                    { symbol: 'INFY', product: 'MIS', qty: 50, buyPrice: 1495.00 }
+                ],
+                orders: [
+                    { time: '10:15 AM', side: 'BUY', symbol: 'RELIANCE', product: 'CNC', qty: 30, price: 2810.00, status: 'EXECUTED' },
+                    { time: '11:42 AM', side: 'BUY', symbol: 'INFY', product: 'MIS', qty: 50, price: 1495.00, status: 'EXECUTED' },
+                    { time: '01:20 PM', side: 'BUY', symbol: 'ITC', product: 'MIS', qty: 200, price: 435.00, status: 'EXECUTED' },
+                    { time: '02:05 PM', side: 'SELL', symbol: 'ITC', product: 'MIS', qty: 200, price: 439.00, status: 'EXECUTED' }
+                ]
+            };
+        }
+
+        let portfolio = loadPortfolio();
+
+        function loadPortfolio() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (e) {
+                console.error(e);
+            }
+            return getDefaultPortfolio();
+        }
+
+        function savePortfolio() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let activeSide = 'BUY';
+
+        // DOM elements
+        const stockSelect = document.getElementById('stockSelect');
+        const quoteSymbol = document.getElementById('quoteSymbol');
+        const quoteName = document.getElementById('quoteName');
+        const quoteLtp = document.getElementById('quoteLtp');
+        const quoteChange = document.getElementById('quoteChange');
+        const tradePrice = document.getElementById('tradePrice');
+        const tradeQty = document.getElementById('tradeQty');
+        const productType = document.getElementById('productType');
+        const orderType = document.getElementById('orderType');
+        const calcOrderValue = document.getElementById('calcOrderValue');
+        const calcMarginReq = document.getElementById('calcMarginReq');
+        const btnSubmitOrder = document.getElementById('btnSubmitOrder');
+
+        // Side toggle
+        const btnSideBuy = document.getElementById('btnSideBuy');
+        const btnSideSell = document.getElementById('btnSideSell');
+
+        btnSideBuy.addEventListener('click', () => setTradeSide('BUY'));
+        btnSideSell.addEventListener('click', () => setTradeSide('SELL'));
+
+        function setTradeSide(side) {
+            activeSide = side;
+            if (side === 'BUY') {
+                btnSideBuy.className = 'trade-side-btn active-buy';
+                btnSideSell.className = 'trade-side-btn';
+                btnSubmitOrder.className = 'btn-order-submit btn-buy';
+                btnSubmitOrder.innerHTML = '<span>Execute BUY Order</span>';
+            } else {
+                btnSideBuy.className = 'trade-side-btn';
+                btnSideSell.className = 'trade-side-btn active-sell';
+                btnSubmitOrder.className = 'btn-order-submit btn-sell';
+                btnSubmitOrder.innerHTML = '<span>Execute SELL Order</span>';
+            }
+        }
+
+        window.setQty = function(val) {
+            tradeQty.value = parseInt(tradeQty.value || 0) + val;
+            updateCalculations();
+        };
+
+        function updateQuote() {
+            const sym = stockSelect.value;
+            const item = STOCK_CATALOG[sym];
+            if (!item) return;
+
+            quoteSymbol.textContent = sym;
+            quoteName.textContent = item.name;
+            quoteLtp.textContent = '₹' + item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            const isPos = item.change >= 0;
+            quoteChange.className = 'live-quote-change ' + (isPos ? 'positive' : 'negative');
+            quoteChange.textContent = `${isPos ? '+' : ''}${item.change.toFixed(2)}%`;
+
+            if (orderType.value === 'MARKET') {
+                tradePrice.value = item.price.toFixed(2);
+                tradePrice.readOnly = true;
+            } else {
+                tradePrice.readOnly = false;
+            }
+            updateCalculations();
+
+            // Real live market price from Binance / NSE feed
+            if (window.apiClient) {
+                window.apiClient.getQuote(sym).then(liveQ => {
+                    if (liveQ && liveQ.price && stockSelect.value === sym) {
+                        item.price = liveQ.price;
+                        item.change = liveQ.change_pct;
+                        quoteLtp.textContent = '₹' + liveQ.price.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                        const pos = liveQ.change >= 0;
+                        quoteChange.className = 'live-quote-change ' + (pos ? 'positive' : 'negative');
+                        quoteChange.textContent = `${pos ? '+' : ''}${liveQ.change_pct.toFixed(2)}%`;
+                        if (orderType.value === 'MARKET') {
+                            tradePrice.value = liveQ.price.toFixed(2);
+                        }
+                        updateCalculations();
+                    }
+                }).catch(() => {});
+            }
+        }
+
+        function updateCalculations() {
+            const qty = parseFloat(tradeQty.value) || 0;
+            const price = parseFloat(tradePrice.value) || 0;
+            const val = qty * price;
+            const isMis = productType.value === 'MIS';
+            const margin = isMis ? val / 5 : val;
+
+            calcOrderValue.textContent = '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            calcMarginReq.textContent = '₹' + margin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        stockSelect.addEventListener('change', updateQuote);
+        tradeQty.addEventListener('input', updateCalculations);
+        tradePrice.addEventListener('input', updateCalculations);
+        productType.addEventListener('change', updateCalculations);
+        orderType.addEventListener('change', () => {
+            if (orderType.value === 'MARKET') {
+                const sym = stockSelect.value;
+                tradePrice.value = STOCK_CATALOG[sym].price.toFixed(2);
+                tradePrice.readOnly = true;
+                document.getElementById('priceHint').textContent = 'Executing at Market LTP';
+            } else {
+                tradePrice.readOnly = false;
+                document.getElementById('priceHint').textContent = 'Enter your custom limit price';
+            }
+            updateCalculations();
+        });
+
+        // Submit Trade
+        btnSubmitOrder.addEventListener('click', () => {
+            const sym = stockSelect.value;
+            const stock = STOCK_CATALOG[sym];
+            const qty = parseInt(tradeQty.value) || 0;
+            const price = parseFloat(tradePrice.value) || stock.price;
+            const prod = productType.value;
+            const isMis = prod === 'MIS';
+            const orderVal = qty * price;
+            const marginRequired = isMis ? orderVal / 5 : orderVal;
+
+            if (qty <= 0) {
+                showToast('Please enter a valid quantity', 'error');
+                return;
+            }
+
+            if (activeSide === 'BUY') {
+                if (portfolio.cash < marginRequired) {
+                    showToast(`Insufficient cash! Required: ₹${marginRequired.toLocaleString('en-IN')}, Available: ₹${portfolio.cash.toLocaleString('en-IN')}`, 'error');
+                    return;
+                }
+
+                portfolio.cash -= marginRequired;
+                const existing = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
+                if (existing) {
+                    const totalQty = existing.qty + qty;
+                    existing.buyPrice = ((existing.buyPrice * existing.qty) + (price * qty)) / totalQty;
+                    existing.qty = totalQty;
+                } else {
+                    portfolio.positions.push({ symbol: sym, product: prod, qty, buyPrice: price });
+                }
+
+                showToast(`BUY Order Executed: ${qty}x ${sym} @ ₹${price.toFixed(2)}`, 'success');
+            } else {
+                // SELL
+                const existingIdx = portfolio.positions.findIndex(p => p.symbol === sym && p.product === prod);
+                if (existingIdx === -1) {
+                    showToast(`No open ${prod} position in ${sym} to sell!`, 'error');
+                    return;
+                }
+                const pos = portfolio.positions[existingIdx];
+                if (pos.qty < qty) {
+                    showToast(`Cannot sell ${qty} units. You only hold ${pos.qty} units of ${sym}`, 'error');
+                    return;
+                }
+
+                const profit = (price - pos.buyPrice) * qty;
+                portfolio.realizedPnl += profit;
+                const marginToReturn = isMis ? (pos.buyPrice * qty) / 5 : (pos.buyPrice * qty);
+                portfolio.cash += marginToReturn + profit;
+
+                pos.qty -= qty;
+                if (pos.qty === 0) {
+                    portfolio.positions.splice(existingIdx, 1);
+                }
+
+                const profitStr = profit >= 0 ? `+₹${profit.toFixed(2)}` : `-₹${Math.abs(profit).toFixed(2)}`;
+                showToast(`SELL Order Executed: ${qty}x ${sym} @ ₹${price.toFixed(2)} (P&L: ${profitStr})`, profit >= 0 ? 'success' : 'error');
+            }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            portfolio.orders.unshift({
+                time: timeStr,
+                side: activeSide,
+                symbol: sym,
+                product: prod,
+                qty,
+                price,
+                status: 'EXECUTED'
+            });
+
+            savePortfolio();
+            renderAll();
+        });
+
+        // Square off position directly
+        window.squareOffPosition = function(index) {
+            const pos = portfolio.positions[index];
+            if (!pos) return;
+            const stock = STOCK_CATALOG[pos.symbol] || { price: pos.buyPrice };
+            const ltp = stock.price;
+            const profit = (ltp - pos.buyPrice) * pos.qty;
+            const isMis = pos.product === 'MIS';
+            const marginToReturn = isMis ? (pos.buyPrice * pos.qty) / 5 : (pos.buyPrice * pos.qty);
+
+            portfolio.cash += marginToReturn + profit;
+            portfolio.realizedPnl += profit;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            portfolio.orders.unshift({
+                time: timeStr,
+                side: 'SELL',
+                symbol: pos.symbol,
+                product: pos.product,
+                qty: pos.qty,
+                price: ltp,
+                status: 'SQUARED OFF'
+            });
+
+            portfolio.positions.splice(index, 1);
+            savePortfolio();
+            renderAll();
+            showToast(`Squared off ${pos.symbol} (${profit >= 0 ? '+' : ''}₹${profit.toFixed(2)})`, profit >= 0 ? 'success' : 'error');
+        };
+
+        // Render functions
+        function renderAll() {
+            renderSummary();
+            renderHoldings();
+            renderOrders();
+            renderWatchlist();
+        }
+
+        function renderSummary() {
+            let holdingsVal = 0;
+            let unrealized = 0;
+            let marginUsed = 0;
+
+            portfolio.positions.forEach(p => {
+                const stock = STOCK_CATALOG[p.symbol] || { price: p.buyPrice };
+                const curVal = stock.price * p.qty;
+                const costVal = p.buyPrice * p.qty;
+                holdingsVal += curVal;
+                unrealized += (curVal - costVal);
+                marginUsed += (p.product === 'MIS' ? costVal / 5 : costVal);
+            });
+
+            const totalPortfolioVal = portfolio.cash + marginUsed + unrealized;
+            const totalChange = totalPortfolioVal - portfolio.initialCapital;
+            const totalChangePct = (totalChange / portfolio.initialCapital) * 100;
+
+            document.getElementById('dispTotalVal').textContent = '₹' + Math.round(totalPortfolioVal).toLocaleString('en-IN');
+            const totalChgEl = document.getElementById('dispTotalChange');
+            totalChgEl.className = 'portfolio-card__sub ' + (totalChange >= 0 ? 'positive' : 'negative');
+            totalChgEl.textContent = `${totalChange >= 0 ? '▲ +' : '▼ -'}₹${Math.abs(Math.round(totalChange)).toLocaleString('en-IN')} (${totalChangePct.toFixed(2)}%)`;
+
+            document.getElementById('dispCashVal').textContent = '₹' + Math.round(portfolio.cash).toLocaleString('en-IN');
+            document.getElementById('dispMarginUsed').textContent = '₹' + Math.round(marginUsed).toLocaleString('en-IN');
+
+            const unpnlEl = document.getElementById('dispUnrealizedPnl');
+            unpnlEl.className = 'portfolio-card__value ' + (unrealized >= 0 ? 'positive' : 'negative');
+            unpnlEl.textContent = `${unrealized >= 0 ? '+' : '-'}₹${Math.abs(Math.round(unrealized)).toLocaleString('en-IN')}`;
+
+            const realPnlEl = document.getElementById('dispRealizedPnl');
+            realPnlEl.className = 'portfolio-card__value ' + (portfolio.realizedPnl >= 0 ? 'positive' : 'negative');
+            realPnlEl.textContent = `${portfolio.realizedPnl >= 0 ? '+' : '-'}₹${Math.abs(Math.round(portfolio.realizedPnl)).toLocaleString('en-IN')}`;
+
+            document.getElementById('dispTotalTradesCount').textContent = `${portfolio.orders.length} Placed`;
+            document.getElementById('countPositions').textContent = portfolio.positions.length;
+            document.getElementById('countOrders').textContent = portfolio.orders.length;
+        }
+
+        function renderHoldings() {
+            const tbody = document.getElementById('holdingsTableBody');
+            if (portfolio.positions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--c-text-tertiary);">No active positions. Select an instrument on the left to start trading!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = portfolio.positions.map((p, idx) => {
+                const stock = STOCK_CATALOG[p.symbol] || { price: p.buyPrice };
+                const ltp = stock.price;
+                const curVal = ltp * p.qty;
+                const pnl = (ltp - p.buyPrice) * p.qty;
+                const pnlPct = ((ltp - p.buyPrice) / p.buyPrice) * 100;
+                const isPos = pnl >= 0;
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${p.symbol}</strong>
+                            <div style="font-size:11px; color:var(--c-text-tertiary);">${STOCK_CATALOG[p.symbol]?.name || ''}</div>
+                        </td>
+                        <td><span class="badge-type">${p.product}</span></td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;">${p.qty}</td>
+                        <td style="font-family:var(--ff-mono);">₹${p.buyPrice.toFixed(2)}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;">₹${ltp.toFixed(2)}</td>
+                        <td style="font-family:var(--ff-mono);">₹${curVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${isPos ? 'positive' : 'negative'}">
+                            ${isPos ? '+' : ''}₹${pnl.toFixed(2)}
+                        </td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${isPos ? 'positive' : 'negative'}">
+                            ${isPos ? '+' : ''}${pnlPct.toFixed(2)}%
+                        </td>
+                        <td>
+                            <button class="btn-action-sm" onclick="squareOffPosition(${idx})">Square Off</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            if (portfolio.orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--c-text-tertiary);">No orders placed yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = portfolio.orders.slice(0, 15).map(o => {
+                const isBuy = o.side === 'BUY';
+                const totalVal = o.qty * o.price;
+                return `
+                    <tr>
+                        <td style="color:var(--c-text-tertiary); font-size:12px;">${o.time}</td>
+                        <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${o.side}</span></td>
+                        <td><strong>${o.symbol}</strong></td>
+                        <td><span class="badge-type">${o.product}</span></td>
+                        <td style="font-family:var(--ff-mono);">${o.qty}</td>
+                        <td style="font-family:var(--ff-mono);">₹${o.price.toFixed(2)}</td>
+                        <td style="font-family:var(--ff-mono);">₹${totalVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                        <td><span style="font-size:11px; font-weight:700; color:var(--c-positive);">✓ ${o.status}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderWatchlist() {
+            const tbody = document.getElementById('watchlistTableBody');
+            tbody.innerHTML = Object.entries(STOCK_CATALOG).map(([sym, item]) => {
+                const isPos = item.change >= 0;
+                return `
+                    <tr>
+                        <td><strong>${sym}</strong></td>
+                        <td style="color:var(--c-text-secondary);">${item.name}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;">₹${item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;" class="${isPos ? 'positive' : 'negative'}">
+                            ${isPos ? '+' : ''}${item.change.toFixed(2)}%
+                        </td>
+                        <td style="font-family:var(--ff-mono); font-size:11px; color:var(--c-text-tertiary);">
+                            H: ₹${item.high.toLocaleString('en-IN')} | L: ₹${item.low.toLocaleString('en-IN')}
+                        </td>
+                        <td>
+                            <button class="btn btn--outline btn--sm" style="padding:4px 8px; font-size:11px;" onclick="quickSelectStock('${sym}')">
+                                Trade
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.quickSelectStock = function(sym) {
+            stockSelect.value = sym;
+            updateQuote();
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+            showToast(`Loaded ${sym} into order terminal`, 'success');
+        };
+
+        // Tabs navigation in lower section
+        document.querySelectorAll('.t-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.t-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const target = btn.dataset.tab;
+                document.getElementById('tabContentHoldings').style.display = target === 'holdings' ? 'block' : 'none';
+                document.getElementById('tabContentOrders').style.display = target === 'orders' ? 'block' : 'none';
+                document.getElementById('tabContentWatchlist').style.display = target === 'watchlist' ? 'block' : 'none';
+                document.getElementById('tabContentAnalytics').style.display = target === 'analytics' ? 'block' : 'none';
+            });
+        });
+
+        // Fast buy button
+        document.getElementById('btnFastBuyNifty').addEventListener('click', () => {
+            quickSelectStock('RELIANCE');
+        });
+
+        // Reset portfolio
+        document.getElementById('btnResetPortfolio').addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset your paper portfolio to ₹10,00,000 virtual cash? All positions and orders will be cleared.')) {
+                portfolio = {
+                    cash: 1000000,
+                    initialCapital: 1000000,
+                    realizedPnl: 0,
+                    positions: [],
+                    orders: []
+                };
+                savePortfolio();
+                renderAll();
+                showToast('Portfolio reset successfully to ₹10,00,000 cash!', 'success');
+            }
+        });
+
+        // Simulate live tick
+        document.getElementById('btnRefreshPrices').addEventListener('click', () => {
+            Object.keys(STOCK_CATALOG).forEach(sym => {
+                const delta = (Math.random() - 0.48) * 0.015;
+                STOCK_CATALOG[sym].price = Math.round(STOCK_CATALOG[sym].price * (1 + delta) * 100) / 100;
+                STOCK_CATALOG[sym].change += (delta * 100);
+            });
+            updateQuote();
+            renderAll();
+            showToast('Simulated real-time price tick updated', 'success');
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast--${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Draw Equity Chart
+        function initEquityChart() {
+            const tfBtns = document.querySelectorAll('#chartTfBtns .tf-btn');
+            tfBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tfBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    drawChart();
+                });
+            });
+
+            function drawChart() {
+                const points = [1000000, 1004500, 1002800, 1009400, 1012300, 1008900, 1015600, 1021000, 1018500, 1024680];
+                const labels = ['D1', 'D3', 'D6', 'D9', 'D12', 'D15', 'D18', 'D21', 'D24', 'Today'];
+                drawAreaChart('equityChartCanvas', points, '#00d09c', 'rgba(0,208,156,0.18)', true, labels);
+            }
+
+            drawChart();
+            window.addEventListener('resize', drawChart);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const querySym = urlParams.get('symbol');
+            if (querySym && stockSelect) {
+                const norm = querySym.toUpperCase();
+                const matched = Object.keys(STOCK_CATALOG).find(s => s === norm || norm.includes(s));
+                if (matched) {
+                    stockSelect.value = matched;
+                }
+            }
+
+            updateQuote();
+            renderAll();
+            initEquityChart();
+
+            // Connect to real-time backend stream
+            if (window.apiClient) {
+                window.apiClient.onTick((ticks) => {
+                    ticks.forEach(t => {
+                        if (STOCK_CATALOG[t.symbol]) {
+                            STOCK_CATALOG[t.symbol].price = t.price;
+                            STOCK_CATALOG[t.symbol].change = t.change_pct;
+                        }
+                    });
+                    updateQuote();
+                    renderSummary();
+                });
+                window.apiClient.connectWebSocket();
+            }
+        });
+    </script>
+</body>
+</html>
