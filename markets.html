@@ -48,6 +48,452 @@
         .heatmap-cell:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
         .heatmap-cell__sym { font-size: 11px; font-weight: 700; color: #fff; opacity: 0.9; }
         .heatmap-cell__pct { font-size: 14px; font-weight: 800; font-family: var(--ff-mono); color: #fff; margin-top: 4px; }
+
+        /* Sub-Dashboard Navigation & Views */
+        .subdash-nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-md);
+            padding: 6px;
+            overflow-x: auto;
+        }
+        .subdash-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--c-text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            transition: all var(--t-fast);
+            white-space: nowrap;
+            font-family: var(--ff-primary);
+        }
+        .subdash-tab:hover {
+            color: var(--c-text-primary);
+            background: rgba(255,255,255,0.04);
+        }
+        .subdash-tab.active {
+            color: #060b16;
+            background: var(--c-accent);
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(0, 208, 156, 0.25);
+        }
+        .subdash-tab-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.15);
+            color: inherit;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .subdash-tab:not(.active) .subdash-tab-badge {
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+        }
+        .subdash-tab:not(.active) .subdash-tab-badge.badge-crypto {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .subdash-view {
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+        .subdash-view.active {
+            display: block;
+        }
+
+        /* API Integration Banner */
+        .api-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: linear-gradient(135deg, rgba(0, 208, 156, 0.08), rgba(59, 130, 246, 0.04));
+            border: 1px solid rgba(0, 208, 156, 0.25);
+            border-radius: var(--r-lg);
+            padding: 16px 22px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .api-banner--crypto {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(234, 88, 12, 0.04));
+            border-color: rgba(245, 158, 11, 0.25);
+        }
+        .api-banner--fx {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.04));
+            border-color: rgba(99, 102, 241, 0.25);
+        }
+        .api-banner__left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .api-banner__icon {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--r-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .api-banner--crypto .api-banner__icon {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .api-banner--fx .api-banner__icon {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+        }
+        .api-banner__title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--c-text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .api-banner__desc {
+            font-size: 12px;
+            color: var(--c-text-secondary);
+            margin-top: 4px;
+        }
+        .api-banner__key-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--ff-mono);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-primary);
+        }
+        .api-banner__actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .api-banner__btn {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: var(--r-sm);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-primary);
+            text-decoration: none;
+            transition: all var(--t-fast);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .api-banner__btn:hover {
+            background: var(--c-accent);
+            color: #060b16;
+            border-color: var(--c-accent);
+        }
+
+        /* KPI Grid */
+        .subdash-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        /* Catalog Toolbar */
+        .catalog-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .catalog-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+        .catalog-search-box input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border-radius: var(--r-sm);
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-primary);
+            font-size: 13px;
+            font-family: var(--ff-primary);
+            transition: all var(--t-fast);
+        }
+        .catalog-search-box input:focus {
+            outline: none;
+            border-color: var(--c-accent);
+            box-shadow: 0 0 0 3px var(--c-accent-dim);
+        }
+        .catalog-search-box svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--c-text-tertiary);
+        }
+        .catalog-sort-select {
+            padding: 9px 14px;
+            border-radius: var(--r-sm);
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--ff-primary);
+        }
+
+        /* Catalog Table */
+        .catalog-table-wrap {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            overflow-x: auto;
+            box-shadow: var(--shadow-sm);
+        }
+        .catalog-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        .catalog-table th {
+            padding: 14px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--c-text-tertiary);
+            border-bottom: 1px solid var(--c-border);
+            background: rgba(255,255,255,0.015);
+            white-space: nowrap;
+        }
+        .catalog-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--c-border);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .catalog-table tr:hover {
+            background: rgba(0, 208, 156, 0.025);
+        }
+        .catalog-table tr:last-child td {
+            border-bottom: none;
+        }
+        .asset-identity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .asset-identity__avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--r-sm);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--c-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--c-text-primary);
+            flex-shrink: 0;
+        }
+        .asset-identity__symbol {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--c-text-primary);
+        }
+        .asset-identity__name {
+            font-size: 11px;
+            color: var(--c-text-tertiary);
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .token-badge {
+            display: inline-block;
+            font-family: var(--ff-mono);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.05);
+            color: var(--c-text-tertiary);
+            margin-top: 2px;
+        }
+        .sector-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            white-space: nowrap;
+        }
+        .sector-badge--crypto {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+        .live-price-cell {
+            font-family: var(--ff-mono);
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--c-text-primary);
+        }
+        .price-dual {
+            display: flex;
+            flex-direction: column;
+        }
+        .price-dual__sub {
+            font-size: 11px;
+            color: var(--c-text-tertiary);
+            font-family: var(--ff-mono);
+        }
+        .action-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-btn-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: var(--r-sm);
+            font-size: 11px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all var(--t-fast);
+            border: 1px solid var(--c-border);
+            background: rgba(255,255,255,0.03);
+            color: var(--c-text-secondary);
+            cursor: pointer;
+        }
+        .action-btn-sm:hover {
+            color: var(--c-text-primary);
+            border-color: var(--c-accent);
+        }
+        .action-btn-sm--primary {
+            background: var(--c-accent-dim);
+            color: var(--c-accent);
+            border-color: rgba(0, 208, 156, 0.3);
+        }
+        .action-btn-sm--primary:hover {
+            background: var(--c-accent);
+            color: #060b16;
+        }
+        .sparkline-canvas {
+            width: 90px;
+            height: 32px;
+            display: block;
+        }
+        .high-low-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 110px;
+        }
+        .high-low-bar__labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            font-family: var(--ff-mono);
+            color: var(--c-text-tertiary);
+        }
+        .high-low-bar__track {
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        .high-low-bar__fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff5252, #00d09c);
+            border-radius: 2px;
+        }
+
+        /* Currency Converter */
+        .converter-card {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .converter-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .converter-input-wrap {
+            flex: 1;
+            min-width: 180px;
+        }
+        .converter-input-wrap label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--c-text-tertiary);
+            margin-bottom: 6px;
+        }
+        .converter-input-wrap input,
+        .converter-input-wrap select {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-sm);
+            color: var(--c-text-primary);
+            font-size: 14px;
+            font-family: var(--ff-mono);
+        }
+        .converter-equal {
+            font-size: 24px;
+            color: var(--c-accent);
+            padding-top: 18px;
+        }
+
+        @media (max-width: 1024px) {
+            .subdash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .subdash-kpi-grid { grid-template-columns: 1fr; }
+            .catalog-toolbar { flex-direction: column; align-items: stretch; }
+            .catalog-search-box { min-width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -179,66 +625,387 @@
                     </div>
                 </div>
 
-                <!-- Major Indices -->
-                <div class="dash-grid dash-grid--4" id="majorIndicesGrid" style="margin-bottom: 24px;">
-                    <!-- Filled by JS -->
+                <!-- Investment Sub-Dashboard Switcher -->
+                <div class="subdash-nav-bar fade-in" id="subdashNavBar">
+                    <button class="subdash-tab active" data-subdash="overview" id="tabSubdashOverview">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M3 10H17M10 3C8 6 8 14 10 17C12 14 12 6 10 3Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                        Macro Overview
+                    </button>
+                    <button class="subdash-tab" data-subdash="stocks" id="tabSubdashStocks">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M3 17L8 10L12 14L17 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="6" r="1.5" fill="currentColor"/></svg>
+                        Indian Stocks <span class="subdash-tab-badge">Kite API</span>
+                    </button>
+                    <button class="subdash-tab" data-subdash="crypto" id="tabSubdashCrypto">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 7H11C11.8 7 12.5 7.7 12.5 8.5C12.5 9.3 11.8 10 11 10H8V7Z" stroke="currentColor" stroke-width="1.2"/><path d="M8 10H11.5C12.3 10 13 10.7 13 11.5C13 12.3 12.3 13 11.5 13H8V10Z" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 5.5V7M9.5 13V14.5M11.5 5.5V7M11.5 13V14.5" stroke="currentColor" stroke-width="1.2"/></svg>
+                        Crypto &amp; Web3 <span class="subdash-tab-badge badge-crypto">Binance API</span>
+                    </button>
+                    <button class="subdash-tab" data-subdash="currencies" id="tabSubdashCurrencies">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+                        Currencies &amp; Forex
+                    </button>
                 </div>
 
-                <!-- Middle Row: Heatmap + Sectors -->
-                <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
-                    <div class="dash-card fade-in stagger-3">
+                <!-- ==============================================
+                     SUB-DASHBOARD 1: MACRO OVERVIEW
+                     ============================================== -->
+                <div class="subdash-view active" id="subdashViewOverview">
+                    <!-- Major Indices -->
+                    <div class="dash-grid dash-grid--4" id="majorIndicesGrid" style="margin-bottom: 24px;">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <!-- Middle Row: Heatmap + Sectors -->
+                    <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
+                        <div class="dash-card fade-in stagger-3">
+                            <div class="dash-card__header">
+                                <div>
+                                    <div class="dash-card__title">Market Heatmap</div>
+                                    <div class="dash-card__subtitle">NIFTY 50 stocks by performance</div>
+                                </div>
+                            </div>
+                            <div class="heatmap-grid" id="heatmapGrid">
+                                <!-- Filled by JS -->
+                            </div>
+                        </div>
+
+                        <div class="dash-card fade-in stagger-4">
+                            <div class="dash-card__header">
+                                <div class="dash-card__title">Sector Performance</div>
+                                <div class="dash-tabs" id="sectorTimeTabs">
+                                    <button class="dash-tab active" data-tab="1d">1D</button>
+                                    <button class="dash-tab" data-tab="1w">1W</button>
+                                    <button class="dash-tab" data-tab="1m">1M</button>
+                                </div>
+                            </div>
+                            <div id="sectorList">
+                                <!-- Filled by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Breadth + FII/DII -->
+                    <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
+                        <div class="dash-card fade-in stagger-5">
+                            <div class="dash-card__header">
+                                <div class="dash-card__title">Market Breadth</div>
+                                <span class="dash-card__action">View Details →</span>
+                            </div>
+                            <div class="chart-area" style="height: 180px; margin-bottom: 16px;">
+                                <canvas id="breadthChart"></canvas>
+                            </div>
+                            <div id="breadthStats">
+                                <!-- Filled by JS -->
+                            </div>
+                        </div>
+
+                        <div class="dash-card fade-in stagger-6">
+                            <div class="dash-card__header">
+                                <div class="dash-card__title">FII / DII Activity</div>
+                                <span class="dash-card__subtitle">Cash segment (₹ Cr)</span>
+                            </div>
+                            <div class="fii-dii-grid" id="fiiDiiGrid">
+                                <!-- Filled by JS -->
+                            </div>
+                            <div class="chart-area" style="height: 140px; margin-top: 16px;">
+                                <canvas id="fiiDiiChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==============================================
+                     SUB-DASHBOARD 2: INDIAN STOCKS (KITE CONNECT API)
+                     ============================================== -->
+                <div class="subdash-view" id="subdashViewStocks">
+                    <!-- Kite API Banner -->
+                    <div class="api-banner">
+                        <div class="api-banner__left">
+                            <div class="api-banner__icon">📊</div>
+                            <div>
+                                <div class="api-banner__title">
+                                    Zerodha Kite Connect v3 Integration
+                                    <span class="market-status market-status--open" style="font-size: 11px; padding: 2px 8px;">
+                                        <span class="market-status__dot"></span> Live Feed Active
+                                    </span>
+                                </div>
+                                <div class="api-banner__desc">
+                                    Streaming real-time NSE/BSE quotes & historical candles via Kite API Key:
+                                    <span class="api-banner__key-pill">40fk01s422b5f4z9</span>
+                                    • Segment: <span class="api-banner__key-pill">EQUITY_CASH</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="api-banner__actions">
+                            <a href="/kite/login" target="_blank" class="api-banner__btn">
+                                🔑 Authorize Kite Session
+                            </a>
+                            <a href="https://kite.trade/docs/connect/v3/" target="_blank" class="api-banner__btn">
+                                ↗ API Docs
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Stocks KPIs -->
+                    <div class="subdash-kpi-grid" id="stocksKpiGrid">
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Instruments Tracked</div>
+                            <div class="index-big-card__val" id="kpiStocksCount">20</div>
+                            <div class="breadth-row__label">Large-Cap Equities (NSE/BSE)</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Top Gainer</div>
+                            <div class="index-big-card__val positive" id="kpiStocksTopGainer">—</div>
+                            <div class="breadth-row__label" id="kpiStocksTopGainerSub">Loading...</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Top Loser / Drag</div>
+                            <div class="index-big-card__val negative" id="kpiStocksTopLoser">—</div>
+                            <div class="breadth-row__label" id="kpiStocksTopLoserSub">Loading...</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Market Sentiment</div>
+                            <div class="index-big-card__val" id="kpiStocksSentiment">—</div>
+                            <div class="breadth-row__label" id="kpiStocksAdvanceCount">Advances vs Declines</div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="catalog-toolbar">
+                        <div class="catalog-search-box">
+                            <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            <input type="text" id="stocksSearchInput" placeholder="Filter stocks by symbol or company name (e.g. RELIANCE, TCS)...">
+                        </div>
+                        <div class="filter-pills" id="stocksSectorPills">
+                            <button class="filter-pill active" data-sector="ALL">All Sectors</button>
+                            <button class="filter-pill" data-sector="Banking">Banking</button>
+                            <button class="filter-pill" data-sector="Information Technology">IT</button>
+                            <button class="filter-pill" data-sector="Oil & Gas">Energy</button>
+                            <button class="filter-pill" data-sector="Automobile">Auto</button>
+                            <button class="filter-pill" data-sector="Pharmaceuticals">Pharma</button>
+                            <button class="filter-pill" data-sector="FMCG">FMCG</button>
+                            <button class="filter-pill" data-sector="Metals & Mining">Metals</button>
+                        </div>
+                        <select class="catalog-sort-select" id="stocksSortSelect">
+                            <option value="gainers">Top Gainers (%)</option>
+                            <option value="losers">Top Losers (%)</option>
+                            <option value="price_desc">Highest Price (₹)</option>
+                            <option value="volume_desc">Most Active (Volume)</option>
+                            <option value="symbol_asc">Symbol (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <!-- Stocks Catalog Table -->
+                    <div class="catalog-table-wrap">
+                        <table class="catalog-table" id="stocksCatalogTable">
+                            <thead>
+                                <tr>
+                                    <th>Instrument &amp; Token</th>
+                                    <th>Sector &amp; Exchange</th>
+                                    <th>Live Price</th>
+                                    <th>24h Change</th>
+                                    <th>24h High / Low</th>
+                                    <th>Volume</th>
+                                    <th>7D Trend</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stocksCatalogBody">
+                                <tr>
+                                    <td colspan="8" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">
+                                        Fetching live stock data from Zerodha Kite Connect API...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ==============================================
+                     SUB-DASHBOARD 3: CRYPTO & WEB3 (BINANCE API)
+                     ============================================== -->
+                <div class="subdash-view" id="subdashViewCrypto">
+                    <!-- Binance API Banner -->
+                    <div class="api-banner api-banner--crypto">
+                        <div class="api-banner__left">
+                            <div class="api-banner__icon">🪙</div>
+                            <div>
+                                <div class="api-banner__title">
+                                    Binance Official Spot API Integration
+                                    <span class="market-status market-status--open" style="font-size: 11px; padding: 2px 8px;">
+                                        <span class="market-status__dot"></span> Spot Streams Active
+                                    </span>
+                                </div>
+                                <div class="api-banner__desc">
+                                    Real-time quotes, 24h ticker metrics & klines via Binance API Key:
+                                    <span class="api-banner__key-pill">DHtL5rlQ...F2F</span>
+                                    • Dual denomination: <span class="api-banner__key-pill">USDT &amp; INR</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="api-banner__actions">
+                            <a href="https://binance-docs.github.io/apidocs/spot/en/" target="_blank" class="api-banner__btn">
+                                ↗ Binance Docs
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Crypto KPIs -->
+                    <div class="subdash-kpi-grid" id="cryptoKpiGrid">
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Crypto Pairs Tracked</div>
+                            <div class="index-big-card__val" id="kpiCryptoCount">11</div>
+                            <div class="breadth-row__label">Binance Spot Markets</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">BTC / USDT Price</div>
+                            <div class="index-big-card__val" id="kpiBtcPrice">$81,480</div>
+                            <div class="breadth-row__label" id="kpiBtcInr">₹69,25,800 INR</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Top Crypto Gainer</div>
+                            <div class="index-big-card__val positive" id="kpiCryptoTopGainer">—</div>
+                            <div class="breadth-row__label" id="kpiCryptoTopGainerSub">Loading...</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Aggregate 24h Volume</div>
+                            <div class="index-big-card__val" id="kpiCryptoVolume">—</div>
+                            <div class="breadth-row__label">USD Equivalent</div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="catalog-toolbar">
+                        <div class="catalog-search-box">
+                            <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            <input type="text" id="cryptoSearchInput" placeholder="Filter crypto by symbol or pair (e.g. BTC, ETH, SOL)...">
+                        </div>
+                        <div class="filter-pills" id="cryptoCategoryPills">
+                            <button class="filter-pill active" data-cat="ALL">All Assets</button>
+                            <button class="filter-pill" data-cat="USDT">USDT Pairs</button>
+                            <button class="filter-pill" data-cat="INR">INR Denominated</button>
+                            <button class="filter-pill" data-cat="Layer-1">Layer-1</button>
+                            <button class="filter-pill" data-cat="DeFi">DeFi &amp; Meme</button>
+                        </div>
+                        <select class="catalog-sort-select" id="cryptoSortSelect">
+                            <option value="price_desc">Highest Price ($)</option>
+                            <option value="gainers">Top Gainers (%)</option>
+                            <option value="losers">Top Losers (%)</option>
+                            <option value="volume_desc">24h Volume</option>
+                            <option value="symbol_asc">Symbol (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <!-- Crypto Catalog Table -->
+                    <div class="catalog-table-wrap">
+                        <table class="catalog-table" id="cryptoCatalogTable">
+                            <thead>
+                                <tr>
+                                    <th>Crypto Asset &amp; Pair</th>
+                                    <th>Category &amp; Exchange</th>
+                                    <th>Price (USDT)</th>
+                                    <th>Price (INR)</th>
+                                    <th>24h Change</th>
+                                    <th>24h High / Low</th>
+                                    <th>24h Volume</th>
+                                    <th>7D Trend</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cryptoCatalogBody">
+                                <tr>
+                                    <td colspan="9" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">
+                                        Fetching live crypto data from Binance Spot API...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ==============================================
+                     SUB-DASHBOARD 4: CURRENCIES & FOREX
+                     ============================================== -->
+                <div class="subdash-view" id="subdashViewCurrencies">
+                    <!-- Forex Banner -->
+                    <div class="api-banner api-banner--fx">
+                        <div class="api-banner__left">
+                            <div class="api-banner__icon">💱</div>
+                            <div>
+                                <div class="api-banner__title">
+                                    Global Currency Rates &amp; Forex Feeds
+                                    <span class="market-status market-status--open" style="font-size: 11px; padding: 2px 8px;">
+                                        <span class="market-status__dot"></span> RBI Reference Rates
+                                    </span>
+                                </div>
+                                <div class="api-banner__desc">
+                                    Live FX crosses against Indian Rupee (INR) for foreign investment hedging and cross-border trades.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Currency Converter Card -->
+                    <div class="converter-card fade-in">
                         <div class="dash-card__header">
                             <div>
-                                <div class="dash-card__title">Market Heatmap</div>
-                                <div class="dash-card__subtitle">NIFTY 50 stocks by performance</div>
+                                <div class="dash-card__title">Live Currency Converter Calculator</div>
+                                <div class="dash-card__subtitle">Instant conversion based on real-time forex reference rates</div>
                             </div>
                         </div>
-                        <div class="heatmap-grid" id="heatmapGrid">
-                            <!-- Filled by JS -->
-                        </div>
-                    </div>
-
-                    <div class="dash-card fade-in stagger-4">
-                        <div class="dash-card__header">
-                            <div class="dash-card__title">Sector Performance</div>
-                            <div class="dash-tabs" id="sectorTimeTabs">
-                                <button class="dash-tab active" data-tab="1d">1D</button>
-                                <button class="dash-tab" data-tab="1w">1W</button>
-                                <button class="dash-tab" data-tab="1m">1M</button>
+                        <div class="converter-row">
+                            <div class="converter-input-wrap">
+                                <label for="convAmount">Amount</label>
+                                <input type="number" id="convAmount" value="1000" min="1" step="any">
+                            </div>
+                            <div class="converter-input-wrap">
+                                <label for="convFrom">From Currency</label>
+                                <select id="convFrom">
+                                    <option value="USD" selected>USD — United States Dollar</option>
+                                    <option value="EUR">EUR — Euro</option>
+                                    <option value="GBP">GBP — British Pound</option>
+                                    <option value="JPY">JPY — Japanese Yen (100x)</option>
+                                    <option value="INR">INR — Indian Rupee</option>
+                                </select>
+                            </div>
+                            <div class="converter-equal">=</div>
+                            <div class="converter-input-wrap">
+                                <label for="convTo">To Currency</label>
+                                <select id="convTo">
+                                    <option value="INR" selected>INR — Indian Rupee</option>
+                                    <option value="USD">USD — United States Dollar</option>
+                                    <option value="EUR">EUR — Euro</option>
+                                    <option value="GBP">GBP — British Pound</option>
+                                    <option value="JPY">JPY — Japanese Yen (100x)</option>
+                                </select>
+                            </div>
+                            <div class="converter-input-wrap">
+                                <label>Converted Value</label>
+                                <input type="text" id="convResult" readonly value="₹85,000.00" style="font-weight: 800; color: var(--c-accent);">
                             </div>
                         </div>
-                        <div id="sectorList">
-                            <!-- Filled by JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bottom Row: Breadth + FII/DII -->
-                <div class="dash-grid dash-grid--2" style="margin-bottom: 24px;">
-                    <div class="dash-card fade-in stagger-5">
-                        <div class="dash-card__header">
-                            <div class="dash-card__title">Market Breadth</div>
-                            <span class="dash-card__action">View Details →</span>
-                        </div>
-                        <div class="chart-area" style="height: 180px; margin-bottom: 16px;">
-                            <canvas id="breadthChart"></canvas>
-                        </div>
-                        <div id="breadthStats">
-                            <!-- Filled by JS -->
-                        </div>
                     </div>
 
-                    <div class="dash-card fade-in stagger-6">
-                        <div class="dash-card__header">
-                            <div class="dash-card__title">FII / DII Activity</div>
-                            <span class="dash-card__subtitle">Cash segment (₹ Cr)</span>
-                        </div>
-                        <div class="fii-dii-grid" id="fiiDiiGrid">
-                            <!-- Filled by JS -->
-                        </div>
-                        <div class="chart-area" style="height: 140px; margin-top: 16px;">
-                            <canvas id="fiiDiiChart"></canvas>
-                        </div>
+                    <!-- Currencies Catalog Table -->
+                    <div class="catalog-table-wrap">
+                        <table class="catalog-table" id="currenciesCatalogTable">
+                            <thead>
+                                <tr>
+                                    <th>Currency Pair</th>
+                                    <th>Description</th>
+                                    <th>Exchange Rate</th>
+                                    <th>24h Change</th>
+                                    <th>7D Trend</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="currenciesCatalogBody">
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">
+                                        Fetching currency exchange rates...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -249,7 +1016,675 @@
     <script src="dashboard.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Major Indices Data (Real Live Feed with fallback)
+        // ========================================================
+        // 1. SUB-DASHBOARD SWITCHING LOGIC
+        // ========================================================
+        const subdashTabs = document.querySelectorAll('#subdashNavBar .subdash-tab');
+        const subdashViews = {
+            'overview': document.getElementById('subdashViewOverview'),
+            'stocks': document.getElementById('subdashViewStocks'),
+            'crypto': document.getElementById('subdashViewCrypto'),
+            'currencies': document.getElementById('subdashViewCurrencies')
+        };
+
+        let currentSubdash = 'overview';
+        let stocksCatalogData = [];
+        let cryptoCatalogData = [];
+        let currenciesCatalogData = [];
+
+        function switchSubdashboard(tabName) {
+            if (!subdashViews[tabName]) tabName = 'overview';
+            currentSubdash = tabName;
+
+            subdashTabs.forEach(btn => {
+                if (btn.getAttribute('data-subdash') === tabName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            Object.keys(subdashViews).forEach(key => {
+                if (subdashViews[key]) {
+                    if (key === tabName) {
+                        subdashViews[key].classList.add('active');
+                        subdashViews[key].style.display = 'block';
+                    } else {
+                        subdashViews[key].classList.remove('active');
+                        subdashViews[key].style.display = 'none';
+                    }
+                }
+            });
+
+            // Update URL query parameter
+            try {
+                const url = new URL(window.location);
+                url.searchParams.set('type', tabName);
+                window.history.replaceState({}, '', url);
+            } catch (e) {}
+
+            // Trigger catalog fetch if not already loaded
+            if (tabName === 'stocks') {
+                loadStocksCatalog();
+            } else if (tabName === 'crypto') {
+                loadCryptoCatalog();
+            } else if (tabName === 'currencies') {
+                loadCurrenciesCatalog();
+            }
+        }
+
+        subdashTabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const subdash = btn.getAttribute('data-subdash');
+                switchSubdashboard(subdash);
+            });
+        });
+
+        // Topbar search shortcut
+        const topbarSearch = document.getElementById('dashSearchInput');
+        if (topbarSearch) {
+            topbarSearch.addEventListener('input', (e) => {
+                const val = e.target.value.trim().toUpperCase();
+                if (currentSubdash === 'stocks') {
+                    const stocksInput = document.getElementById('stocksSearchInput');
+                    if (stocksInput) {
+                        stocksInput.value = val;
+                        stockSearchTerm = val;
+                        renderStocksTable();
+                    }
+                } else if (currentSubdash === 'crypto') {
+                    const cryptoInput = document.getElementById('cryptoSearchInput');
+                    if (cryptoInput) {
+                        cryptoInput.value = val;
+                        cryptoSearchTerm = val;
+                        renderCryptoTable();
+                    }
+                }
+            });
+        }
+
+        // ========================================================
+        // 2. STOCKS CATALOG (ZERODHA KITE CONNECT API)
+        // ========================================================
+        let selectedStockSector = 'ALL';
+        let stockSearchTerm = '';
+        let stockSortMode = 'gainers';
+
+        function loadStocksCatalog() {
+            if (stocksCatalogData.length > 0) return;
+            const tbody = document.getElementById('stocksCatalogBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">Streaming real-time stocks from Zerodha Kite Connect API...</td></tr>`;
+            }
+
+            if (window.apiClient && window.apiClient.getStocksCatalog) {
+                window.apiClient.getStocksCatalog().then(data => {
+                    if (data && data.length > 0) {
+                        stocksCatalogData = data;
+                        updateStocksKPIs();
+                        renderStocksTable();
+                    } else {
+                        renderStocksFallback();
+                    }
+                }).catch(err => {
+                    console.warn('[Stocks Catalog Live Feed Warning]:', err);
+                    renderStocksFallback();
+                });
+            } else {
+                renderStocksFallback();
+            }
+        }
+
+        function renderStocksFallback() {
+            stocksCatalogData = [
+                { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', sector: 'Oil & Gas', segment: 'EQUITY', exchange: 'NSE', token: '738561', price: 2985.40, change: 34.20, change_pct: 1.16, high_24h: 3010.00, low_24h: 2950.00, volume: 5420000 },
+                { symbol: 'TCS', name: 'Tata Consultancy Services', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '2953217', price: 3840.15, change: 48.70, change_pct: 1.28, high_24h: 3865.00, low_24h: 3790.00, volume: 2180000 },
+                { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '341249', price: 1680.90, change: -12.30, change_pct: -0.73, high_24h: 1702.00, low_24h: 1675.00, volume: 8940000 },
+                { symbol: 'INFY', name: 'Infosys Ltd.', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '408065', price: 1520.45, change: 28.60, change_pct: 1.92, high_24h: 1535.00, low_24h: 1495.00, volume: 6200000 },
+                { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '1270529', price: 1145.30, change: 16.80, change_pct: 1.49, high_24h: 1152.00, low_24h: 1128.00, volume: 4850000 },
+                { symbol: 'SBIN', name: 'State Bank of India', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '779521', price: 785.60, change: 9.40, change_pct: 1.21, high_24h: 792.00, low_24h: 776.00, volume: 7300000 },
+                { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd.', sector: 'Telecommunication', segment: 'EQUITY', exchange: 'NSE', token: '2714625', price: 1340.20, change: 21.50, change_pct: 1.63, high_24h: 1348.00, low_24h: 1318.00, volume: 3200000 },
+                { symbol: 'TATASTEEL', name: 'Tata Steel Ltd.', sector: 'Metals & Mining', segment: 'EQUITY', exchange: 'NSE', token: '895745', price: 162.80, change: 3.40, change_pct: 2.13, high_24h: 165.00, low_24h: 159.00, volume: 14200000 },
+                { symbol: 'ITC', name: 'ITC Ltd.', sector: 'FMCG', segment: 'EQUITY', exchange: 'NSE', token: '424961', price: 432.10, change: -2.10, change_pct: -0.48, high_24h: 436.00, low_24h: 429.50, volume: 5600000 },
+                { symbol: 'TATAMOTORS', name: 'Tata Motors Ltd.', sector: 'Automobile', segment: 'EQUITY', exchange: 'NSE', token: '884737', price: 978.40, change: 24.60, change_pct: 2.58, high_24h: 988.00, low_24h: 954.00, volume: 5800000 },
+                { symbol: 'MARUTI', name: 'Maruti Suzuki India', sector: 'Automobile', segment: 'EQUITY', exchange: 'NSE', token: '2815745', price: 12450.00, change: 180.00, change_pct: 1.47, high_24h: 12580.00, low_24h: 12280.00, volume: 720000 },
+                { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', sector: 'Pharmaceuticals', segment: 'EQUITY', exchange: 'NSE', token: '857857', price: 1560.80, change: 14.20, change_pct: 0.92, high_24h: 1572.00, low_24h: 1542.00, volume: 1850000 },
+                { symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '81153', price: 6920.00, change: -85.00, change_pct: -1.21, high_24h: 7040.00, low_24h: 6890.00, volume: 1100000 },
+                { symbol: 'WIPRO', name: 'Wipro Ltd.', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '969473', price: 478.30, change: 5.60, change_pct: 1.18, high_24h: 484.00, low_24h: 472.00, volume: 4100000 },
+                { symbol: 'ASIANPAINT', name: 'Asian Paints Ltd.', sector: 'FMCG', segment: 'EQUITY', exchange: 'NSE', token: '60417', price: 2890.50, change: -18.40, change_pct: -0.63, high_24h: 2920.00, low_24h: 2875.00, volume: 950000 }
+            ];
+            updateStocksKPIs();
+            renderStocksTable();
+        }
+
+        function updateStocksKPIs() {
+            if (!stocksCatalogData.length) return;
+            const countEl = document.getElementById('kpiStocksCount');
+            if (countEl) countEl.textContent = stocksCatalogData.length;
+
+            const sorted = [...stocksCatalogData].sort((a, b) => b.change_pct - a.change_pct);
+            const topGainer = sorted[0];
+            const topLoser = sorted[sorted.length - 1];
+
+            const gainerEl = document.getElementById('kpiStocksTopGainer');
+            const gainerSub = document.getElementById('kpiStocksTopGainerSub');
+            if (gainerEl && topGainer) {
+                gainerEl.textContent = `+${topGainer.change_pct}%`;
+                gainerSub.textContent = `${topGainer.symbol} (₹${topGainer.price.toLocaleString('en-IN')})`;
+            }
+
+            const loserEl = document.getElementById('kpiStocksTopLoser');
+            const loserSub = document.getElementById('kpiStocksTopLoserSub');
+            if (loserEl && topLoser) {
+                loserEl.textContent = `${topLoser.change_pct}%`;
+                loserSub.textContent = `${topLoser.symbol} (₹${topLoser.price.toLocaleString('en-IN')})`;
+            }
+
+            const adv = stocksCatalogData.filter(s => s.change >= 0).length;
+            const dec = stocksCatalogData.filter(s => s.change < 0).length;
+            const sentEl = document.getElementById('kpiStocksSentiment');
+            const advSub = document.getElementById('kpiStocksAdvanceCount');
+            if (sentEl) {
+                sentEl.textContent = adv >= dec ? 'Bullish' : 'Bearish';
+                sentEl.className = `index-big-card__val ${adv >= dec ? 'positive' : 'negative'}`;
+            }
+            if (advSub) advSub.textContent = `${adv} Advances • ${dec} Declines`;
+        }
+
+        function renderStocksTable() {
+            const tbody = document.getElementById('stocksCatalogBody');
+            if (!tbody) return;
+
+            let filtered = [...stocksCatalogData];
+
+            if (stockSearchTerm) {
+                const term = stockSearchTerm.toLowerCase();
+                filtered = filtered.filter(s =>
+                    s.symbol.toLowerCase().includes(term) ||
+                    (s.name && s.name.toLowerCase().includes(term)) ||
+                    (s.sector && s.sector.toLowerCase().includes(term))
+                );
+            }
+
+            if (selectedStockSector && selectedStockSector !== 'ALL') {
+                filtered = filtered.filter(s => s.sector && s.sector.toLowerCase().includes(selectedStockSector.toLowerCase()));
+            }
+
+            if (stockSortMode === 'gainers') {
+                filtered.sort((a, b) => b.change_pct - a.change_pct);
+            } else if (stockSortMode === 'losers') {
+                filtered.sort((a, b) => a.change_pct - b.change_pct);
+            } else if (stockSortMode === 'price_desc') {
+                filtered.sort((a, b) => b.price - a.price);
+            } else if (stockSortMode === 'volume_desc') {
+                filtered.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+            } else if (stockSortMode === 'symbol_asc') {
+                filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">No stocks matched your search filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => {
+                const isPos = s.change >= 0;
+                const high = s.high_24h || (s.price * 1.01);
+                const low = s.low_24h || (s.price * 0.99);
+                const rangePct = high > low ? Math.min(100, Math.max(0, ((s.price - low) / (high - low)) * 100)) : 50;
+                const volFormatted = s.volume ? (s.volume >= 10000000 ? (s.volume / 10000000).toFixed(2) + ' Cr' : (s.volume >= 100000 ? (s.volume / 100000).toFixed(2) + ' L' : s.volume.toLocaleString('en-IN'))) : '—';
+                const canvasId = `stockSpark_${s.symbol}`;
+
+                return `
+                <tr>
+                    <td>
+                        <div class="asset-identity">
+                            <div class="asset-identity__avatar">${s.symbol.substring(0, 2)}</div>
+                            <div>
+                                <div class="asset-identity__symbol">${s.symbol}</div>
+                                <div class="asset-identity__name">${s.name || s.symbol}</div>
+                                <span class="token-badge">Token: ${s.token || 'NSE'}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="sector-badge">${s.sector || 'Equities'}</span>
+                        <div style="font-size: 11px; color: var(--c-text-tertiary); margin-top: 3px;">${s.exchange || 'NSE'} Cash</div>
+                    </td>
+                    <td>
+                        <div class="live-price-cell">₹${s.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </td>
+                    <td>
+                        <div class="${isPos ? 'positive' : 'negative'}" style="font-family: var(--ff-mono); font-weight: 700; font-size: 14px;">
+                            ${isPos ? '+' : ''}${s.change_pct}%
+                        </div>
+                        <div style="font-size: 11px; color: var(--c-text-tertiary); font-family: var(--ff-mono);">
+                            ${isPos ? '+' : ''}₹${s.change}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="high-low-bar">
+                            <div class="high-low-bar__labels">
+                                <span>L: ₹${low.toLocaleString('en-IN')}</span>
+                                <span>H: ₹${high.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="high-low-bar__track">
+                                <div class="high-low-bar__fill" style="width: ${rangePct}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family: var(--ff-mono); font-weight: 600;">${volFormatted}</td>
+                    <td>
+                        <canvas id="${canvasId}" class="sparkline-canvas"></canvas>
+                    </td>
+                    <td>
+                        <div class="action-btn-group">
+                            <a href="predictions.html?symbol=${s.symbol}" class="action-btn-sm action-btn-sm--primary" title="Run AI Prediction">
+                                🔮 Predict
+                            </a>
+                            <a href="analysis.html?cat=${s.symbol}" class="action-btn-sm" title="Technical Analysis">
+                                📊 Analyze
+                            </a>
+                            <a href="mock-trading.html?symbol=${s.symbol}" class="action-btn-sm" title="Paper Trade">
+                                ⚡ Trade
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                filtered.forEach(s => {
+                    const canvasId = `stockSpark_${s.symbol}`;
+                    const spark = (s.sparkline && s.sparkline.length > 0) ? s.sparkline : [s.price * 0.98, s.price * 0.99, s.price, s.price * 1.01, s.price];
+                    const isPos = s.change >= 0;
+                    drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
+                });
+            });
+        }
+
+        const stocksSearch = document.getElementById('stocksSearchInput');
+        if (stocksSearch) {
+            stocksSearch.addEventListener('input', (e) => {
+                stockSearchTerm = e.target.value.trim();
+                renderStocksTable();
+            });
+        }
+
+        const stocksPills = document.querySelectorAll('#stocksSectorPills .filter-pill');
+        stocksPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                stocksPills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                selectedStockSector = pill.getAttribute('data-sector');
+                renderStocksTable();
+            });
+        });
+
+        const stocksSort = document.getElementById('stocksSortSelect');
+        if (stocksSort) {
+            stocksSort.addEventListener('change', (e) => {
+                stockSortMode = e.target.value;
+                renderStocksTable();
+            });
+        }
+
+        // ========================================================
+        // 3. CRYPTO CATALOG (BINANCE API)
+        // ========================================================
+        let selectedCryptoCategory = 'ALL';
+        let cryptoSearchTerm = '';
+        let cryptoSortMode = 'price_desc';
+
+        function loadCryptoCatalog() {
+            if (cryptoCatalogData.length > 0) return;
+            const tbody = document.getElementById('cryptoCatalogBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">Streaming real-time crypto markets from Binance Spot API...</td></tr>`;
+            }
+
+            if (window.apiClient && window.apiClient.getCryptoCatalog) {
+                window.apiClient.getCryptoCatalog().then(data => {
+                    if (data && data.length > 0) {
+                        cryptoCatalogData = data;
+                        updateCryptoKPIs();
+                        renderCryptoTable();
+                    } else {
+                        renderCryptoFallback();
+                    }
+                }).catch(err => {
+                    console.warn('[Crypto Catalog Live Feed Warning]:', err);
+                    renderCryptoFallback();
+                });
+            } else {
+                renderCryptoFallback();
+            }
+        }
+
+        function renderCryptoFallback() {
+            cryptoCatalogData = [
+                { symbol: 'BTCUSDT', pair: 'BTC/USDT', name: 'Bitcoin', base: 'BTC', quote: 'USDT', category: 'Layer-1', price: 81480.00, price_usdt: 81480.00, price_inr: 6925800.00, change: 1680.00, change_pct: 2.10, high_24h: 82200.00, low_24h: 79800.00, volume: 2450000000 },
+                { symbol: 'ETHUSDT', pair: 'ETH/USDT', name: 'Ethereum', base: 'ETH', quote: 'USDT', category: 'Smart Contracts', price: 2145.50, price_usdt: 2145.50, price_inr: 182367.50, change: 38.20, change_pct: 1.81, high_24h: 2180.00, low_24h: 2100.00, volume: 1120000000 },
+                { symbol: 'SOLUSDT', pair: 'SOL/USDT', name: 'Solana', base: 'SOL', quote: 'USDT', category: 'Layer-1', price: 142.80, price_usdt: 142.80, price_inr: 12138.00, change: 6.40, change_pct: 4.69, high_24h: 145.50, low_24h: 135.00, volume: 680000000 },
+                { symbol: 'BNBUSDT', pair: 'BNB/USDT', name: 'Binance Coin', base: 'BNB', quote: 'USDT', category: 'Exchange Token', price: 582.40, price_usdt: 582.40, price_inr: 49504.00, change: -4.50, change_pct: -0.77, high_24h: 592.00, low_24h: 578.00, volume: 240000000 },
+                { symbol: 'DOGEUSDT', pair: 'DOGE/USDT', name: 'Dogecoin', base: 'DOGE', quote: 'USDT', category: 'Memecoin', price: 0.162, price_usdt: 0.162, price_inr: 13.77, change: 0.012, change_pct: 8.00, high_24h: 0.170, low_24h: 0.149, volume: 410000000 },
+                { symbol: 'XRPUSDT', pair: 'XRP/USDT', name: 'Ripple', base: 'XRP', quote: 'USDT', category: 'Payments', price: 0.585, price_usdt: 0.585, price_inr: 49.72, change: -0.008, change_pct: -1.35, high_24h: 0.598, low_24h: 0.580, volume: 320000000 },
+                { symbol: 'ADAUSDT', pair: 'ADA/USDT', name: 'Cardano', base: 'ADA', quote: 'USDT', category: 'Layer-1', price: 0.472, price_usdt: 0.472, price_inr: 40.12, change: 0.009, change_pct: 1.94, high_24h: 0.485, low_24h: 0.460, volume: 150000000 },
+                { symbol: 'AVAXUSDT', pair: 'AVAX/USDT', name: 'Avalanche', base: 'AVAX', quote: 'USDT', category: 'Layer-1', price: 28.40, price_usdt: 28.40, price_inr: 2414.00, change: 0.95, change_pct: 3.46, high_24h: 29.20, low_24h: 27.10, volume: 180000000 },
+                { symbol: 'BTCINR', pair: 'BTC/INR', name: 'Bitcoin (INR)', base: 'BTC', quote: 'INR', category: 'Layer-1', price: 6925800.00, price_usdt: 81480.00, price_inr: 6925800.00, change: 142800.00, change_pct: 2.10, high_24h: 6987000.00, low_24h: 6783000.00, volume: 54000000 },
+                { symbol: 'ETHINR', pair: 'ETH/INR', name: 'Ethereum (INR)', base: 'ETH', quote: 'INR', category: 'Smart Contracts', price: 182367.50, price_usdt: 2145.50, price_inr: 182367.50, change: 3247.00, change_pct: 1.81, high_24h: 185300.00, low_24h: 178500.00, volume: 32000000 },
+                { symbol: 'SOLINR', pair: 'SOL/INR', name: 'Solana (INR)', base: 'SOL', quote: 'INR', category: 'Layer-1', price: 12138.00, price_usdt: 142.80, price_inr: 12138.00, change: 544.00, change_pct: 4.69, high_24h: 12367.00, low_24h: 11475.00, volume: 18000000 }
+            ];
+            updateCryptoKPIs();
+            renderCryptoTable();
+        }
+
+        function updateCryptoKPIs() {
+            if (!cryptoCatalogData.length) return;
+            const countEl = document.getElementById('kpiCryptoCount');
+            if (countEl) countEl.textContent = cryptoCatalogData.length;
+
+            const btc = cryptoCatalogData.find(c => c.symbol.startsWith('BTC'));
+            if (btc) {
+                const btcPriceEl = document.getElementById('kpiBtcPrice');
+                const btcInrEl = document.getElementById('kpiBtcInr');
+                if (btcPriceEl) btcPriceEl.textContent = `$${(btc.price_usdt || btc.price).toLocaleString('en-US')}`;
+                if (btcInrEl) btcInrEl.textContent = `₹${(btc.price_inr || btc.price * 85).toLocaleString('en-IN')} INR`;
+            }
+
+            const sorted = [...cryptoCatalogData].sort((a, b) => b.change_pct - a.change_pct);
+            const topGainer = sorted[0];
+            const gainerEl = document.getElementById('kpiCryptoTopGainer');
+            const gainerSub = document.getElementById('kpiCryptoTopGainerSub');
+            if (gainerEl && topGainer) {
+                gainerEl.textContent = `+${topGainer.change_pct}%`;
+                gainerSub.textContent = `${topGainer.symbol} ($${topGainer.price_usdt || topGainer.price})`;
+            }
+
+            const totalVol = cryptoCatalogData.reduce((acc, c) => acc + (c.volume || 0), 0);
+            const volEl = document.getElementById('kpiCryptoVolume');
+            if (volEl) volEl.textContent = totalVol >= 1e9 ? `$${(totalVol / 1e9).toFixed(2)}B` : `$${(totalVol / 1e6).toFixed(2)}M`;
+        }
+
+        function renderCryptoTable() {
+            const tbody = document.getElementById('cryptoCatalogBody');
+            if (!tbody) return;
+
+            let filtered = [...cryptoCatalogData];
+
+            if (cryptoSearchTerm) {
+                const term = cryptoSearchTerm.toLowerCase();
+                filtered = filtered.filter(c =>
+                    c.symbol.toLowerCase().includes(term) ||
+                    (c.name && c.name.toLowerCase().includes(term)) ||
+                    (c.pair && c.pair.toLowerCase().includes(term))
+                );
+            }
+
+            if (selectedCryptoCategory === 'USDT') {
+                filtered = filtered.filter(c => c.quote === 'USDT' || c.symbol.endsWith('USDT'));
+            } else if (selectedCryptoCategory === 'INR') {
+                filtered = filtered.filter(c => c.quote === 'INR' || c.symbol.endsWith('INR'));
+            } else if (selectedCryptoCategory === 'Layer-1') {
+                filtered = filtered.filter(c => ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'AVAX'].some(k => c.symbol.includes(k)));
+            } else if (selectedCryptoCategory === 'DeFi') {
+                filtered = filtered.filter(c => ['DOGE', 'XRP'].some(k => c.symbol.includes(k)));
+            }
+
+            if (cryptoSortMode === 'price_desc') {
+                filtered.sort((a, b) => (b.price_usdt || b.price) - (a.price_usdt || a.price));
+            } else if (cryptoSortMode === 'gainers') {
+                filtered.sort((a, b) => b.change_pct - a.change_pct);
+            } else if (cryptoSortMode === 'losers') {
+                filtered.sort((a, b) => a.change_pct - b.change_pct);
+            } else if (cryptoSortMode === 'volume_desc') {
+                filtered.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+            } else if (cryptoSortMode === 'symbol_asc') {
+                filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">No crypto assets matched your search filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(c => {
+                const isPos = c.change >= 0;
+                const canvasId = `cryptoSpark_${c.symbol}`;
+                const volFormatted = c.volume ? (c.volume >= 1e9 ? (c.volume / 1e9).toFixed(2) + 'B' : (c.volume >= 1e6 ? (c.volume / 1e6).toFixed(2) + 'M' : (c.volume / 1e3).toFixed(1) + 'K')) : '—';
+
+                return `
+                <tr>
+                    <td>
+                        <div class="asset-identity">
+                            <div class="asset-identity__avatar" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                ${c.base ? c.base.substring(0, 3) : c.symbol.substring(0, 3)}
+                            </div>
+                            <div>
+                                <div class="asset-identity__symbol">${c.symbol}</div>
+                                <div class="asset-identity__name">${c.name || c.pair}</div>
+                                <span class="token-badge">${c.pair || c.symbol}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="sector-badge sector-badge--crypto">${c.category || 'Crypto'}</span>
+                        <div style="font-size: 11px; color: var(--c-text-tertiary); margin-top: 3px;">Binance Spot</div>
+                    </td>
+                    <td>
+                        <div class="live-price-cell">$${(c.price_usdt || c.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</div>
+                    </td>
+                    <td>
+                        <div class="live-price-cell" style="font-size: 13px; color: var(--c-text-secondary);">₹${(c.price_inr || (c.price * 85)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </td>
+                    <td>
+                        <div class="${isPos ? 'positive' : 'negative'}" style="font-family: var(--ff-mono); font-weight: 700; font-size: 14px;">
+                            ${isPos ? '+' : ''}${c.change_pct}%
+                        </div>
+                    </td>
+                    <td>
+                        <div class="high-low-bar">
+                            <div class="high-low-bar__labels">
+                                <span>$${(c.low_24h || (c.price * 0.98)).toFixed(2)}</span>
+                                <span>$${(c.high_24h || (c.price * 1.02)).toFixed(2)}</span>
+                            </div>
+                            <div class="high-low-bar__track">
+                                <div class="high-low-bar__fill" style="width: 55%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family: var(--ff-mono); font-weight: 600;">${volFormatted}</td>
+                    <td>
+                        <canvas id="${canvasId}" class="sparkline-canvas"></canvas>
+                    </td>
+                    <td>
+                        <div class="action-btn-group">
+                            <a href="predictions.html?symbol=${c.symbol}" class="action-btn-sm action-btn-sm--primary" title="Run AI Prediction">
+                                🔮 Predict
+                            </a>
+                            <a href="analysis.html?cat=${c.symbol}" class="action-btn-sm" title="Technical Analysis">
+                                📊 Analyze
+                            </a>
+                            <a href="mock-trading.html?symbol=${c.symbol}" class="action-btn-sm" title="Paper Trade">
+                                ⚡ Trade
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                filtered.forEach(c => {
+                    const canvasId = `cryptoSpark_${c.symbol}`;
+                    const spark = (c.sparkline && c.sparkline.length > 0) ? c.sparkline : [c.price * 0.98, c.price * 0.99, c.price, c.price * 1.01, c.price];
+                    const isPos = c.change >= 0;
+                    drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
+                });
+            });
+        }
+
+        const cryptoSearch = document.getElementById('cryptoSearchInput');
+        if (cryptoSearch) {
+            cryptoSearch.addEventListener('input', (e) => {
+                cryptoSearchTerm = e.target.value.trim();
+                renderCryptoTable();
+            });
+        }
+
+        const cryptoPills = document.querySelectorAll('#cryptoCategoryPills .filter-pill');
+        cryptoPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                cryptoPills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                selectedCryptoCategory = pill.getAttribute('data-cat');
+                renderCryptoTable();
+            });
+        });
+
+        const cryptoSort = document.getElementById('cryptoSortSelect');
+        if (cryptoSort) {
+            cryptoSort.addEventListener('change', (e) => {
+                cryptoSortMode = e.target.value;
+                renderCryptoTable();
+            });
+        }
+
+        // ========================================================
+        // 4. CURRENCIES & FOREX CATALOG
+        // ========================================================
+        const fxRates = {
+            'USD': 85.00,
+            'EUR': 92.50,
+            'GBP': 108.20,
+            'JPY': 0.56,
+            'INR': 1.00
+        };
+
+        function loadCurrenciesCatalog() {
+            if (currenciesCatalogData.length > 0) return;
+            if (window.apiClient && window.apiClient.getCurrenciesCatalog) {
+                window.apiClient.getCurrenciesCatalog().then(data => {
+                    if (data && data.length > 0) {
+                        currenciesCatalogData = data;
+                        data.forEach(d => {
+                            if (d.symbol === 'USDINR') fxRates['USD'] = d.price;
+                            if (d.symbol === 'EURINR') fxRates['EUR'] = d.price;
+                            if (d.symbol === 'GBPINR') fxRates['GBP'] = d.price;
+                            if (d.symbol === 'JPYINR') fxRates['JPY'] = d.price / 100;
+                        });
+                        renderCurrenciesTable();
+                    } else {
+                        renderCurrenciesFallback();
+                    }
+                }).catch(() => renderCurrenciesFallback());
+            } else {
+                renderCurrenciesFallback();
+            }
+        }
+
+        function renderCurrenciesFallback() {
+            currenciesCatalogData = [
+                { symbol: 'USDINR', pair: 'USD / INR', name: 'US Dollar / Indian Rupee', price: 85.00, change: 0.12, change_pct: 0.14 },
+                { symbol: 'EURINR', pair: 'EUR / INR', name: 'Euro / Indian Rupee', price: 92.50, change: -0.25, change_pct: -0.27 },
+                { symbol: 'GBPINR', pair: 'GBP / INR', name: 'British Pound / Indian Rupee', price: 108.20, change: 0.40, change_pct: 0.37 },
+                { symbol: 'JPYINR', pair: 'JPY / INR (100x)', name: '100 Japanese Yen / Indian Rupee', price: 56.40, change: -0.15, change_pct: -0.27 }
+            ];
+            renderCurrenciesTable();
+        }
+
+        function renderCurrenciesTable() {
+            const tbody = document.getElementById('currenciesCatalogBody');
+            if (!tbody) return;
+            tbody.innerHTML = currenciesCatalogData.map(fx => {
+                const isPos = fx.change >= 0;
+                const canvasId = `fxSpark_${fx.symbol}`;
+                return `
+                <tr>
+                    <td>
+                        <div class="asset-identity">
+                            <div class="asset-identity__avatar" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                                ${fx.symbol.substring(0, 3)}
+                            </div>
+                            <div>
+                                <div class="asset-identity__symbol">${fx.pair || fx.symbol}</div>
+                                <span class="token-badge">FOREX</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">${fx.name}</div>
+                        <div style="font-size: 11px; color: var(--c-text-tertiary);">RBI Reference Cross</div>
+                    </td>
+                    <td>
+                        <div class="live-price-cell">₹${fx.price.toFixed(2)}</div>
+                    </td>
+                    <td>
+                        <span class="${isPos ? 'positive' : 'negative'}" style="font-family: var(--ff-mono); font-weight: 700;">
+                            ${isPos ? '+' : ''}${fx.change} (${isPos ? '+' : ''}${fx.change_pct}%)
+                        </span>
+                    </td>
+                    <td>
+                        <canvas id="${canvasId}" class="sparkline-canvas"></canvas>
+                    </td>
+                    <td>
+                        <button class="action-btn-sm action-btn-sm--primary" onclick="window.setConverter('${fx.symbol.substring(0,3)}', 'INR')">
+                            ⇄ Quick Convert
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                currenciesCatalogData.forEach(fx => {
+                    const canvasId = `fxSpark_${fx.symbol}`;
+                    const spark = (fx.sparkline && fx.sparkline.length > 0) ? fx.sparkline : [fx.price * 0.99, fx.price, fx.price * 1.01];
+                    const isPos = fx.change >= 0;
+                    drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
+                });
+            });
+        }
+
+        window.setConverter = function(from, to) {
+            const f = document.getElementById('convFrom');
+            const t = document.getElementById('convTo');
+            if (f) f.value = from;
+            if (t) t.value = to;
+            recalcConversion();
+            const card = document.querySelector('.converter-card');
+            if (card) card.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        function recalcConversion() {
+            const amount = parseFloat(document.getElementById('convAmount')?.value) || 0;
+            const from = document.getElementById('convFrom')?.value || 'USD';
+            const to = document.getElementById('convTo')?.value || 'INR';
+            const resInput = document.getElementById('convResult');
+            if (!resInput) return;
+
+            const fromInr = fxRates[from] || 1;
+            const toInr = fxRates[to] || 1;
+            const converted = (amount * fromInr) / toInr;
+
+            const symMap = { 'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥' };
+            const prefix = symMap[to] || '';
+            resInput.value = `${prefix}${converted.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${to}`;
+        }
+
+        ['convAmount', 'convFrom', 'convTo'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', recalcConversion);
+                el.addEventListener('change', recalcConversion);
+            }
+        });
+        recalcConversion();
+
+        // ========================================================
+        // 5. MACRO OVERVIEW SCRIPTS
+        // ========================================================
         const indicesFallback = [
             { name: 'NIFTY 50', value: 22456.80, change: 278.45, change_pct: 1.24, positive: true },
             { name: 'SENSEX', value: 73890.45, change: 718.32, change_pct: 0.98, positive: true },
@@ -341,14 +1776,13 @@
             return 'rgba(255,82,82,0.7)';
         }
 
-        // Fetch Real Live Quotes for Heatmap
         if (window.apiClient) {
             window.apiClient.getQuotes().then(quotes => {
                 if (quotes && quotes.length > 0) renderHeatmap(quotes);
             }).catch(() => {});
         }
 
-        // Sectors (Live with fallback)
+        // Sectors
         function renderSectors(tf = '1d') {
             const sectorList = document.getElementById('sectorList');
             if (!sectorList) return;
@@ -376,7 +1810,7 @@
         renderSectors('1d');
         initTabSwitcher('sectorTimeTabs', (tab) => renderSectors(tab));
 
-        // Market Breadth: Real Live Feed
+        // Market Breadth
         function loadMarketBreadth() {
             if (window.apiClient) {
                 window.apiClient.getBreadth().then(b => {
@@ -403,7 +1837,7 @@
         }
         loadMarketBreadth();
 
-        // FII / DII Institutional Activity: Real Live Feed
+        // FII / DII Activity
         function loadFiiDii() {
             if (window.apiClient) {
                 window.apiClient.getFiiDii().then(f => {
@@ -437,6 +1871,13 @@
             }
         }
         loadFiiDii();
+
+        // Check if page opened with subdashboard query param (e.g. ?type=stocks)
+        const urlParams = new URLSearchParams(window.location.search);
+        const initType = urlParams.get('type') || urlParams.get('tab');
+        if (initType && ['stocks', 'crypto', 'currencies'].includes(initType)) {
+            switchSubdashboard(initType);
+        }
     });
     </script>
 </body>

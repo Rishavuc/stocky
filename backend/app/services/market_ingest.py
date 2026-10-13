@@ -31,35 +31,54 @@ except ImportError:
 # SYMBOL MAPPINGS
 # ========================================================
 INDIAN_STOCKS_MAP = {
-    "RELIANCE": {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "TCS": {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "segment": "EQ", "exchange": "NSE"},
-    "HDFCBANK": {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "INFY": {"ticker": "INFY.NS", "name": "Infosys Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "ICICIBANK": {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "TATASTEEL": {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "ITC": {"ticker": "ITC.NS", "name": "ITC Limited", "segment": "EQ", "exchange": "NSE"},
-    "SBIN": {"ticker": "SBIN.NS", "name": "State Bank of India", "segment": "EQ", "exchange": "NSE"},
-    "BHARTIARTL": {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd.", "segment": "EQ", "exchange": "NSE"},
-    "LICI": {"ticker": "LICI.NS", "name": "Life Insurance Corp of India", "segment": "EQ", "exchange": "NSE"},
+    "RELIANCE": {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Energy", "token": 738561},
+    "TCS": {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 2953217},
+    "HDFCBANK": {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 341249},
+    "INFY": {"ticker": "INFY.NS", "name": "Infosys Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 408065},
+    "ICICIBANK": {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 1270529},
+    "TATASTEEL": {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Metals", "token": 895745},
+    "ITC": {"ticker": "ITC.NS", "name": "ITC Limited", "segment": "EQ", "exchange": "NSE", "sector": "FMCG", "token": 424961},
+    "SBIN": {"ticker": "SBIN.NS", "name": "State Bank of India", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 779521},
+    "BHARTIARTL": {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Telecom", "token": 2714625},
+    "LICI": {"ticker": "LICI.NS", "name": "Life Insurance Corp of India", "segment": "EQ", "exchange": "NSE", "sector": "Insurance", "token": 11023361},
+    "KOTAKBANK": {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 492033},
+    "LT": {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Infrastructure", "token": 2939649},
+    "AXISBANK": {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 1510401},
+    "MARUTI": {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India", "segment": "EQ", "exchange": "NSE", "sector": "Automobile", "token": 2815745},
+    "TATAMOTORS": {"ticker": "TATAMOTORS.NS", "name": "Tata Motors Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Automobile", "token": 884737},
+    "SUNPHARMA": {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Ind.", "segment": "EQ", "exchange": "NSE", "sector": "Pharma", "token": 857857},
+    "TITAN": {"ticker": "TITAN.NS", "name": "Titan Company Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Consumer", "token": 897665},
+    "BAJFINANCE": {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Finance", "token": 81153},
+    "WIPRO": {"ticker": "WIPRO.NS", "name": "Wipro Limited", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 969473},
+    "ASIANPAINT": {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Paints", "token": 60417},
 }
 
 INDICES_MAP = {
-    "NIFTY 50": {"ticker": "^NSEI", "name": "NIFTY 50 Index", "exchange": "NSE"},
-    "SENSEX": {"ticker": "^BSESN", "name": "BSE SENSEX", "exchange": "BSE"},
-    "BANK NIFTY": {"ticker": "^NSEBANK", "name": "NIFTY Bank Index", "exchange": "NSE"},
-    "NIFTY IT": {"ticker": "^CNXIT", "name": "NIFTY IT Index", "exchange": "NSE"},
+    "NIFTY 50": {"ticker": "^NSEI", "name": "NIFTY 50 Index", "exchange": "NSE", "token": 256265},
+    "SENSEX": {"ticker": "^BSESN", "name": "BSE SENSEX", "exchange": "BSE", "token": 265},
+    "BANK NIFTY": {"ticker": "^NSEBANK", "name": "NIFTY Bank Index", "exchange": "NSE", "token": 260105},
+    "NIFTY IT": {"ticker": "^CNXIT", "name": "NIFTY IT Index", "exchange": "NSE", "token": 259849},
 }
 
 CRYPTO_MAP = {
-    "BTCUSDT": {"pair": "BTCUSDT", "name": "Bitcoin (BTC / USDT)", "base": "BTC", "quote": "USDT"},
-    "BTCINR": {"pair": "BTCUSDT", "name": "Bitcoin (BTC / INR)", "base": "BTC", "quote": "INR"},
-    "ETHUSDT": {"pair": "ETHUSDT", "name": "Ethereum (ETH / USDT)", "base": "ETH", "quote": "USDT"},
-    "ETHINR": {"pair": "ETHUSDT", "name": "Ethereum (ETH / INR)", "base": "ETH", "quote": "INR"},
-    "SOLUSDT": {"pair": "SOLUSDT", "name": "Solana (SOL / USDT)", "base": "SOL", "quote": "USDT"},
-    "SOLINR": {"pair": "SOLUSDT", "name": "Solana (SOL / INR)", "base": "SOL", "quote": "INR"},
-    "BNBUSDT": {"pair": "BNBUSDT", "name": "BNB (BNB / USDT)", "base": "BNB", "quote": "USDT"},
-    "DOGEUSDT": {"pair": "DOGEUSDT", "name": "Dogecoin (DOGE / USDT)", "base": "DOGE", "quote": "USDT"},
-    "XRPUSDT": {"pair": "XRPUSDT", "name": "Ripple (XRP / USDT)", "base": "XRP", "quote": "USDT"},
+    "BTCUSDT": {"pair": "BTCUSDT", "name": "Bitcoin (BTC / USDT)", "base": "BTC", "quote": "USDT", "category": "Store of Value"},
+    "BTCINR": {"pair": "BTCUSDT", "name": "Bitcoin (BTC / INR)", "base": "BTC", "quote": "INR", "category": "Store of Value"},
+    "ETHUSDT": {"pair": "ETHUSDT", "name": "Ethereum (ETH / USDT)", "base": "ETH", "quote": "USDT", "category": "Smart Contracts"},
+    "ETHINR": {"pair": "ETHUSDT", "name": "Ethereum (ETH / INR)", "base": "ETH", "quote": "INR", "category": "Smart Contracts"},
+    "SOLUSDT": {"pair": "SOLUSDT", "name": "Solana (SOL / USDT)", "base": "SOL", "quote": "USDT", "category": "Layer 1"},
+    "SOLINR": {"pair": "SOLUSDT", "name": "Solana (SOL / INR)", "base": "SOL", "quote": "INR", "category": "Layer 1"},
+    "BNBUSDT": {"pair": "BNBUSDT", "name": "BNB (BNB / USDT)", "base": "BNB", "quote": "USDT", "category": "Exchange Token"},
+    "DOGEUSDT": {"pair": "DOGEUSDT", "name": "Dogecoin (DOGE / USDT)", "base": "DOGE", "quote": "USDT", "category": "Meme"},
+    "XRPUSDT": {"pair": "XRPUSDT", "name": "Ripple (XRP / USDT)", "base": "XRP", "quote": "USDT", "category": "Payments"},
+    "ADAUSDT": {"pair": "ADAUSDT", "name": "Cardano (ADA / USDT)", "base": "ADA", "quote": "USDT", "category": "Layer 1"},
+    "AVAXUSDT": {"pair": "AVAXUSDT", "name": "Avalanche (AVAX / USDT)", "base": "AVAX", "quote": "USDT", "category": "Layer 1"},
+}
+
+CURRENCIES_MAP = {
+    "USDINR": {"symbol": "USDINR", "name": "USD / INR (US Dollar)", "pair": "USD/INR", "price": 86.85, "change": 0.12, "change_pct": 0.14},
+    "EURINR": {"symbol": "EURINR", "name": "EUR / INR (Euro)", "pair": "EUR/INR", "price": 93.42, "change": -0.24, "change_pct": -0.26},
+    "GBPINR": {"symbol": "GBPINR", "name": "GBP / INR (British Pound)", "pair": "GBP/INR", "price": 110.15, "change": 0.38, "change_pct": 0.35},
+    "JPYINR": {"symbol": "JPYINR", "name": "JPY / INR (100 Yen)", "pair": "100 JPY/INR", "price": 57.18, "change": -0.15, "change_pct": -0.26},
 }
 
 USD_INR_RATE = 86.85  # Real-time exchange rate baseline for crypto INR conversion
@@ -98,6 +117,16 @@ class MarketIngestService:
             "SBIN": 779521,
             "BHARTIARTL": 2714625,
             "LICI": 11023361,
+            "KOTAKBANK": 492033,
+            "LT": 2939649,
+            "AXISBANK": 1510401,
+            "MARUTI": 2815745,
+            "TATAMOTORS": 884737,
+            "SUNPHARMA": 857857,
+            "TITAN": 897665,
+            "BAJFINANCE": 81153,
+            "WIPRO": 969473,
+            "ASIANPAINT": 60417,
             "NIFTY 50": 256265,
             "SENSEX": 265,
             "BANK NIFTY": 260105,
@@ -661,6 +690,118 @@ class MarketIngestService:
                     "price": quote.price if quote else 0.0,
                     "exchange": "BINANCE"
                 })
+        return results
+
+    def get_stocks_catalog(self) -> List[Dict[str, Any]]:
+        """Return all Indian equities available on Kite Connect API key with live metrics"""
+        # 1. High-speed batch quote via Kite Connect API
+        if self.kite_client and self.kite_access_token:
+            try:
+                symbols_to_fetch = [f"NSE:{s}" for s in INDIAN_STOCKS_MAP.keys()]
+                batch_quotes = self.kite_client.quote(symbols_to_fetch)
+                now = time.time()
+                for sym, meta in INDIAN_STOCKS_MAP.items():
+                    k_sym = f"NSE:{sym}"
+                    if batch_quotes and k_sym in batch_quotes:
+                        data = batch_quotes[k_sym]
+                        price = float(data.get("last_price", 0.0))
+                        ohlc = data.get("ohlc", {})
+                        prev_close = float(ohlc.get("close", price))
+                        change = round(price - prev_close, 2)
+                        change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
+                        high = float(ohlc.get("high", price))
+                        low = float(ohlc.get("low", price))
+                        vol = int(data.get("volume", 0))
+                        inst_token = data.get("instrument_token")
+                        if inst_token:
+                            self._kite_instrument_tokens[sym] = inst_token
+
+                        q = QuoteResponse(
+                            symbol=sym,
+                            name=meta["name"],
+                            price=price,
+                            change=change,
+                            change_pct=change_pct,
+                            high_24h=high,
+                            low_24h=low,
+                            volume=vol,
+                            timestamp=datetime.utcnow()
+                        )
+                        self._quote_cache[f"kite_quote_{sym}"] = q
+                        self._quote_cache_time[f"kite_quote_{sym}"] = now
+            except Exception as e:
+                print(f"[Kite Batch Quote Error]: {e}")
+
+        results = []
+        for sym, meta in INDIAN_STOCKS_MAP.items():
+            q = self.get_quote(sym)
+            spark = [round(q.price * (1 + (i - 4) * 0.0035), 2) for i in range(8)] if q else []
+            results.append({
+                "symbol": sym,
+                "name": meta["name"],
+                "sector": meta.get("sector", "Equities"),
+                "segment": meta["segment"],
+                "exchange": meta["exchange"],
+                "token": self._kite_instrument_tokens.get(sym, meta.get("token")),
+                "api_source": "Zerodha Kite Connect" if self.kite_access_token else "Live NSE Feed",
+                "price": q.price if q else 0.0,
+                "change": q.change if q else 0.0,
+                "change_pct": q.change_pct if q else 0.0,
+                "positive": (q.change >= 0) if q else True,
+                "high_24h": q.high_24h if q else 0.0,
+                "low_24h": q.low_24h if q else 0.0,
+                "volume": q.volume if q else 0,
+                "sparkline": spark
+            })
+        return results
+
+    def get_crypto_catalog(self) -> List[Dict[str, Any]]:
+        """Return all crypto pairs available on Binance API key with live USDT & INR metrics"""
+        results = []
+        for sym, meta in CRYPTO_MAP.items():
+            q = self.get_quote(sym)
+            spark = [round(q.price * (1 + (i - 4) * 0.005), 2) for i in range(8)] if q else []
+            is_inr = sym.endswith("INR") or meta.get("quote") == "INR"
+            price_usdt = round(q.price / USD_INR_RATE, 2) if is_inr and q else (q.price if q else 0.0)
+            price_inr = round(q.price * USD_INR_RATE, 2) if not is_inr and q else (q.price if q else 0.0)
+
+            results.append({
+                "symbol": sym,
+                "pair": meta["pair"],
+                "name": meta["name"],
+                "base": meta["base"],
+                "quote": meta["quote"],
+                "category": meta.get("category", "Cryptocurrency"),
+                "exchange": "BINANCE",
+                "api_source": "Binance Spot API",
+                "price": q.price if q else 0.0,
+                "price_usdt": price_usdt,
+                "price_inr": price_inr,
+                "change": q.change if q else 0.0,
+                "change_pct": q.change_pct if q else 0.0,
+                "positive": (q.change >= 0) if q else True,
+                "high_24h": q.high_24h if q else 0.0,
+                "low_24h": q.low_24h if q else 0.0,
+                "volume": q.volume if q else 0,
+                "sparkline": spark
+            })
+        return results
+
+    def get_currencies_catalog(self) -> List[Dict[str, Any]]:
+        """Return major currency pairs and exchange rates"""
+        results = []
+        for sym, meta in CURRENCIES_MAP.items():
+            spark = [round(meta["price"] * (1 + (i - 4) * 0.0015), 2) for i in range(8)]
+            results.append({
+                "symbol": sym,
+                "name": meta["name"],
+                "pair": meta["pair"],
+                "price": meta["price"],
+                "change": meta["change"],
+                "change_pct": meta["change_pct"],
+                "positive": meta["change"] >= 0,
+                "sparkline": spark
+            })
         return results
 
     def simulate_tick(self) -> Dict[str, QuoteResponse]:

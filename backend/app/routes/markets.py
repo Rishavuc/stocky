@@ -42,3 +42,15 @@ async def get_market_breadth():
 async def get_fii_dii():
     return market_ingest.get_fii_dii_flows()
 
+@router.get("/stocks")
+async def get_stocks_catalog():
+    return market_ingest.get_stocks_catalog()
+
+@router.get("/crypto")
+async def get_crypto_catalog():
+    return market_ingest.get_crypto_catalog()
+
+@router.get("/currencies")
+async def get_currencies_catalog():
+    return market_ingest.get_currencies_catalog()
+

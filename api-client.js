@@ -75,6 +75,18 @@ class ApiClient {
         return await this._fetch('/markets/sectors');
     }
 
+    async getStocksCatalog() {
+        return await this._fetch('/markets/stocks');
+    }
+
+    async getCryptoCatalog() {
+        return await this._fetch('/markets/crypto');
+    }
+
+    async getCurrenciesCatalog() {
+        return await this._fetch('/markets/currencies');
+    }
+
     // --- Analysis ---
     async getTechnicalAnalysis(symbol) {
         return await this._fetch(`/analysis/technical/${symbol}`);
