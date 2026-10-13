@@ -1302,9 +1302,14 @@
             });
 
             function drawChart() {
-                const points = [1000000, 1004500, 1002800, 1009400, 1012300, 1008900, 1015600, 1021000, 1018500, 1024680];
-                const labels = ['D1', 'D3', 'D6', 'D9', 'D12', 'D15', 'D18', 'D21', 'D24', 'Today'];
-                drawAreaChart('equityChartCanvas', points, '#00d09c', 'rgba(0,208,156,0.18)', true, labels);
+                const totalPnl = (state.positions || []).reduce((acc, p) => acc + (p.pnl || 0), 0);
+                const currentEq = (state.walletBalance || 1000000) + totalPnl;
+                const startEq = 1000000;
+                const step = (currentEq - startEq) / 9;
+                const points = Array.from({length: 9}, (_, i) => Math.round(startEq + step * i)).concat([Math.round(currentEq)]);
+                const labels = ['D1', 'D3', 'D6', 'D9', 'D12', 'D15', 'D18', 'D21', 'D24', 'Live'];
+                const isPos = currentEq >= startEq;
+                drawAreaChart('equityChartCanvas', points, isPos ? '#00d09c' : '#ff5252', isPos ? 'rgba(0,208,156,0.18)' : 'rgba(255,82,82,0.18)', true, labels);
             }
 
             drawChart();

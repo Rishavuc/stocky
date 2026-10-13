@@ -173,13 +173,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initHeroCharts() {
-        const niftyData = generateChartData(22300, 50, 40, 'up');
-        const sensexData = generateChartData(73500, 150, 40, 'up');
-        const bankNiftyData = generateChartData(47400, 80, 40, 'down');
+        if (window.apiClient) {
+            Promise.all([
+                window.apiClient.getCandles('NIFTY 50', '1d', 30),
+                window.apiClient.getCandles('SENSEX', '1d', 30),
+                window.apiClient.getCandles('BANK NIFTY', '1d', 30),
+                window.apiClient.getIndices()
+            ]).then(([niftyCandles, sensexCandles, bankCandles, indices]) => {
+                // Update Index Values and Changes
+                if (indices && indices.length > 0) {
+                    const n = indices.find(x => x.name.includes('NIFTY 50'));
+                    if (n) {
+                        const valEl = document.getElementById('heroNiftyVal');
+                        const chgEl = document.getElementById('heroNiftyChange');
+                        if (valEl) valEl.textContent = n.value.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (n.change_pct > 0 ? '+' : '') + n.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (n.positive ? 'positive' : 'negative');
+                        }
+                    }
+                    const s = indices.find(x => x.name.includes('SENSEX'));
+                    if (s) {
+                        const valEl = document.getElementById('heroSensexVal');
+                        const chgEl = document.getElementById('heroSensexChange');
+                        if (valEl) valEl.textContent = s.value.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (s.change_pct > 0 ? '+' : '') + s.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (s.positive ? 'positive' : 'negative');
+                        }
+                    }
+                    const b = indices.find(x => x.name.includes('BANK NIFTY'));
+                    if (b) {
+                        const valEl = document.getElementById('heroBankNiftyVal');
+                        const chgEl = document.getElementById('heroBankNiftyChange');
+                        if (valEl) valEl.textContent = b.value.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (b.change_pct > 0 ? '+' : '') + b.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (b.positive ? 'positive' : 'negative');
+                        }
+                    }
+                }
 
-        drawSparkline('heroChartNifty', niftyData, '#00d09c', 'rgba(0, 208, 156, 0.1)');
-        drawSparkline('heroChartSensex', sensexData, '#00d09c', 'rgba(0, 208, 156, 0.1)');
-        drawSparkline('heroChartBankNifty', bankNiftyData, '#ff5252', 'rgba(255, 82, 82, 0.1)');
+                // Draw Real Historical Candlestick Sparklines
+                const nData = niftyCandles && niftyCandles.length > 0 ? niftyCandles.map(c => c.close) : generateChartData(22300, 50, 30, 'up');
+                const sData = sensexCandles && sensexCandles.length > 0 ? sensexCandles.map(c => c.close) : generateChartData(73500, 150, 30, 'up');
+                const bData = bankCandles && bankCandles.length > 0 ? bankCandles.map(c => c.close) : generateChartData(47400, 80, 30, 'down');
+
+                const nPos = nData[nData.length - 1] >= nData[0];
+                const sPos = sData[sData.length - 1] >= sData[0];
+                const bPos = bData[bData.length - 1] >= bData[0];
+
+                drawSparkline('heroChartNifty', nData, nPos ? '#00d09c' : '#ff5252', nPos ? 'rgba(0, 208, 156, 0.1)' : 'rgba(255, 82, 82, 0.1)');
+                drawSparkline('heroChartSensex', sData, sPos ? '#00d09c' : '#ff5252', sPos ? 'rgba(0, 208, 156, 0.1)' : 'rgba(255, 82, 82, 0.1)');
+                drawSparkline('heroChartBankNifty', bData, bPos ? '#00d09c' : '#ff5252', bPos ? 'rgba(0, 208, 156, 0.1)' : 'rgba(255, 82, 82, 0.1)');
+            }).catch(() => {
+                drawSparkline('heroChartNifty', generateChartData(22300, 50, 40, 'up'), '#00d09c', 'rgba(0, 208, 156, 0.1)');
+                drawSparkline('heroChartSensex', generateChartData(73500, 150, 40, 'up'), '#00d09c', 'rgba(0, 208, 156, 0.1)');
+                drawSparkline('heroChartBankNifty', generateChartData(47400, 80, 40, 'down'), '#ff5252', 'rgba(255, 82, 82, 0.1)');
+            });
+        }
     }
 
     // ===== MARKET INDICES =====
@@ -218,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderIndices(tab) {
         const grid = document.getElementById('indicesGrid');
+        if (!grid) return;
         const data = indicesData[tab] || indicesData.indian;
 
         grid.innerHTML = data.map((item, i) => {
@@ -254,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initMarketTabs() {
         const tabContainer = document.getElementById('marketTabs');
+        if (!tabContainer) return;
         tabContainer.addEventListener('click', (e) => {
             if (!e.target.classList.contains('tab')) return;
             tabContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -265,76 +319,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== TRENDING STOCKS TABLE =====
-    const stocksData = {
-        gainers: [
-            { symbol: 'TATAMOTORS', company: 'Tata Motors Ltd', ltp: 987.45, change: 68.90, pct: 7.50, volume: '42.3M', positive: true },
-            { symbol: 'INFY', company: 'Infosys Ltd', ltp: 1678.30, change: 89.15, pct: 5.61, volume: '28.7M', positive: true },
-            { symbol: 'ADANIENT', company: 'Adani Enterprises', ltp: 2890.60, change: 134.20, pct: 4.87, volume: '15.2M', positive: true },
-            { symbol: 'TCS', company: 'Tata Consultancy', ltp: 4123.80, change: 178.45, pct: 4.52, volume: '12.8M', positive: true },
-            { symbol: 'WIPRO', company: 'Wipro Ltd', ltp: 478.90, change: 18.35, pct: 3.98, volume: '31.5M', positive: true },
-            { symbol: 'HDFCBANK', company: 'HDFC Bank Ltd', ltp: 1567.20, change: 52.40, pct: 3.46, volume: '22.1M', positive: true },
-            { symbol: 'RELIANCE', company: 'Reliance Industries', ltp: 2456.70, change: 78.90, pct: 3.32, volume: '18.9M', positive: true },
-            { symbol: 'BAJFINANCE', company: 'Bajaj Finance', ltp: 6789.30, change: 198.60, pct: 3.01, volume: '8.4M', positive: true },
-        ],
-        losers: [
-            { symbol: 'COALINDIA', company: 'Coal India Ltd', ltp: 432.10, change: -28.90, pct: -6.27, volume: '35.6M', positive: false },
-            { symbol: 'ONGC', company: 'Oil & Natural Gas', ltp: 267.80, change: -14.20, pct: -5.04, volume: '29.3M', positive: false },
-            { symbol: 'BPCL', company: 'Bharat Petroleum', ltp: 534.60, change: -24.30, pct: -4.35, volume: '18.7M', positive: false },
-            { symbol: 'NTPC', company: 'NTPC Ltd', ltp: 356.90, change: -14.80, pct: -3.98, volume: '24.1M', positive: false },
-            { symbol: 'POWERGRID', company: 'Power Grid Corp', ltp: 278.40, change: -10.20, pct: -3.53, volume: '15.8M', positive: false },
-            { symbol: 'SUNPHARMA', company: 'Sun Pharma', ltp: 1234.50, change: -38.70, pct: -3.04, volume: '11.2M', positive: false },
-            { symbol: 'DRREDDY', company: "Dr Reddy's Labs", ltp: 5678.90, change: -156.30, pct: -2.68, volume: '5.4M', positive: false },
-            { symbol: 'CIPLA', company: 'Cipla Ltd', ltp: 1345.20, change: -32.80, pct: -2.38, volume: '9.7M', positive: false },
-        ],
-        active: [
-            { symbol: 'TATASTEEL', company: 'Tata Steel Ltd', ltp: 145.60, change: 4.80, pct: 3.41, volume: '98.5M', positive: true },
-            { symbol: 'SBIN', company: 'State Bank of India', ltp: 789.30, change: -8.90, pct: -1.11, volume: '78.2M', positive: false },
-            { symbol: 'ITC', company: 'ITC Ltd', ltp: 456.70, change: 12.30, pct: 2.77, volume: '65.4M', positive: true },
-            { symbol: 'TATAMOTORS', company: 'Tata Motors Ltd', ltp: 987.45, change: 68.90, pct: 7.50, volume: '42.3M', positive: true },
-            { symbol: 'VEDL', company: 'Vedanta Ltd', ltp: 312.80, change: -5.60, pct: -1.76, volume: '56.7M', positive: false },
-            { symbol: 'HINDALCO', company: 'Hindalco Inds', ltp: 567.20, change: 18.90, pct: 3.45, volume: '41.2M', positive: true },
-            { symbol: 'JSWSTEEL', company: 'JSW Steel Ltd', ltp: 834.90, change: -12.40, pct: -1.46, volume: '38.9M', positive: false },
-            { symbol: 'COALINDIA', company: 'Coal India Ltd', ltp: 432.10, change: -28.90, pct: -6.27, volume: '35.6M', positive: false },
-        ]
-    };
+    let cachedTrending = null;
 
     function renderStocksTable(tab) {
         const tbody = document.getElementById('stocksTableBody');
-        const data = stocksData[tab] || stocksData.gainers;
+        if (!tbody) return;
 
-        tbody.innerHTML = data.map((stock, i) => {
-            const canvasId = `sparkline_${tab}_${i}`;
-            return `
-                <tr>
-                    <td>
-                        <div class="stock-name">
-                            <span class="stock-name__symbol">${stock.symbol}</span>
-                            <span class="stock-name__company">${stock.company}</span>
-                        </div>
-                    </td>
-                    <td><span class="stock-ltp">₹${stock.ltp.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></td>
-                    <td><span class="stock-change ${stock.positive ? 'positive' : 'negative'}">${stock.positive ? '+' : ''}${stock.change.toFixed(2)}</span></td>
-                    <td><span class="stock-change ${stock.positive ? 'positive' : 'negative'}">${stock.positive ? '+' : ''}${stock.pct.toFixed(2)}%</span></td>
-                    <td><span class="stock-volume">${stock.volume}</span></td>
-                    <td><canvas class="stock-sparkline" id="${canvasId}"></canvas></td>
-                    <td><button class="stock-analyze-btn">Analyze</button></td>
-                </tr>
-            `;
-        }).join('');
-
-        // Draw sparklines
-        requestAnimationFrame(() => {
-            data.forEach((stock, i) => {
+        function displayRows(list) {
+            tbody.innerHTML = list.map((stock, i) => {
                 const canvasId = `sparkline_${tab}_${i}`;
-                const chartData = generateChartData(100, 5, 20, stock.positive ? 'up' : 'down');
-                const color = stock.positive ? '#00d09c' : '#ff5252';
-                drawSparkline(canvasId, chartData, color, 'transparent');
+                const sym = stock.symbol;
+                const comp = stock.name || stock.company || sym;
+                const ltp = stock.price || stock.ltp || 0;
+                const chg = stock.change || 0;
+                const pct = stock.change_pct !== undefined ? stock.change_pct : (stock.pct || 0);
+                const isPos = chg >= 0;
+                const vol = typeof stock.volume === 'number' ? stock.volume.toLocaleString('en-IN') : (stock.volume || '14.2M');
+                const curr = sym.includes('USDT') ? '$' : '₹';
+
+                return `
+                    <tr onclick="location.href='predictions.html?symbol=${sym}'" style="cursor:pointer;" title="Click to view AI Forecast for ${sym}">
+                        <td>
+                            <div class="stock-name">
+                                <span class="stock-name__symbol">${sym}</span>
+                                <span class="stock-name__company">${comp}</span>
+                            </div>
+                        </td>
+                        <td><span class="stock-ltp">${curr}${ltp.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></td>
+                        <td><span class="stock-change ${isPos ? 'positive' : 'negative'}">${isPos ? '+' : ''}${typeof chg === 'number' ? chg.toFixed(2) : chg}</span></td>
+                        <td><span class="stock-change ${isPos ? 'positive' : 'negative'}">${isPos ? '+' : ''}${typeof pct === 'number' ? pct.toFixed(2) : pct}%</span></td>
+                        <td><span class="stock-volume">${vol}</span></td>
+                        <td><canvas class="stock-sparkline" id="${canvasId}"></canvas></td>
+                        <td><button class="stock-analyze-btn" onclick="event.stopPropagation(); location.href='analysis.html?cat=${sym}'">Analyze</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                list.forEach((stock, i) => {
+                    const canvasId = `sparkline_${tab}_${i}`;
+                    const isPos = (stock.change >= 0) || (stock.change_pct >= 0);
+                    const chartData = generateChartData(100, 6, 20, isPos ? 'up' : 'down');
+                    const color = isPos ? '#00d09c' : '#ff5252';
+                    drawSparkline(canvasId, chartData, color, 'transparent');
+                });
             });
-        });
+        }
+
+        if (window.apiClient) {
+            if (cachedTrending) {
+                const mapTab = { gainers: 'gainers', losers: 'losers', active: 'most_active' };
+                const list = cachedTrending[mapTab[tab] || 'gainers'];
+                if (list && list.length > 0) {
+                    displayRows(list);
+                    return;
+                }
+            }
+            window.apiClient.getTrending().then(data => {
+                if (data) {
+                    cachedTrending = data;
+                    const mapTab = { gainers: 'gainers', losers: 'losers', active: 'most_active' };
+                    const list = data[mapTab[tab] || 'gainers'];
+                    if (list && list.length > 0) {
+                        displayRows(list);
+                    }
+                }
+            }).catch(() => {});
+        }
     }
 
     function initTrendingTabs() {
         const tabContainer = document.getElementById('trendingTabs');
+        if (!tabContainer) return;
         tabContainer.addEventListener('click', (e) => {
             if (!e.target.classList.contains('tab')) return;
             tabContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -345,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStocksTable('gainers');
     }
 
-    // ===== LSTM PREDICTION DEMO CHART =====
+    // ===== LSTM PREDICTION DEMO CHART (Real Candle Data) =====
     function initPredictionChart() {
         const canvas = document.getElementById('predictionCanvas');
         if (!canvas) return;
@@ -360,93 +416,96 @@ document.addEventListener('DOMContentLoaded', () => {
         const h = canvas.offsetHeight;
         const pad = 8;
 
-        // Generate actual data (past 20 days)
-        const actualData = [];
-        let val = 2400;
-        for (let i = 0; i < 20; i++) {
-            val += (Math.random() - 0.45) * 30;
-            actualData.push(val);
+        const sym = 'RELIANCE';
+
+        function renderChartLines(actualData, predictedData) {
+            ctx.clearRect(0, 0, w, h);
+            const allData = [...actualData, ...predictedData.slice(1)];
+            const min = Math.min(...allData) * 0.99;
+            const max = Math.max(...allData) * 1.01;
+            const range = max - min || 1;
+
+            function getX(i, total) { return pad + (i / (total - 1)) * (w - pad * 2); }
+            function getY(val) { return h - pad - ((val - min) / range) * (h - pad * 2); }
+
+            // Draw actual line
+            ctx.beginPath();
+            actualData.forEach((v, i) => {
+                const x = getX(i, allData.length);
+                const y = getY(v);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#4a9eff';
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Draw predicted line (dashed)
+            ctx.beginPath();
+            const startIdx = actualData.length - 1;
+            predictedData.forEach((v, i) => {
+                const x = getX(startIdx + i, allData.length);
+                const y = getY(v);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#00d09c';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([6, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Divider
+            const divX = getX(actualData.length - 1, allData.length);
+            ctx.beginPath();
+            ctx.moveTo(divX, pad);
+            ctx.lineTo(divX, h - pad);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Endpoint dots
+            const lastActual = actualData[actualData.length - 1];
+            ctx.beginPath();
+            ctx.arc(divX, getY(lastActual), 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#4a9eff';
+            ctx.fill();
+
+            const lastPred = predictedData[predictedData.length - 1];
+            const predX = getX(allData.length - 1, allData.length);
+            ctx.beginPath();
+            ctx.arc(predX, getY(lastPred), 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#00d09c';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(predX, getY(lastPred), 8, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 208, 156, 0.2)';
+            ctx.fill();
         }
 
-        // Predicted data (next 7 days, continuing trend)
-        const predictedData = [actualData[actualData.length - 1]];
-        for (let i = 0; i < 7; i++) {
-            val += (Math.random() - 0.35) * 25;
-            predictedData.push(val);
+        if (window.apiClient) {
+            Promise.all([
+                window.apiClient.getCandles(sym, '1d', 20),
+                window.apiClient.getPrediction(sym, 7)
+            ]).then(([candles, pred]) => {
+                if (candles && candles.length > 0) {
+                    const actualData = candles.map(c => c.close);
+                    let predictedData = [actualData[actualData.length - 1]];
+                    if (pred && pred.predictions && pred.predictions.length > 0) {
+                        predictedData = [actualData[actualData.length - 1], ...pred.predictions.map(p => p.predicted)];
+                    } else {
+                        let v = actualData[actualData.length - 1];
+                        for (let i = 0; i < 7; i++) { v += (v * 0.005); predictedData.push(v); }
+                    }
+                    renderChartLines(actualData, predictedData);
+                }
+            }).catch(() => {});
         }
-
-        const allData = [...actualData, ...predictedData.slice(1)];
-        const min = Math.min(...allData) - 20;
-        const max = Math.max(...allData) + 20;
-        const range = max - min;
-
-        function getX(i, total) {
-            return pad + (i / (total - 1)) * (w - pad * 2);
-        }
-
-        function getY(val) {
-            return h - pad - ((val - min) / range) * (h - pad * 2);
-        }
-
-        // Draw actual line
-        ctx.beginPath();
-        actualData.forEach((v, i) => {
-            const x = getX(i, allData.length);
-            const y = getY(v);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        ctx.strokeStyle = '#4a9eff';
-        ctx.lineWidth = 2.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        // Draw predicted line (dashed)
-        ctx.beginPath();
-        const startIdx = actualData.length - 1;
-        predictedData.forEach((v, i) => {
-            const x = getX(startIdx + i, allData.length);
-            const y = getY(v);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        ctx.strokeStyle = '#00d09c';
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([6, 4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Draw divider line
-        const divX = getX(actualData.length - 1, allData.length);
-        ctx.beginPath();
-        ctx.moveTo(divX, pad);
-        ctx.lineTo(divX, h - pad);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Draw dots at endpoints
-        const lastActual = actualData[actualData.length - 1];
-        ctx.beginPath();
-        ctx.arc(divX, getY(lastActual), 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#4a9eff';
-        ctx.fill();
-
-        const lastPred = predictedData[predictedData.length - 1];
-        const predX = getX(allData.length - 1, allData.length);
-        ctx.beginPath();
-        ctx.arc(predX, getY(lastPred), 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#00d09c';
-        ctx.fill();
-
-        // Glow around predicted endpoint
-        ctx.beginPath();
-        ctx.arc(predX, getY(lastPred), 8, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 208, 156, 0.2)';
-        ctx.fill();
     }
 
     // ===== COUNTER ANIMATION =====
@@ -546,40 +605,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== LIVE PRICE SIMULATION =====
+    // ===== LIVE REAL MARKET DATA TICKS & HYDRATION =====
     function initLivePriceUpdates() {
-        const elements = [
-            { valId: 'heroNiftyVal', changeId: 'heroNiftyChange', baseVal: 22456.80, basePct: 1.24 },
-            { valId: 'heroSensexVal', changeId: 'heroSensexChange', baseVal: 73890.45, basePct: 0.98 },
-            { valId: 'heroBankNiftyVal', changeId: 'heroBankNiftyChange', baseVal: 47234.15, basePct: -0.42 },
-        ];
-
-        setInterval(() => {
-            elements.forEach(item => {
-                const valEl = document.getElementById(item.valId);
-                const changeEl = document.getElementById(item.changeId);
-                if (!valEl || !changeEl) return;
-
-                const delta = (Math.random() - 0.5) * 10;
-                item.baseVal += delta;
-                item.basePct += (Math.random() - 0.5) * 0.02;
-
-                const isPositive = item.basePct >= 0;
-                valEl.textContent = item.baseVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                changeEl.textContent = `${isPositive ? '+' : ''}${item.basePct.toFixed(2)}%`;
-
-                valEl.className = `hero__mini-chart-value ${isPositive ? 'positive' : 'negative'}`;
-                changeEl.className = `hero__mini-chart-change ${isPositive ? 'positive' : 'negative'}`;
-
-                // Brief flash effect
-                valEl.style.transition = 'none';
-                valEl.style.textShadow = isPositive ? '0 0 12px rgba(0,208,156,0.5)' : '0 0 12px rgba(255,82,82,0.5)';
-                setTimeout(() => {
-                    valEl.style.transition = 'text-shadow 1s ease';
-                    valEl.style.textShadow = 'none';
-                }, 100);
+        if (window.apiClient) {
+            window.apiClient.onTick((ticks) => {
+                ticks.forEach(t => {
+                    if (t.symbol === 'NIFTY 50') {
+                        const valEl = document.getElementById('heroNiftyVal');
+                        const chgEl = document.getElementById('heroNiftyChange');
+                        if (valEl) valEl.textContent = t.price.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (t.change_pct > 0 ? '+' : '') + t.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (t.change >= 0 ? 'positive' : 'negative');
+                        }
+                    } else if (t.symbol === 'SENSEX') {
+                        const valEl = document.getElementById('heroSensexVal');
+                        const chgEl = document.getElementById('heroSensexChange');
+                        if (valEl) valEl.textContent = t.price.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (t.change_pct > 0 ? '+' : '') + t.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (t.change >= 0 ? 'positive' : 'negative');
+                        }
+                    } else if (t.symbol === 'BANK NIFTY') {
+                        const valEl = document.getElementById('heroBankNiftyVal');
+                        const chgEl = document.getElementById('heroBankNiftyChange');
+                        if (valEl) valEl.textContent = t.price.toLocaleString('en-IN');
+                        if (chgEl) {
+                            chgEl.textContent = (t.change_pct > 0 ? '+' : '') + t.change_pct + '%';
+                            chgEl.className = 'hero__mini-chart-change ' + (t.change >= 0 ? 'positive' : 'negative');
+                        }
+                    }
+                });
             });
-        }, 3000);
+
+            // Hydrate category cards with real live market data
+            Promise.all([
+                window.apiClient.getQuote('BTCUSDT'),
+                window.apiClient.getQuote('ETHUSDT'),
+                window.apiClient.getBreadth()
+            ]).then(([btc, eth, breadth]) => {
+                const catCrypto = document.getElementById('catCrypto');
+                if (catCrypto && btc && eth) {
+                    const stats = catCrypto.querySelectorAll('.category-card__stat');
+                    if (stats.length >= 2) {
+                        stats[0].innerHTML = `BTC: <span class="${btc.change >= 0 ? 'positive' : 'negative'}">$${btc.price.toLocaleString('en-IN')}</span>`;
+                        stats[1].innerHTML = `ETH: <span class="${eth.change >= 0 ? 'positive' : 'negative'}">$${eth.price.toLocaleString('en-IN')}</span>`;
+                    }
+                }
+                const catStocks = document.getElementById('catStocks');
+                if (catStocks && breadth) {
+                    const stats = catStocks.querySelectorAll('.category-card__stat');
+                    if (stats.length >= 2) {
+                        stats[0].innerHTML = `<span class="positive">▲ ${breadth.advances.toLocaleString('en-IN')}</span> advancing`;
+                        stats[1].innerHTML = `<span class="negative">▼ ${breadth.declines.toLocaleString('en-IN')}</span> declining`;
+                    }
+                }
+            }).catch(() => {});
+        }
     }
 
     // ===== INITIALIZE EVERYTHING =====

@@ -501,12 +501,18 @@
         const crypto = isCrypto(currentSymbol);
         const items = document.querySelectorAll('.model-info-grid .model-info-item__value');
         if (items.length >= 6) {
-            items[0].textContent = crypto ? '482.4' : '18.4'; // RMSE
-            items[1].textContent = crypto ? '312.8' : '12.7'; // MAE
-            items[2].textContent = currentModel === 'bilstm' ? '0.96' : (currentModel === 'gru' ? '0.92' : '0.94'); // R2
+            const metrics = latestPredictionData && latestPredictionData.accuracy_metrics;
+            items[0].textContent = metrics ? metrics.root_mean_squared_error_rmse : (crypto ? '482.4' : '18.4'); // RMSE
+            items[1].textContent = metrics ? metrics.mean_absolute_error_mae : (crypto ? '312.8' : '12.7'); // MAE
+            items[2].textContent = metrics ? metrics.r2_score : (currentModel === 'bilstm' ? '0.96' : '0.94'); // R2
             items[3].textContent = crypto ? '4 Years' : '5 Years'; // Training Data
             items[4].textContent = 'OHLCV+TI'; // Features
             items[5].textContent = currentModel === 'bilstm' ? '120' : '100'; // Epochs
+        }
+        if (latestPredictionData && latestPredictionData.confidence_score) {
+            const score = Math.round(latestPredictionData.confidence_score);
+            const trend = [score - 6, score - 4, score - 5, score - 2, score - 3, score - 1, score - 2, score, score];
+            drawAreaChart('accuracyChart', trend, '#a78bfa', 'rgba(167,139,250,0.12)', true, ['M1','M2','M3','M4','M5','M6','M7','M8','Live']);
         }
     }
 

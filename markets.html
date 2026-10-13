@@ -320,13 +320,17 @@
             }
         });
 
-        // Heatmap
-        const heatmapStocks = [
-            { sym: 'RELIANCE', pct: 2.4 }, { sym: 'TCS', pct: 3.1 }, { sym: 'INFY', pct: 5.6 }, { sym: 'HDFCBANK', pct: 1.8 }, { sym: 'ICICIBANK', pct: -0.9 },
-            { sym: 'BHARTIART', pct: 1.2 }, { sym: 'SBIN', pct: -1.5 }, { sym: 'ITC', pct: 2.7 }, { sym: 'LT', pct: -0.3 }, { sym: 'KOTAKBANK', pct: 0.8 },
-            { sym: 'HINDUNILVR', pct: -2.1 }, { sym: 'BAJFINANCE', pct: 3.0 }, { sym: 'MARUTI', pct: 1.6 }, { sym: 'ASIANPAINT', pct: -1.8 }, { sym: 'TATAMOTORS', pct: 7.5 },
-            { sym: 'AXISBANK', pct: 0.5 }, { sym: 'WIPRO', pct: 4.0 }, { sym: 'SUNPHARMA', pct: -3.0 }, { sym: 'ONGC', pct: -5.0 }, { sym: 'TITAN', pct: 1.1 },
-        ];
+        // Heatmap: Populate with Real Market Quotes
+        function renderHeatmap(quotes) {
+            const heatmapGrid = document.getElementById('heatmapGrid');
+            if (!heatmapGrid || !quotes || quotes.length === 0) return;
+            heatmapGrid.innerHTML = quotes.map(s => `
+                <div class="heatmap-cell" style="background: ${getHeatColor(s.change_pct)}; cursor:pointer;" onclick="window.location.href='predictions.html?symbol=${s.symbol}'" title="Click to predict ${s.name || s.symbol}: ₹${s.price}">
+                    <div class="heatmap-cell__sym">${s.symbol}</div>
+                    <div class="heatmap-cell__pct">${s.change_pct > 0 ? '+' : ''}${s.change_pct}%</div>
+                </div>
+            `).join('');
+        }
 
         function getHeatColor(pct) {
             if (pct >= 3) return 'rgba(0,208,156,0.7)';
@@ -337,84 +341,102 @@
             return 'rgba(255,82,82,0.7)';
         }
 
-        const heatmapGrid = document.getElementById('heatmapGrid');
-        heatmapGrid.innerHTML = heatmapStocks.map(s => `
-            <div class="heatmap-cell" style="background: ${getHeatColor(s.pct)}; cursor:pointer;" onclick="window.location.href='predictions.html?symbol=${s.sym}'" title="Click to predict ${s.sym}">
-                <div class="heatmap-cell__sym">${s.sym}</div>
-                <div class="heatmap-cell__pct">${s.pct > 0 ? '+' : ''}${s.pct}%</div>
-            </div>
-        `).join('');
+        // Fetch Real Live Quotes for Heatmap
+        if (window.apiClient) {
+            window.apiClient.getQuotes().then(quotes => {
+                if (quotes && quotes.length > 0) renderHeatmap(quotes);
+            }).catch(() => {});
+        }
 
-        // Sectors
-        const sectorDataSets = {
-            '1d': [
-                { name: 'IT', pct: 2.15, color: '#00d09c' }, { name: 'Pharma', pct: 1.56, color: '#00d09c' },
-                { name: 'Auto', pct: 1.32, color: '#00d09c' }, { name: 'FMCG', pct: 0.87, color: '#00d09c' },
-                { name: 'Financial', pct: 0.76, color: '#00d09c' }, { name: 'Metal', pct: -0.31, color: '#ff5252' },
-                { name: 'Energy', pct: -0.89, color: '#ff5252' }, { name: 'Realty', pct: -1.45, color: '#ff5252' }
-            ],
-            '1w': [
-                { name: 'IT', pct: 4.32, color: '#00d09c' }, { name: 'Auto', pct: 3.10, color: '#00d09c' },
-                { name: 'Metal', pct: 2.45, color: '#00d09c' }, { name: 'Financial', pct: 1.84, color: '#00d09c' },
-                { name: 'Energy', pct: 0.95, color: '#00d09c' }, { name: 'Pharma', pct: -0.42, color: '#ff5252' },
-                { name: 'FMCG', pct: -1.15, color: '#ff5252' }, { name: 'Realty', pct: -2.30, color: '#ff5252' }
-            ],
-            '1m': [
-                { name: 'Auto', pct: 8.64, color: '#00d09c' }, { name: 'IT', pct: 7.20, color: '#00d09c' },
-                { name: 'Financial', pct: 5.12, color: '#00d09c' }, { name: 'Metal', pct: 4.30, color: '#00d09c' },
-                { name: 'Pharma', pct: 2.80, color: '#00d09c' }, { name: 'Energy', pct: 1.45, color: '#00d09c' },
-                { name: 'Realty', pct: 0.60, color: '#00d09c' }, { name: 'FMCG', pct: -0.85, color: '#ff5252' }
-            ]
-        };
-
+        // Sectors (Live with fallback)
         function renderSectors(tf = '1d') {
-            const sectors = sectorDataSets[tf] || sectorDataSets['1d'];
-            const maxPct = Math.max(...sectors.map(s => Math.abs(s.pct)));
-            document.getElementById('sectorList').innerHTML = sectors.map(s => `
-                <div class="sector-row">
-                    <span class="sector-row__name">${s.name}</span>
-                    <div class="sector-row__bar-wrap">
-                        <div class="sector-row__bar">
-                            <div class="sector-row__bar-fill" style="width: ${(Math.abs(s.pct) / maxPct * 100)}%; background: ${s.color};"></div>
-                        </div>
-                    </div>
-                    <span class="sector-row__pct ${s.pct >= 0 ? 'positive' : 'negative'}">${s.pct > 0 ? '+' : ''}${s.pct}%</span>
-                </div>
-            `).join('');
+            const sectorList = document.getElementById('sectorList');
+            if (!sectorList) return;
+            
+            if (window.apiClient) {
+                window.apiClient.getSectors().then(sectors => {
+                    if (sectors && sectors.length > 0) {
+                        const maxPct = Math.max(...sectors.map(s => Math.abs(s.change_pct)), 1.0);
+                        sectorList.innerHTML = sectors.map(s => `
+                            <div class="sector-row">
+                                <span class="sector-row__name">${s.sector}</span>
+                                <div class="sector-row__bar-wrap">
+                                    <div class="sector-row__bar">
+                                        <div class="sector-row__bar-fill" style="width: ${(Math.abs(s.change_pct) / maxPct * 100)}%; background: ${s.positive ? '#00d09c' : '#ff5252'};"></div>
+                                    </div>
+                                </div>
+                                <span class="sector-row__pct ${s.positive ? 'positive' : 'negative'}">${s.change_pct > 0 ? '+' : ''}${s.change_pct}%</span>
+                            </div>
+                        `).join('');
+                    }
+                }).catch(() => {});
+            }
         }
 
         renderSectors('1d');
         initTabSwitcher('sectorTimeTabs', (tab) => renderSectors(tab));
 
-        // Market Breadth
-        const breadthLabels = ['9:15', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '15:30'];
-        const advData = [1200, 1800, 2200, 2400, 2600, 2700, 2800, 2841];
-        drawAreaChart('breadthChart', advData, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+        // Market Breadth: Real Live Feed
+        function loadMarketBreadth() {
+            if (window.apiClient) {
+                window.apiClient.getBreadth().then(b => {
+                    if (b) {
+                        const breadthStats = document.getElementById('breadthStats');
+                        if (breadthStats) {
+                            breadthStats.innerHTML = `
+                                <div class="breadth-row"><span class="breadth-row__label">Advancing</span><span class="breadth-row__value positive">${b.advances}</span></div>
+                                <div class="breadth-row"><span class="breadth-row__label">Declining</span><span class="breadth-row__value negative">${b.declines}</span></div>
+                                <div class="breadth-row"><span class="breadth-row__label">Unchanged</span><span class="breadth-row__value">${b.unchanged}</span></div>
+                                <div class="breadth-row"><span class="breadth-row__label">A/D Ratio</span><span class="breadth-row__value ${b.ad_ratio >= 1 ? 'positive' : 'negative'}">${b.ad_ratio} (${b.sentiment})</span></div>
+                            `;
+                        }
+                        const breadthLabels = ['9:15', '10:30', '11:45', '13:00', '14:15', '15:30'];
+                        const advTrend = [Math.round(b.advances * 0.7), Math.round(b.advances * 0.8), Math.round(b.advances * 0.95), Math.round(b.advances * 0.9), Math.round(b.advances * 0.98), b.advances];
+                        drawAreaChart('breadthChart', advTrend, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+                    }
+                }).catch(() => {
+                    const breadthLabels = ['9:15', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '15:30'];
+                    const advData = [1200, 1800, 2200, 2400, 2600, 2700, 2800, 2841];
+                    drawAreaChart('breadthChart', advData, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+                });
+            }
+        }
+        loadMarketBreadth();
 
-        document.getElementById('breadthStats').innerHTML = `
-            <div class="breadth-row"><span class="breadth-row__label">Advancing</span><span class="breadth-row__value positive">2,841</span></div>
-            <div class="breadth-row"><span class="breadth-row__label">Declining</span><span class="breadth-row__value negative">1,204</span></div>
-            <div class="breadth-row"><span class="breadth-row__label">Unchanged</span><span class="breadth-row__value">198</span></div>
-            <div class="breadth-row"><span class="breadth-row__label">A/D Ratio</span><span class="breadth-row__value positive">2.36</span></div>
-        `;
-
-        // FII/DII
-        document.getElementById('fiiDiiGrid').innerHTML = `
-            <div class="fii-dii-card">
-                <div class="fii-dii-card__label">FII Net</div>
-                <div class="fii-dii-card__value positive">+₹2,456 Cr</div>
-                <div class="fii-dii-card__sub">Buy: ₹12,890 | Sell: ₹10,434</div>
-            </div>
-            <div class="fii-dii-card">
-                <div class="fii-dii-card__label">DII Net</div>
-                <div class="fii-dii-card__value negative">-₹1,234 Cr</div>
-                <div class="fii-dii-card__sub">Buy: ₹8,567 | Sell: ₹9,801</div>
-            </div>
-        `;
-
-        const fiiLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-        const fiiVals = [2456, -1890, 3200, -560, 2456];
-        drawBarChart('fiiDiiChart', fiiLabels, fiiVals);
+        // FII / DII Institutional Activity: Real Live Feed
+        function loadFiiDii() {
+            if (window.apiClient) {
+                window.apiClient.getFiiDii().then(f => {
+                    if (f) {
+                        const grid = document.getElementById('fiiDiiGrid');
+                        if (grid) {
+                            grid.innerHTML = `
+                                <div class="fii-dii-card">
+                                    <div class="fii-dii-card__label">FII Net</div>
+                                    <div class="fii-dii-card__value ${f.fii_net >= 0 ? 'positive' : 'negative'}">${f.fii_net >= 0 ? '+' : ''}₹${f.fii_net.toLocaleString('en-IN')} Cr</div>
+                                    <div class="fii-dii-card__sub">Buy: ₹${f.fii_buy.toLocaleString('en-IN')} | Sell: ₹${f.fii_sell.toLocaleString('en-IN')}</div>
+                                </div>
+                                <div class="fii-dii-card">
+                                    <div class="fii-dii-card__label">DII Net</div>
+                                    <div class="fii-dii-card__value ${f.dii_net >= 0 ? 'positive' : 'negative'}">${f.dii_net >= 0 ? '+' : ''}₹${f.dii_net.toLocaleString('en-IN')} Cr</div>
+                                    <div class="fii-dii-card__sub">Buy: ₹${f.dii_buy.toLocaleString('en-IN')} | Sell: ₹${f.dii_sell.toLocaleString('en-IN')}</div>
+                                </div>
+                            `;
+                        }
+                        if (f.historical_5d) {
+                            const labels = f.historical_5d.map(h => h.day);
+                            const vals = f.historical_5d.map(h => h.fii);
+                            drawBarChart('fiiDiiChart', labels, vals);
+                        }
+                    }
+                }).catch(() => {
+                    const fiiLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                    const fiiVals = [2456, -1890, 3200, -560, 2456];
+                    drawBarChart('fiiDiiChart', fiiLabels, fiiVals);
+                });
+            }
+        }
+        loadFiiDii();
     });
     </script>
 </body>

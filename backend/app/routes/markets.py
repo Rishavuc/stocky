@@ -33,3 +33,12 @@ async def get_sector_performance():
         {"sector": "NIFTY FMCG", "change_pct": -0.28, "positive": False},
         {"sector": "NIFTY Bank", "change_pct": -0.42, "positive": False}
     ]
+
+@router.get("/breadth")
+async def get_market_breadth():
+    return market_ingest.get_market_breadth()
+
+@router.get("/fii-dii")
+async def get_fii_dii():
+    return market_ingest.get_fii_dii_flows()
+

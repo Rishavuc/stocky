@@ -63,6 +63,18 @@ class ApiClient {
         return await this._fetch(`/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`);
     }
 
+    async getBreadth() {
+        return await this._fetch('/markets/breadth');
+    }
+
+    async getFiiDii() {
+        return await this._fetch('/markets/fii-dii');
+    }
+
+    async getSectors() {
+        return await this._fetch('/markets/sectors');
+    }
+
     // --- Analysis ---
     async getTechnicalAnalysis(symbol) {
         return await this._fetch(`/analysis/technical/${symbol}`);
