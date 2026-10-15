@@ -326,7 +326,7 @@
         if (window.apiClient) {
             try {
                 const [pred, candles] = await Promise.all([
-                    window.apiClient.getPrediction(currentSymbol, currentHorizon),
+                    window.apiClient.getPrediction(currentSymbol, currentHorizon, currentModel),
                     window.apiClient.getCandles(currentSymbol, '1d', 30)
                 ]);
                 latestPredictionData = pred;
@@ -364,7 +364,7 @@
         ctx.scale(dpr, dpr);
 
         const w = canvas.offsetWidth, h = canvas.offsetHeight;
-        const pad = { top: 20, right: 20, bottom: 34, left: 65 };
+        const pad = { top: 20, right: 20, bottom: 52, left: 65 };
         const cW = w - pad.left - pad.right, cH = h - pad.top - pad.bottom;
         const prefix = getCurrencyPrefix(currentSymbol);
 
@@ -380,14 +380,18 @@
             }
         }
 
+        const pts = latestPredictionData ? (latestPredictionData.forecast_points || latestPredictionData.predictions) : null;
         let predicted = [actual[actual.length - 1]];
-        if (latestPredictionData && latestPredictionData.predictions && latestPredictionData.predictions.length > 0) {
-            predicted = [actual[actual.length - 1], ...latestPredictionData.predictions.map(p => p.predicted)];
+        let lowerBand = null, upperBand = null;
+        if (pts && pts.length > 0) {
+            predicted = [actual[actual.length - 1], ...pts.map(p => p.predicted)];
+            lowerBand = [actual[actual.length - 1], ...pts.map(p => p.lower_band)];
+            upperBand = [actual[actual.length - 1], ...pts.map(p => p.upper_band)];
         } else {
             let v = actual[actual.length - 1];
-            for (let i = 0; i < currentHorizon; i++) { 
-                v += (Math.random() - 0.35) * (v * 0.012); 
-                predicted.push(v); 
+            for (let i = 0; i < currentHorizon; i++) {
+                v += v * 0.004;
+                predicted.push(v);
             }
         }
 
@@ -410,20 +414,31 @@
             ctx.fillText(prefix + priceLabel.toLocaleString(), pad.left - 8, y + 4);
         }
 
-        // Confidence band
+        // Confidence band (real q10/q90 quantiles when available)
         const bandStart = actual.length - 1;
         ctx.fillStyle = 'rgba(0, 208, 156, 0.08)';
         ctx.beginPath();
-        predicted.forEach((val, i) => {
-            const x = gX(bandStart + i);
-            const offset = (i + 1) * (val * 0.008);
-            if (i === 0) ctx.moveTo(x, gY(val - offset));
-            else ctx.lineTo(x, gY(val - offset));
-        });
-        for (let i = predicted.length - 1; i >= 0; i--) {
-            const x = gX(bandStart + i);
-            const offset = (i + 1) * (predicted[i] * 0.008);
-            ctx.lineTo(x, gY(predicted[i] + offset));
+        if (lowerBand && upperBand) {
+            lowerBand.forEach((val, i) => {
+                const x = gX(bandStart + i);
+                if (i === 0) ctx.moveTo(x, gY(val));
+                else ctx.lineTo(x, gY(val));
+            });
+            for (let i = upperBand.length - 1; i >= 0; i--) {
+                ctx.lineTo(gX(bandStart + i), gY(upperBand[i]));
+            }
+        } else {
+            predicted.forEach((val, i) => {
+                const x = gX(bandStart + i);
+                const offset = (i + 1) * (val * 0.008);
+                if (i === 0) ctx.moveTo(x, gY(val - offset));
+                else ctx.lineTo(x, gY(val - offset));
+            });
+            for (let i = predicted.length - 1; i >= 0; i--) {
+                const x = gX(bandStart + i);
+                const offset = (i + 1) * (predicted[i] * 0.008);
+                ctx.lineTo(x, gY(predicted[i] + offset));
+            }
         }
         ctx.closePath(); ctx.fill();
 
@@ -442,10 +457,31 @@
         ctx.beginPath(); ctx.moveTo(dx, pad.top); ctx.lineTo(dx, pad.top + cH);
         ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
 
+        // X-axis time labels (real candle dates, then forecast dates)
+        if (latestCandlesData && latestCandlesData.length > 0) {
+            const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const fmtDate = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+            const lastCandleDate = new Date(latestCandlesData[latestCandlesData.length - 1].time);
+            const totalPts = all.length;
+            const tickCount = Math.min(6, totalPts);
+            ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+            for (let t = 0; t < tickCount; t++) {
+                const idx = Math.round(t * (totalPts - 1) / Math.max(1, tickCount - 1));
+                let label;
+                if (idx <= actual.length - 1 && latestCandlesData[idx]) {
+                    label = fmtDate(new Date(latestCandlesData[idx].time));
+                } else {
+                    const daysAhead = idx - (actual.length - 1);
+                    label = fmtDate(new Date(lastCandleDate.getTime() + daysAhead * 86400000));
+                }
+                ctx.fillText(label, gX(idx), pad.top + cH + 16);
+            }
+        }
+
         ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
-        ctx.fillText('← Historical Data', dx - 55, pad.top + cH + 18);
+        ctx.fillText('← Historical Data', dx - 55, pad.top + cH + 34);
         ctx.fillStyle = '#00d09c';
-        ctx.fillText('Quantile Forecast →', dx + 65, pad.top + cH + 18);
+        ctx.fillText('Quantile Forecast →', dx + 65, pad.top + cH + 34);
 
         // End dots
         ctx.beginPath(); ctx.arc(dx, gY(actual[actual.length-1]), 5, 0, Math.PI*2); ctx.fillStyle = '#4a9eff'; ctx.fill();
@@ -461,12 +497,13 @@
         if (!tbody) return;
         const prefix = getCurrencyPrefix(currentSymbol);
 
-        if (latestPredictionData && latestPredictionData.predictions && latestPredictionData.predictions.length > 0) {
-            const baseClose = latestCandlesData && latestCandlesData.length > 0 
-                ? latestCandlesData[latestCandlesData.length - 1].close 
-                : latestPredictionData.predictions[0].predicted;
-            
-            tbody.innerHTML = latestPredictionData.predictions.map((p, idx) => {
+        const pts = latestPredictionData ? (latestPredictionData.forecast_points || latestPredictionData.predictions) : null;
+        if (pts && pts.length > 0) {
+            const baseClose = latestCandlesData && latestCandlesData.length > 0
+                ? latestCandlesData[latestCandlesData.length - 1].close
+                : pts[0].predicted;
+
+            tbody.innerHTML = pts.map((p, idx) => {
                 const pct = (((p.predicted - baseClose) / baseClose) * 100);
                 const confidence = Math.max(72, 96 - (idx + 1) * 3);
                 return `<tr>
@@ -482,7 +519,7 @@
             const rows = [];
             for (let i = 1; i <= currentHorizon; i++) {
                 const date = new Date(today); date.setDate(today.getDate() + i);
-                const change = (Math.random() - 0.35) * (price * 0.012);
+                const change = price * 0.004;
                 price += change;
                 const pct = (change / price * 100);
                 const confidence = Math.max(72, 95 - i * 2.5).toFixed(0);
@@ -505,9 +542,9 @@
             items[0].textContent = metrics ? metrics.root_mean_squared_error_rmse : (crypto ? '482.4' : '18.4'); // RMSE
             items[1].textContent = metrics ? metrics.mean_absolute_error_mae : (crypto ? '312.8' : '12.7'); // MAE
             items[2].textContent = metrics ? metrics.r2_score : (currentModel === 'bilstm' ? '0.96' : '0.94'); // R2
-            items[3].textContent = crypto ? '4 Years' : '5 Years'; // Training Data
+            items[3].textContent = (metrics && metrics.history_years) ? `${metrics.history_years} Years` : (crypto ? '4 Years' : '5 Years'); // Training Data
             items[4].textContent = 'OHLCV+TI'; // Features
-            items[5].textContent = currentModel === 'bilstm' ? '120' : '100'; // Epochs
+            items[5].textContent = (metrics && metrics.epochs_trained) ? metrics.epochs_trained : (currentModel === 'bilstm' ? '120' : '100'); // Epochs
         }
         if (latestPredictionData && latestPredictionData.confidence_score) {
             const score = Math.round(latestPredictionData.confidence_score);
@@ -563,7 +600,7 @@
 
         let data = null;
         if (window.apiClient) {
-            data = await window.apiClient.getBacktest(currentSymbol);
+            data = await window.apiClient.getBacktest(currentSymbol, currentModel);
         }
 
         if (!data) {

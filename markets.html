@@ -1872,6 +1872,37 @@
         }
         loadFiiDii();
 
+        // ========================================================
+        // AUTO-REFRESH: keep prices & breadth moving without a manual reload
+        // ========================================================
+        function refreshLivePrices() {
+            if (!window.apiClient) return;
+            Promise.all([
+                window.apiClient.getIndices().catch(() => null),
+                window.apiClient.getQuotes().catch(() => null)
+            ]).then(([idx, quotes]) => {
+                if (idx && idx.length) renderIndices(idx);
+                if (quotes && quotes.length) renderHeatmap(quotes);
+            });
+            if (window.apiClient.getStocksCatalog) {
+                window.apiClient.getStocksCatalog().then(d => {
+                    if (d && d.length) { stocksCatalogData = d; updateStocksKPIs(); renderStocksTable(); }
+                }).catch(() => {});
+            }
+            if (window.apiClient.getCryptoCatalog) {
+                window.apiClient.getCryptoCatalog().then(d => {
+                    if (d && d.length) { cryptoCatalogData = d; updateCryptoKPIs(); renderCryptoTable(); }
+                }).catch(() => {});
+            }
+            if (window.apiClient.getCurrenciesCatalog) {
+                window.apiClient.getCurrenciesCatalog().then(d => {
+                    if (d && d.length) { currenciesCatalogData = d; renderCurrenciesTable(); }
+                }).catch(() => {});
+            }
+            loadMarketBreadth();
+        }
+        setInterval(refreshLivePrices, 15000);
+
         // Check if page opened with subdashboard query param (e.g. ?type=stocks)
         const urlParams = new URLSearchParams(window.location.search);
         const initType = urlParams.get('type') || urlParams.get('tab');

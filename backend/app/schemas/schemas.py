@@ -101,6 +101,7 @@ class PredictionResponse(BaseModel):
     confidence_score: float
     accuracy_metrics: Dict[str, Any] # mae, rmse, r2, win_rate
     forecast_points: List[PredictionPoint]
+    predictions: List[PredictionPoint] = []  # alias of forecast_points for client compatibility
     disclaimer: str
 
 # ========================================================

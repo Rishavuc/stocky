@@ -6,17 +6,15 @@ from app.schemas.schemas import PaperOrderRequest, PaperPortfolioResponse, Paper
 class PaperTradingEngine:
     def __init__(self):
         self.initial_capital: float = 1000000.0
-        self.cash: float = 845200.0
-        self.realized_pnl: float = 6200.0
+        self.cash: float = 909600.0
+        self.realized_pnl: float = 0.0
         self.positions: Dict[str, Dict] = {
-            "RELIANCE_CNC": {"symbol": "RELIANCE", "product": "CNC", "qty": 30, "buy_price": 2810.00},
-            "INFY_MIS": {"symbol": "INFY", "product": "MIS", "qty": 50, "buy_price": 1495.00}
+            "RELIANCE_CNC": {"symbol": "RELIANCE", "product": "CNC", "qty": 30, "buy_price": 1180.00},
+            "INFY_MIS": {"symbol": "INFY", "product": "MIS", "qty": 50, "buy_price": 1100.00}
         }
         self.orders: List[Dict] = [
-            {"time": "10:15 AM", "side": "BUY", "symbol": "RELIANCE", "product": "CNC", "qty": 30, "price": 2810.00, "status": "EXECUTED"},
-            {"time": "11:42 AM", "side": "BUY", "symbol": "INFY", "product": "MIS", "qty": 50, "price": 1495.00, "status": "EXECUTED"},
-            {"time": "01:20 PM", "side": "BUY", "symbol": "ITC", "product": "MIS", "qty": 200, "price": 435.00, "status": "EXECUTED"},
-            {"time": "02:05 PM", "side": "SELL", "symbol": "ITC", "product": "MIS", "qty": 200, "price": 439.00, "status": "EXECUTED"}
+            {"time": "10:15 AM", "side": "BUY", "symbol": "RELIANCE", "product": "CNC", "qty": 30, "price": 1180.00, "status": "EXECUTED"},
+            {"time": "11:42 AM", "side": "BUY", "symbol": "INFY", "product": "MIS", "qty": 50, "price": 1100.00, "status": "EXECUTED"},
         ]
 
     def get_portfolio(self) -> PaperPortfolioResponse:

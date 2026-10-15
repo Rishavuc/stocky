@@ -496,8 +496,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (candles && candles.length > 0) {
                     const actualData = candles.map(c => c.close);
                     let predictedData = [actualData[actualData.length - 1]];
-                    if (pred && pred.predictions && pred.predictions.length > 0) {
-                        predictedData = [actualData[actualData.length - 1], ...pred.predictions.map(p => p.predicted)];
+                    const pts = pred && (pred.forecast_points || pred.predictions);
+                    if (pts && pts.length > 0) {
+                        predictedData = [actualData[actualData.length - 1], ...pts.map(p => p.predicted)];
                     } else {
                         let v = actualData[actualData.length - 1];
                         for (let i = 0; i < 7; i++) { v += (v * 0.005); predictedData.push(v); }
@@ -608,6 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== LIVE REAL MARKET DATA TICKS & HYDRATION =====
     function initLivePriceUpdates() {
         if (window.apiClient) {
+            window.apiClient.connectWebSocket();
             window.apiClient.onTick((ticks) => {
                 ticks.forEach(t => {
                     if (t.symbol === 'NIFTY 50') {

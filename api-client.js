@@ -105,12 +105,12 @@ class ApiClient {
     }
 
     // --- LSTM Predictions ---
-    async getPrediction(symbol, horizon = 7) {
-        return await this._fetch(`/predictions/${symbol}?horizon=${horizon}`);
+    async getPrediction(symbol, horizon = 7, model = 'lstm') {
+        return await this._fetch(`/predictions/${symbol}?horizon=${horizon}&model=${model}`);
     }
 
-    async getBacktest(symbol) {
-        return await this._fetch(`/predictions/${symbol}/backtest`);
+    async getBacktest(symbol, model = 'lstm') {
+        return await this._fetch(`/predictions/${symbol}/backtest?model=${model}`);
     }
 
     // --- Mock / Paper Trading ---

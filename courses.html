@@ -207,6 +207,8 @@
         .platform-coursera { background: rgba(0, 86, 210, 0.15); color: #60a5fa; }
         .platform-nse { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
         .platform-edx { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+        .platform-tv { background: rgba(41, 98, 255, 0.15); color: #6ea8ff; }
+        .platform-fcc { background: rgba(10, 10, 10, 0.35); color: #cbd5e1; }
 
         .btn-bookmark {
             background: transparent;
@@ -503,15 +505,15 @@
                     </p>
                     <div class="learn-stats-strip">
                         <div class="learn-stat">
-                            <span class="learn-stat__num">50+</span>
+                            <span class="learn-stat__num" id="learnStatCourses">0</span>
                             <span class="learn-stat__lbl">Verified Free Courses</span>
                         </div>
                         <div class="learn-stat">
-                            <span class="learn-stat__num">6</span>
+                            <span class="learn-stat__num" id="learnStatRoadmaps">6</span>
                             <span class="learn-stat__lbl">Guided Roadmaps</span>
                         </div>
                         <div class="learn-stat">
-                            <span class="learn-stat__num">250+</span>
+                            <span class="learn-stat__num" id="learnStatLessons">0</span>
                             <span class="learn-stat__lbl">Video & Text Lessons</span>
                         </div>
                         <div class="learn-stat">
@@ -562,6 +564,22 @@
                             <p class="track-card__desc">Read Balance Sheets, P&L statements, calculate DCF valuations, ROCE, ROE, and competitive moats.</p>
                             <div class="track-card__steps"><span>14 Modules</span> • <span>Value Investor</span></div>
                         </div>
+
+                        <div class="track-card" onclick="filterByTopic('crypto')">
+                            <span class="track-card__icon">🪙</span>
+                            <div class="track-card__level">Stage 5 — Digital Assets</div>
+                            <h3 class="track-card__title">Crypto, Blockchain & DeFi</h3>
+                            <p class="track-card__desc">Wallets & keys, spot and futures trading, stablecoins, staking, liquidity pools, and on-chain risk assessment.</p>
+                            <div class="track-card__steps"><span>10 Modules</span> • <span>Advanced</span></div>
+                        </div>
+
+                        <div class="track-card" onclick="filterByTopic('algo')">
+                            <span class="track-card__icon">🤖</span>
+                            <div class="track-card__level">Stage 6 — Automation</div>
+                            <h3 class="track-card__title">Algorithmic & Quant Trading</h3>
+                            <p class="track-card__desc">Python for markets, indicator engineering, event-driven backtesting, ML/LSTM forecasting and paper-trade automation.</p>
+                            <div class="track-card__steps"><span>12 Modules</span> • <span>Quant</span></div>
+                        </div>
                     </div>
                 </div>
 
@@ -576,6 +594,8 @@
                             <option value="Coursera">Coursera</option>
                             <option value="NSE Academy">NSE Academy</option>
                             <option value="edX">edX</option>
+                            <option value="TradingView">TradingView</option>
+                            <option value="freeCodeCamp">freeCodeCamp</option>
                         </select>
                         <select class="filter-select" id="langSelect">
                             <option value="all">All Languages</option>
@@ -607,7 +627,7 @@
                             <h3 style="font-size:18px; font-weight:700;">🧠 Quick Knowledge Check</h3>
                             <p style="font-size:12px; color:var(--c-text-secondary);">Test your market terminology comprehension</p>
                         </div>
-                        <span class="badge-type" id="quizScoreBadge">Question 1 of 3</span>
+                        <span class="badge-type" id="quizScoreBadge">Question 1 of 8</span>
                     </div>
 
                     <div id="quizContent">
@@ -842,6 +862,343 @@
                     'Module 5: Central Bank Digital Currencies (CBDCs) and Global Policy'
                 ],
                 link: 'https://ocw.mit.edu'
+            },
+            {
+                id: 'course-10',
+                title: 'Personal Finance, Mutual Funds & SIP Blueprint',
+                instructor: 'CA Rachana Phadke Ranade',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'basics',
+                language: 'Hindi',
+                duration: '9 Hours',
+                lessons: 16,
+                rating: 4.8,
+                reviews: '52K',
+                desc: 'Build a goal-based investment plan: emergency funds, term insurance, index & flexi-cap funds, SIP vs lump-sum, and how to review a portfolio.',
+                syllabus: [
+                    'Module 1: Goal-based planning and the power of compounding',
+                    'Module 2: Direct vs regular mutual funds and expense ratio',
+                    'Module 3: SIP vs lump sum and step-up SIP strategies',
+                    'Module 4: Building a diversified fund portfolio'
+                ],
+                link: 'https://www.youtube.com/@CARachanaRanade'
+            },
+            {
+                id: 'course-11',
+                title: 'Stock Market Investing for Beginners',
+                instructor: 'Pranjal Kamra',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'basics',
+                language: 'Hindi',
+                duration: '7 Hours',
+                lessons: 12,
+                rating: 4.8,
+                reviews: '61K',
+                desc: 'A friendly, practical introduction to equity investing: how to open a Demat account, place orders, read a stock quote, and avoid common beginner mistakes.',
+                syllabus: [
+                    'Module 1: Demat, trading accounts and order types',
+                    'Module 2: Reading a live stock quote and market depth',
+                    'Module 3: Large-cap vs mid-cap vs small-cap',
+                    'Module 4: Common beginner mistakes to avoid'
+                ],
+                link: 'https://www.youtube.com/@PranjalKamra'
+            },
+            {
+                id: 'course-12',
+                title: 'Price Action & Swing Trading Blueprint',
+                instructor: 'Rayner Teo',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'technical',
+                language: 'English',
+                duration: '10 Hours',
+                lessons: 18,
+                rating: 4.7,
+                reviews: '33K',
+                desc: 'Trade pure price action: market structure, trend-following entries, breakout vs fakeout, and a complete swing-trading playbook with risk rules.',
+                syllabus: [
+                    'Module 1: Market structure and higher-highs/higher-lows',
+                    'Module 2: Support, resistance and trend channels',
+                    'Module 3: Breakout vs false-breakout setups',
+                    'Module 4: Position sizing and trailing stops'
+                ],
+                link: 'https://www.youtube.com/@RaynerTeo'
+            },
+            {
+                id: 'course-13',
+                title: 'Volume Price Analysis & Wyckoff Method',
+                instructor: 'Anna Coulling / Trade with Trend',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'technical',
+                language: 'English',
+                duration: '6 Hours',
+                lessons: 11,
+                rating: 4.6,
+                reviews: '21K',
+                desc: 'Read institutional footprints using volume spread analysis and the Wyckoff accumulation/distribution schematic to time entries with smart money.',
+                syllabus: [
+                    'Module 1: The Wyckoff three laws',
+                    'Module 2: Accumulation and distribution schematics',
+                    'Module 3: Volume spread analysis signals',
+                    'Module 4: Spotting springs, upthrusts and tests'
+                ],
+                link: 'https://www.youtube.com/results?search_query=wyckoff+volume+price+analysis'
+            },
+            {
+                id: 'course-14',
+                title: 'TradingView Charting & Indicator Mastery',
+                instructor: 'TradingView Education',
+                platform: 'TradingView',
+                platformClass: 'platform-tv',
+                topic: 'technical',
+                language: 'English',
+                duration: '5 Hours',
+                lessons: 10,
+                rating: 4.7,
+                reviews: '27K',
+                desc: 'Set up pro charts, add multi-timeframe indicators, build watchlists and alerts, and script simple Pine indicators for signals.',
+                syllabus: [
+                    'Module 1: Chart setup, layouts and multi-timeframe analysis',
+                    'Module 2: Adding and tuning RSI, MACD, VWAP, volume profile',
+                    'Module 3: Alerts, watchlists and screeners',
+                    'Module 4: Intro to Pine Script indicators'
+                ],
+                link: 'https://www.tradingview.com/education/'
+            },
+            {
+                id: 'course-15',
+                title: 'Futures & Options Complete Bootcamp',
+                instructor: 'Karthik Rangappa (Zerodha)',
+                platform: 'Zerodha Varsity',
+                platformClass: 'platform-varsity',
+                topic: 'fno',
+                language: 'English',
+                duration: '16 Hours',
+                lessons: 24,
+                rating: 4.9,
+                reviews: '88K',
+                desc: 'The definitive F&O curriculum: contract specs, margins, futures pricing, option moneyness, Greeks, and a catalogue of hedged strategies.',
+                syllabus: [
+                    'Module 1: Futures contracts, margins and mark-to-market',
+                    'Module 2: Options moneyness: ITM, ATM, OTM',
+                    'Module 3: Greeks and the option pricing model',
+                    'Module 4: Bull, bear and range-bound strategies',
+                    'Module 5: Hedging a portfolio with options'
+                ],
+                link: 'https://zerodha.com/varsity/module/futures-trading/'
+            },
+            {
+                id: 'course-16',
+                title: 'Option Greeks & Payoff Strategy Lab',
+                instructor: 'Sensibull Academy',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'fno',
+                language: 'English',
+                duration: '8 Hours',
+                lessons: 14,
+                rating: 4.7,
+                reviews: '24K',
+                desc: 'Interactive payoff labs: build, visualise and stress-test spreads, condors and calendar trades before risking real capital.',
+                syllabus: [
+                    'Module 1: Reading payoff diagrams',
+                    'Module 2: Vertical spreads and credit structures',
+                    'Module 3: Iron condor, butterfly and calendar spreads',
+                    'Module 4: Adjusting a losing options position'
+                ],
+                link: 'https://www.sensibull.com'
+            },
+            {
+                id: 'course-17',
+                title: 'Nifty & Bank Nifty Option Selling Systems',
+                instructor: 'Bhanu Pratap',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'fno',
+                language: 'Hindi',
+                duration: '12 Hours',
+                lessons: 20,
+                rating: 4.6,
+                reviews: '39K',
+                desc: 'Weekly-expiry income systems for index options: strike selection, adjustment rules, event-day risk and disciplined position sizing.',
+                syllabus: [
+                    'Module 1: Weekly expiry mechanics and theta harvesting',
+                    'Module 2: Strike selection with OI and PCR',
+                    'Module 3: Adjusting trades on trending days',
+                    'Module 4: Event-day (budget/result) risk management'
+                ],
+                link: 'https://www.youtube.com/@BhanuPratap'
+            },
+            {
+                id: 'course-18',
+                title: 'Financial Statement Analysis & Ratio Deep Dive',
+                instructor: 'NSE Academy',
+                platform: 'NSE Academy',
+                platformClass: 'platform-nse',
+                topic: 'fundamental',
+                language: 'English',
+                duration: '18 Hours',
+                lessons: 22,
+                rating: 4.8,
+                reviews: '30K',
+                desc: 'Learn to read annual reports line by line, spot earnings quality, compute ROCE/ROE/working-capital ratios and build a stock screening checklist.',
+                syllabus: [
+                    'Module 1: Reading the P&L, balance sheet and cash flow',
+                    'Module 2: Earnings quality and red flags',
+                    'Module 3: Return ratios and working-capital cycles',
+                    'Module 4: Building a fundamental screening checklist'
+                ],
+                link: 'https://www.nseindia.com/learn'
+            },
+            {
+                id: 'course-19',
+                title: 'Value Investing & Margin of Safety',
+                instructor: 'NPTEL / IIT Faculty',
+                platform: 'NSE Academy',
+                platformClass: 'platform-nse',
+                topic: 'fundamental',
+                language: 'English',
+                duration: '14 Hours',
+                lessons: 18,
+                rating: 4.7,
+                reviews: '26K',
+                desc: 'Graham-style value investing: intrinsic value, margin of safety, moats, and how to build a concentrated long-term portfolio.',
+                syllabus: [
+                    'Module 1: Intrinsic value and margin of safety',
+                    'Module 2: Economic moats and competitive advantage',
+                    'Module 3: Valuation multiples and mean reversion',
+                    'Module 4: Constructing a value portfolio'
+                ],
+                link: 'https://nptel.ac.in/courses'
+            },
+            {
+                id: 'course-20',
+                title: 'Python for Finance & Algo Backtesting',
+                instructor: 'freeCodeCamp',
+                platform: 'freeCodeCamp',
+                platformClass: 'platform-fcc',
+                topic: 'algo',
+                language: 'English',
+                duration: '12 Hours',
+                lessons: 15,
+                rating: 4.8,
+                reviews: '45K',
+                desc: 'Hands-on Python for markets: pull data with yfinance, compute indicators with pandas, backtest a strategy, and measure Sharpe and drawdown.',
+                syllabus: [
+                    'Module 1: Python & pandas for time-series data',
+                    'Module 2: Computing indicators and signals',
+                    'Module 3: Writing an event-driven backtester',
+                    'Module 4: Performance metrics and risk analytics'
+                ],
+                link: 'https://www.freecodecamp.org/news/tag/finance/'
+            },
+            {
+                id: 'course-21',
+                title: 'Machine Learning & Deep Learning for Trading',
+                instructor: 'DeepLearning.AI (Coursera)',
+                platform: 'Coursera',
+                platformClass: 'platform-coursera',
+                topic: 'algo',
+                language: 'English',
+                duration: '20 Hours',
+                lessons: 22,
+                rating: 4.7,
+                reviews: '31K',
+                desc: 'Feature engineering, walk-forward validation, LSTMs and gradient boosting for return and volatility forecasting with realistic evaluation.',
+                syllabus: [
+                    'Module 1: Feature engineering for financial series',
+                    'Module 2: Walk-forward validation and avoiding lookahead',
+                    'Module 3: LSTM / GRU sequence models',
+                    'Module 4: Evaluation: MAE, RMSE, directional accuracy'
+                ],
+                link: 'https://www.coursera.org/learn/machine-learning-for-trading'
+            },
+            {
+                id: 'course-22',
+                title: 'Crypto Trading & DeFi Yield Strategies',
+                instructor: 'Whiteboard Crypto',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'crypto',
+                language: 'English',
+                duration: '9 Hours',
+                lessons: 16,
+                rating: 4.7,
+                reviews: '29K',
+                desc: 'From spot trading to on-chain yield: wallets, exchanges, stablecoins, staking, liquidity pools, and how to evaluate DeFi risk.',
+                syllabus: [
+                    'Module 1: Wallets, keys and exchange basics',
+                    'Module 2: Spot vs futures and funding rates',
+                    'Module 3: Staking, lending and liquidity pools',
+                    'Module 4: Evaluating on-chain and smart-contract risk'
+                ],
+                link: 'https://www.youtube.com/@WhiteboardCrypto'
+            },
+            {
+                id: 'course-23',
+                title: 'Ethereum Smart Contracts with Solidity',
+                instructor: 'freeCodeCamp',
+                platform: 'freeCodeCamp',
+                platformClass: 'platform-fcc',
+                topic: 'crypto',
+                language: 'English',
+                duration: '16 Hours',
+                lessons: 20,
+                rating: 4.8,
+                reviews: '54K',
+                desc: 'Write, test and deploy Solidity smart contracts on Ethereum; understand gas, ERC-20/721 tokens and decentralised finance primitives.',
+                syllabus: [
+                    'Module 1: Solidity basics and the EVM',
+                    'Module 2: Gas, storage and security pitfalls',
+                    'Module 3: ERC-20 and ERC-721 token standards',
+                    'Module 4: Deploying to a testnet'
+                ],
+                link: 'https://www.freecodecamp.org/news/tag/blockchain/'
+            },
+            {
+                id: 'course-24',
+                title: 'Risk Management & Trading Psychology',
+                instructor: 'Mark Douglas (adapted lectures)',
+                platform: 'YouTube',
+                platformClass: 'platform-yt',
+                topic: 'basics',
+                language: 'English',
+                duration: '5 Hours',
+                lessons: 9,
+                rating: 4.9,
+                reviews: '40K',
+                desc: 'The discipline layer most traders skip: expectancy, position sizing, drawdown control, and the probabilistic mindset that survives losing streaks.',
+                syllabus: [
+                    'Module 1: Expectancy, R-multiples and edge',
+                    'Module 2: Position sizing and the 1% rule',
+                    'Module 3: Managing drawdowns and revenge trading',
+                    'Module 4: The five fundamental truths of trading'
+                ],
+                link: 'https://www.youtube.com/results?search_query=mark+douglas+trading+psychology'
+            },
+            {
+                id: 'course-25',
+                title: 'Portfolio Management & Asset Allocation',
+                instructor: 'NPTEL / IIT Faculty',
+                platform: 'Coursera',
+                platformClass: 'platform-coursera',
+                topic: 'basics',
+                language: 'English',
+                duration: '13 Hours',
+                lessons: 17,
+                rating: 4.7,
+                reviews: '23K',
+                desc: 'Modern portfolio theory in practice: diversification, correlation, rebalancing, factor investing and risk-adjusted performance measurement.',
+                syllabus: [
+                    'Module 1: Risk, return and correlation',
+                    'Module 2: Asset allocation across equity, debt and gold',
+                    'Module 3: Rebalancing and tax-aware withdrawal',
+                    'Module 4: Factor investing and index strategies'
+                ],
+                link: 'https://nptel.ac.in/courses'
             }
         ];
 
@@ -1100,7 +1457,18 @@
             `).join('');
         }
 
+        function updateLearnStats() {
+            const coursesEl = document.getElementById('learnStatCourses');
+            const lessonsEl = document.getElementById('learnStatLessons');
+            if (coursesEl) coursesEl.textContent = COURSES_DATA.length + '+';
+            if (lessonsEl) {
+                const total = COURSES_DATA.reduce((n, c) => n + (c.lessons || 0), 0);
+                lessonsEl.textContent = total + '+';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            updateLearnStats();
             updateSavedBadge();
             renderCourses();
             loadQuizQuestion(0);

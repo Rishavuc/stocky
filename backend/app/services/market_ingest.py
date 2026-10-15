@@ -1,6 +1,7 @@
 import os
 import math
 import time
+import random
 import json
 import urllib.request
 import hmac
@@ -30,35 +31,7 @@ except ImportError:
 # ========================================================
 # SYMBOL MAPPINGS
 # ========================================================
-INDIAN_STOCKS_MAP = {
-    "RELIANCE": {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Energy", "token": 738561},
-    "TCS": {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 2953217},
-    "HDFCBANK": {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 341249},
-    "INFY": {"ticker": "INFY.NS", "name": "Infosys Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 408065},
-    "ICICIBANK": {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 1270529},
-    "TATASTEEL": {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Metals", "token": 895745},
-    "ITC": {"ticker": "ITC.NS", "name": "ITC Limited", "segment": "EQ", "exchange": "NSE", "sector": "FMCG", "token": 424961},
-    "SBIN": {"ticker": "SBIN.NS", "name": "State Bank of India", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 779521},
-    "BHARTIARTL": {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Telecom", "token": 2714625},
-    "LICI": {"ticker": "LICI.NS", "name": "Life Insurance Corp of India", "segment": "EQ", "exchange": "NSE", "sector": "Insurance", "token": 11023361},
-    "KOTAKBANK": {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 492033},
-    "LT": {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Infrastructure", "token": 2939649},
-    "AXISBANK": {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Banking", "token": 1510401},
-    "MARUTI": {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India", "segment": "EQ", "exchange": "NSE", "sector": "Automobile", "token": 2815745},
-    "TATAMOTORS": {"ticker": "TATAMOTORS.NS", "name": "Tata Motors Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Automobile", "token": 884737},
-    "SUNPHARMA": {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Ind.", "segment": "EQ", "exchange": "NSE", "sector": "Pharma", "token": 857857},
-    "TITAN": {"ticker": "TITAN.NS", "name": "Titan Company Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Consumer", "token": 897665},
-    "BAJFINANCE": {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Finance", "token": 81153},
-    "WIPRO": {"ticker": "WIPRO.NS", "name": "Wipro Limited", "segment": "EQ", "exchange": "NSE", "sector": "IT", "token": 969473},
-    "ASIANPAINT": {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd.", "segment": "EQ", "exchange": "NSE", "sector": "Paints", "token": 60417},
-}
-
-INDICES_MAP = {
-    "NIFTY 50": {"ticker": "^NSEI", "name": "NIFTY 50 Index", "exchange": "NSE", "token": 256265},
-    "SENSEX": {"ticker": "^BSESN", "name": "BSE SENSEX", "exchange": "BSE", "token": 265},
-    "BANK NIFTY": {"ticker": "^NSEBANK", "name": "NIFTY Bank Index", "exchange": "NSE", "token": 260105},
-    "NIFTY IT": {"ticker": "^CNXIT", "name": "NIFTY IT Index", "exchange": "NSE", "token": 259849},
-}
+from app.services.universe import INDIAN_STOCKS_MAP, INDICES_MAP
 
 CRYPTO_MAP = {
     "BTCUSDT": {"pair": "BTCUSDT", "name": "Bitcoin (BTC / USDT)", "base": "BTC", "quote": "USDT", "category": "Store of Value"},
@@ -82,6 +55,64 @@ CURRENCIES_MAP = {
 }
 
 USD_INR_RATE = 86.85  # Real-time exchange rate baseline for crypto INR conversion
+
+# ========================================================
+# REALISTIC FALLBACK REFERENCE PRICES
+# Used only when no live provider (Kite Connect / Binance / yfinance) is
+# reachable. Equity & index reference levels live on the maps in
+# ``app.services.universe`` so every instrument shows a sane, instrument-specific
+# number instead of one hard-coded constant.
+# ========================================================
+CRYPTO_BASE_PRICES: Dict[str, float] = {
+    "BTCUSDT": 81700.00, "BTCINR": 81700.00,
+    "ETHUSDT": 2145.00, "ETHINR": 2145.00,
+    "SOLUSDT": 142.80, "SOLINR": 142.80,
+    "BNBUSDT": 582.40, "DOGEUSDT": 0.1700, "XRPUSDT": 2.3000,
+    "ADAUSDT": 0.6200, "AVAXUSDT": 28.00,
+}
+
+
+def _stable_seed(symbol: str) -> int:
+    """Deterministic 32-bit seed derived from a symbol name."""
+    return int(hashlib.sha256(symbol.encode("utf-8")).hexdigest(), 16) % (2 ** 32)
+
+
+def _base_price(symbol: str) -> float:
+    meta = INDIAN_STOCKS_MAP.get(symbol) or INDICES_MAP.get(symbol)
+    if meta and meta.get("base"):
+        return float(meta["base"])
+    if symbol in CRYPTO_BASE_PRICES:
+        return CRYPTO_BASE_PRICES[symbol]
+    if symbol in CURRENCIES_MAP:
+        return CURRENCIES_MAP[symbol]["price"]
+    return 1000.0
+
+
+def _deterministic_walk(symbol: str, steps: int, end_price: float, daily_vol: float = 0.014) -> List[float]:
+    """Deterministic geometric random walk that terminates at ``end_price``.
+
+    Uses a seeded RNG so the same symbol always produces the same series
+    (no jitter between requests), and the series is rebuilt backwards from the
+    anchor price so the last close matches the live/fallback quote.
+    """
+    rng = random.Random(_stable_seed(symbol))
+    # Forward noise then rescale so the final value lands on end_price.
+    prices = [1.0]
+    for _ in range(max(1, steps - 1)):
+        prices.append(prices[-1] * math.exp((rng.random() - 0.5) * daily_vol * 2))
+    scale = end_price / prices[-1]
+    return [round(p * scale, 2) for p in prices]
+
+
+def _intraday_wobble(symbol: str) -> float:
+    """Small, smoothly varying multiplier so fallback quotes feel alive.
+
+    Bounded to ±0.35% and deterministic per (symbol, 30s window) so successive
+    requests over a short interval are not identical, but never look erratic.
+    """
+    window = int(time.time() // 30)
+    phase = (_stable_seed(symbol) % 1000) / 1000.0
+    return 1.0 + 0.0035 * math.sin((window + phase * 100) * 0.7)
 
 
 class MarketIngestService:
@@ -133,6 +164,13 @@ class MarketIngestService:
             "NIFTY IT": 259849,
         }
         self._cache_ttl = 15.0  # 15 seconds cache for real quotes
+        # Batched universe (stocks + indices) quote cache
+        self._universe_batch: Dict[str, QuoteResponse] = {}
+        self._universe_batch_time: float = 0.0
+        self._universe_sparklines: Dict[str, List[float]] = {}
+        self._universe_sparkline_times: Dict[str, List[str]] = {}
+        self._batch_ttl = 30.0
+        self._tick_seq = 0
 
     # ========================================================
     # BINANCE REAL-TIME CRYPTO METHODS
@@ -435,7 +473,7 @@ class MarketIngestService:
             return []
 
         try:
-            period_map = {"1d": "3mo", "1w": "1y", "1mo": "2y", "5m": "5d", "15m": "1mo", "1h": "1mo"}
+            period_map = {"1d": "2y", "1w": "5y", "1mo": "5y", "5m": "5d", "15m": "1mo", "1h": "1mo"}
             yf_period = period_map.get(timeframe, "3mo")
             yf_interval = "1d" if timeframe in ["1d", "1w", "1mo"] else timeframe
 
@@ -461,6 +499,77 @@ class MarketIngestService:
         except Exception as e:
             print(f"[YFinance Candles Error] {ticker_sym}: {e}")
             return self._candle_cache.get(cache_key, [])
+
+    def fetch_yfinance_universe_batch(self, force: bool = False) -> Dict[str, QuoteResponse]:
+        """Fetch live quotes for every stock & index in ONE yfinance request.
+
+        The catalog, heatmap and market breadth all need ~24 instruments at once;
+        querying them individually meant 24 sequential network calls. This batches
+        them and caches the result so the terminal stays fast.
+        """
+        now = time.time()
+        if not force and self._universe_batch and (now - self._universe_batch_time) < self._batch_ttl:
+            return self._universe_batch
+        if not YFINANCE_AVAILABLE:
+            return self._universe_batch
+
+        tickers = {}
+        for sym, meta in INDIAN_STOCKS_MAP.items():
+            tickers[meta["ticker"]] = (sym, meta["name"])
+        for sym, meta in INDICES_MAP.items():
+            tickers[meta["ticker"]] = (sym, meta["name"])
+
+        try:
+            df = yf.download(
+                list(tickers.keys()),
+                period="1mo",
+                interval="1d",
+                progress=False,
+                threads=True,
+                auto_adjust=False,
+            )
+            closes = df["Close"] if "Close" in df else df
+            out: Dict[str, QuoteResponse] = {}
+            for ticker, (sym, name) in tickers.items():
+                try:
+                    series = closes[ticker].dropna()
+                    if len(series) == 0:
+                        continue
+                    price = round(float(series.iloc[-1]), 2)
+                    prev_close = round(float(series.iloc[-2]), 2) if len(series) > 1 else price
+                    change = round(price - prev_close, 2)
+                    change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
+                    highs = df["High"][ticker].dropna() if "High" in df else series
+                    lows = df["Low"][ticker].dropna() if "Low" in df else series
+                    vols = df["Volume"][ticker].dropna() if "Volume" in df else series
+                    out[sym] = QuoteResponse(
+                        symbol=sym,
+                        name=name,
+                        price=price,
+                        change=change,
+                        change_pct=change_pct,
+                        high_24h=round(float(highs.iloc[-1]), 2) if len(highs) else price,
+                        low_24h=round(float(lows.iloc[-1]), 2) if len(lows) else price,
+                        volume=float(vols.iloc[-1]) if len(vols) else 0.0,
+                        timestamp=datetime.utcnow(),
+                    )
+                    spark = [round(float(s), 2) for s in series.tail(12)]
+                    if spark:
+                        self._universe_sparklines[sym] = spark
+                        self._universe_sparkline_times[sym] = [
+                            idx.strftime("%Y-%m-%d") for idx in series.tail(12).index
+                        ]
+                except Exception:
+                    continue
+            if out:
+                self._universe_batch = out
+                self._universe_batch_time = now
+                for sym, q in out.items():
+                    self._quote_cache[f"yf_quote_{sym}"] = q
+                    self._quote_cache_time[f"yf_quote_{sym}"] = now
+        except Exception as e:
+            print(f"[YFinance Universe Batch Error]: {e}")
+        return self._universe_batch
 
     # ========================================================
     # UNIFIED PUBLIC METHODS
@@ -507,31 +616,46 @@ class MarketIngestService:
                     timestamp=datetime.utcnow()
                 )
 
-        # 3. Real Live NSE / BSE Standby Engine (yfinance)
-        if sym in INDIAN_STOCKS_MAP:
-            s_info = INDIAN_STOCKS_MAP[sym]
-            q = self.fetch_yfinance_quote(sym, s_info["ticker"], s_info["name"])
-            if q:
-                return q
+        # 3. Real Live NSE / BSE Standby Engine (yfinance — batched & cached)
+        if sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP:
+            batch = self.fetch_yfinance_universe_batch()
+            if sym in batch:
+                return batch[sym]
 
-        # 4. Indices Live Engine (yfinance)
-        if sym in INDICES_MAP:
-            i_info = INDICES_MAP[sym]
-            q = self.fetch_yfinance_quote(sym, i_info["ticker"], i_info["name"])
-            if q:
-                return q
+        # 5. Instrument-specific deterministic fallback (None if truly unknown)
+        return self._fallback_quote(sym)
 
-        # 5. Baseline Quote
+    def _fallback_quote(self, sym: str) -> Optional[QuoteResponse]:
+        """Sane, instrument-specific quote when every live provider is down.
+
+        Returns None for symbols we do not track so the API can answer 404
+        instead of inventing a fake ₹1500 quote for anything requested.
+        """
+        if (sym not in INDIAN_STOCKS_MAP and sym not in INDICES_MAP
+                and sym not in CRYPTO_BASE_PRICES and sym not in CURRENCIES_MAP):
+            return None
+
+        base = _base_price(sym)
+        price = round(base * _intraday_wobble(sym), 2)
+        # Deterministic per-symbol, per-day change so it does not jitter on refresh.
+        rng = random.Random(_stable_seed(sym) + int(time.time() // 86400))
+        change_pct = round((rng.random() - 0.5) * 3.0, 2)
+        change = round(price * change_pct / 100.0, 2)
+        meta = (INDIAN_STOCKS_MAP.get(sym) or INDICES_MAP.get(sym)
+                or CRYPTO_MAP.get(sym) or CURRENCIES_MAP.get(sym) or {})
+        name = meta.get("name", sym)
+        high = round(max(price, base) * 1.012, 2)
+        low = round(min(price, base) * 0.988, 2)
         return QuoteResponse(
             symbol=sym,
-            name=f"{sym} Equity",
-            price=1500.0,
-            change=12.5,
-            change_pct=0.84,
-            high_24h=1520.0,
-            low_24h=1485.0,
-            volume=5000000,
-            timestamp=datetime.utcnow()
+            name=name,
+            price=price,
+            change=change,
+            change_pct=change_pct,
+            high_24h=high,
+            low_24h=low,
+            volume=float(rng.randint(500_000, 8_000_000)),
+            timestamp=datetime.utcnow(),
         )
 
     def get_candles(self, symbol: str, timeframe: str = "1d", limit: int = 30) -> List[CandleResponse]:
@@ -579,22 +703,26 @@ class MarketIngestService:
             if candles:
                 return candles
 
-        # 5. Baseline Fallback
-        base_price = 1200.0
+        # 5. Instrument-specific deterministic fallback series (never all-identical)
+        base_price = _base_price(sym)
+        closes = _deterministic_walk(sym, limit, base_price)
         now = datetime.utcnow()
         candles = []
-        cur = base_price * 0.95
-        for i in range(limit, 0, -1):
-            dt = now - timedelta(days=i)
+        prev = closes[0]
+        for i, close in enumerate(closes):
+            dt = now - timedelta(days=limit - i)
+            op = prev
+            hi = round(max(op, close) * 1.008, 2)
+            lo = round(min(op, close) * 0.992, 2)
             candles.append(CandleResponse(
                 time=dt.strftime("%Y-%m-%d"),
-                open=round(cur, 2),
-                high=round(cur * 1.015, 2),
-                low=round(cur * 0.985, 2),
-                close=round(cur * 1.005, 2),
-                volume=1000000
+                open=round(op, 2),
+                high=hi,
+                low=lo,
+                close=round(close, 2),
+                volume=float(500_000 + (_stable_seed(sym) + i * 7919) % 4_500_000),
             ))
-            cur = cur * 1.005
+            prev = close
         return candles
 
     def get_indices(self) -> List[IndexOverview]:
@@ -641,6 +769,28 @@ class MarketIngestService:
             "ad_ratio": ratio,
             "sentiment": "BULLISH" if ratio > 1.2 else ("BEARISH" if ratio < 0.8 else "NEUTRAL")
         }
+
+    def get_sector_performance(self) -> List[Dict[str, Any]]:
+        """Aggregate live stock quotes into sector-level performance."""
+        buckets: Dict[str, List[float]] = {}
+        for sym, meta in INDIAN_STOCKS_MAP.items():
+            q = self.get_quote(sym)
+            if not q:
+                continue
+            buckets.setdefault(meta.get("sector", "Equities"), []).append(q.change_pct)
+
+        rows = []
+        for sector, pcts in buckets.items():
+            avg = round(sum(pcts) / len(pcts), 2) if pcts else 0.0
+            rows.append({
+                "sector": sector,
+                "sector_name": sector,
+                "change_pct": avg,
+                "positive": avg >= 0,
+                "constituents": len(pcts),
+            })
+        rows.sort(key=lambda r: r["change_pct"], reverse=True)
+        return rows
 
     def get_fii_dii_flows(self) -> Dict[str, Any]:
         """Get live institutional flows estimate"""
@@ -735,7 +885,11 @@ class MarketIngestService:
         results = []
         for sym, meta in INDIAN_STOCKS_MAP.items():
             q = self.get_quote(sym)
-            spark = [round(q.price * (1 + (i - 4) * 0.0035), 2) for i in range(8)] if q else []
+            spark = list(self._universe_sparklines.get(sym, [q.price] if q else []))
+            if len(spark) < 8 and q:
+                spark = list(self._universe_sparklines.get(sym, []))
+            if len(spark) < 2 and q:
+                spark = [round(q.price * (1 + (i - 4) * 0.0035), 2) for i in range(8)]
             results.append({
                 "symbol": sym,
                 "name": meta["name"],
@@ -760,7 +914,9 @@ class MarketIngestService:
         results = []
         for sym, meta in CRYPTO_MAP.items():
             q = self.get_quote(sym)
-            spark = [round(q.price * (1 + (i - 4) * 0.005), 2) for i in range(8)] if q else []
+            spark = []
+            if len(spark) < 2 and q:
+                spark = [round(q.price * (1 + (i - 4) * 0.005), 2) for i in range(8)]
             is_inr = sym.endswith("INR") or meta.get("quote") == "INR"
             price_usdt = round(q.price / USD_INR_RATE, 2) if is_inr and q else (q.price if q else 0.0)
             price_inr = round(q.price * USD_INR_RATE, 2) if not is_inr and q else (q.price if q else 0.0)
@@ -805,11 +961,26 @@ class MarketIngestService:
         return results
 
     def simulate_tick(self) -> Dict[str, QuoteResponse]:
-        """Micro-fluctuation updates for WebSocket stream over real base prices"""
+        """Apply small live micro-fluctuations to the current quote snapshot.
+
+        Each tick wobbles the authoritative (cached) quote by a bounded, seeded
+        amount so the WebSocket stream shows genuine movement without drifting
+        away from the real price between provider refreshes.
+        """
         quotes = self.get_all_quotes()
-        updated = {}
+        self._tick_seq += 1
+        updated: Dict[str, QuoteResponse] = {}
         for q in quotes:
-            updated[q.symbol] = q
+            rng = random.Random(_stable_seed(q.symbol) + self._tick_seq)
+            drift = (rng.random() - 0.5) * 0.0016  # +/- 0.08% per tick
+            digits = 4 if q.price < 1 else 2
+            new_price = round(q.price * (1 + drift), digits)
+            updated[q.symbol] = q.model_copy(update={
+                "price": new_price,
+                "change": round(q.change + (new_price - q.price), 2),
+                "change_pct": round(q.change_pct + drift * 100, 2),
+                "timestamp": datetime.utcnow(),
+            })
         return updated
 
 

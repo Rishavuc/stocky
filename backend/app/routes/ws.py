@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.ws_gateway import ws_gateway
 from app.services.market_ingest import market_ingest
@@ -28,8 +29,13 @@ async def websocket_stream_endpoint(websocket: WebSocket):
             except asyncio.TimeoutError:
                 # Send updated tick
                 ticks = market_ingest.simulate_tick()
-                # Sample 4 random ticks to simulate live exchange throughput
-                sample_syms = list(ticks.keys())[:4]
+                # Rotate the sampled symbols each tick to mimic live exchange throughput
+                symbols = list(ticks.keys())
+                if symbols:
+                    start = int(time.time() // 2) % len(symbols)
+                    sample_syms = [symbols[(start + i) % len(symbols)] for i in range(min(6, len(symbols)))]
+                else:
+                    sample_syms = []
                 tick_payload = {
                     "type": "TICK",
                     "data": [ticks[s].dict() for s in sample_syms]
