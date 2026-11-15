@@ -1,0 +1,33 @@
+# Public web release, separate from the private team/IP-restricted deployment.
+# docker compose -f compose.yaml -f compose.public.yaml up -d --build
+services:
+  web:
+    ports: !reset []
+    environment:
+      COOKIE_SECURE: 'true'
+      PUBLIC_BASE_URL: https://${APP_DOMAIN:?Set the public domain}
+      ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY:?Provide the production encryption key}
+      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-}
+      AUTH_SMTP_PORT: ${AUTH_SMTP_PORT:-587}
+      AUTH_SMTP_USER: ${AUTH_SMTP_USER:-}
+      AUTH_SMTP_PASSWORD: ${AUTH_SMTP_PASSWORD:-}
+      AUTH_SMTP_FROM: ${AUTH_SMTP_FROM:-}
+  worker:
+    environment:
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY}
+  jobs:
+    environment:
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY}
+  proxy:
+    image: caddy:2-alpine
+    ports: ['80:80','443:443']
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile.public:/etc/caddy/Caddyfile:ro
+      - eye_tls:/data
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  eye_tls:

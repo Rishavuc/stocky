@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: investorseye
+      POSTGRES_USER: eye
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes: [eye_database:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U eye -d investorseye]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  web:
+    build: .
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://eye:${POSTGRES_PASSWORD}@db:5432/investorseye
+      APP_HOST: 0.0.0.0
+      KITE_API_KEY: ${KITE_API_KEY:-}
+      KITE_API_SECRET: ${KITE_API_SECRET:-}
+      KITE_MULTI_USER_ENABLED: ${KITE_MULTI_USER_ENABLED:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+    volumes: [eye_runtime:/app/runtime, eye_history:/app/data, eye_models:/app/models]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+  worker:
+    build: .
+    command: [python, -m, app.worker]
+    environment:
+      DATABASE_URL: postgresql+psycopg://eye:${POSTGRES_PASSWORD}@db:5432/investorseye
+      KITE_API_KEY: ${KITE_API_KEY:-}
+      KITE_ACCESS_TOKEN: ${KITE_ACCESS_TOKEN:-}
+      KITE_API_SECRET: ${KITE_API_SECRET:-}
+      KITE_MULTI_USER_ENABLED: ${KITE_MULTI_USER_ENABLED:-false}
+    volumes: [eye_runtime:/app/runtime, eye_history:/app/data, eye_models:/app/models]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+  jobs:
+    build:
+      context: .
+      target: trainer
+    command: [python, -m, app.jobs]
+    environment:
+      DATABASE_URL: postgresql+psycopg://eye:${POSTGRES_PASSWORD}@db:5432/investorseye
+      PYTHONPATH: /app/backend
+    volumes: [eye_runtime:/app/runtime, eye_history:/app/data, eye_models:/app/models]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  eye_database:
+  eye_runtime:
+  eye_history:
+  eye_models:

@@ -1,0 +1,13 @@
+{$APP_DOMAIN} {
+    # Public provider receipts are authenticated by HMAC in FastAPI.
+    @whatsapp path /v1/webhooks/whatsapp
+    handle @whatsapp {
+        reverse_proxy web:8000
+    }
+    handle {
+        @untrusted not remote_ip {$ALLOWED_CLIENT_CIDRS}
+        respond @untrusted "This educational workspace is private." 403
+        reverse_proxy web:8000
+    }
+    header Strict-Transport-Security "max-age=31536000"
+}

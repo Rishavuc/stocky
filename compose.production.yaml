@@ -1,0 +1,39 @@
+# Apply with: docker-compose -f compose.yaml -f compose.production.yaml up -d
+services:
+  web:
+    ports: !reset []
+    environment:
+      COOKIE_SECURE: 'true'
+      PUBLIC_BASE_URL: https://${APP_DOMAIN:?Set APP_DOMAIN}
+      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-}
+      AUTH_SMTP_USER: ${AUTH_SMTP_USER:-}
+      AUTH_SMTP_PASSWORD: ${AUTH_SMTP_PASSWORD:-}
+      AUTH_SMTP_FROM: ${AUTH_SMTP_FROM:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:-}
+      ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY:?Set and back up EYE_ENCRYPTION_KEY}
+  worker:
+    environment:
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-}
+      AUTH_SMTP_USER: ${AUTH_SMTP_USER:-}
+      AUTH_SMTP_PASSWORD: ${AUTH_SMTP_PASSWORD:-}
+      AUTH_SMTP_FROM: ${AUTH_SMTP_FROM:-}
+  jobs:
+    environment:
+      EYE_ENCRYPTION_KEY: ${EYE_ENCRYPTION_KEY}
+  proxy:
+    image: caddy:2-alpine
+    ports: ['80:80','443:443']
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ALLOWED_CLIENT_CIDRS: ${ALLOWED_CLIENT_CIDRS:?Set the private team's allowed IP ranges}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - eye_tls:/data
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  eye_tls:

@@ -1,0 +1,4 @@
+-r requirements.txt
+scikit-learn==1.6.1
+torch==2.15.0
+joblib==1.5.1

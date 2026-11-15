@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "InvestorsEYE companion",
+  "version": "1.0.0",
+  "description": "Research, watchlists and alerts beside supported market pages.",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "activeTab"
+  ],
+  "optional_host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://investoreye.harkiratsingh.tech/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://kite.zerodha.com/*",
+        "https://www.moneycontrol.com/*"
+      ],
+      "js": [
+        "detect.js"
+      ]
+    }
+  ]
+}

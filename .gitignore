@@ -43,3 +43,22 @@ Thumbs.db
 
 # Large reference document
 *.pdf
+
+# Capstone build and runtime
+frontend/dist/
+models/*.joblib
+models/*.pt
+models/*_predictions.json
+models/*_report.json
+.pytest_cache/
+.coverage
+runtime/
+*.db-shm
+*.db-wal
+*.tsbuildinfo
+# Reproducible extension package
+extension/dist/
+
+models/runs/
+
+data/history/.publish.lock
