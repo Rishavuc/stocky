@@ -541,6 +541,12 @@ def install(app):
 
         return GLOSSARY
 
+    @app.get("/v1/learn/resources")
+    def resources():
+        from app.curriculum import RESOURCES
+
+        return RESOURCES
+
     @app.get("/v1/learn/bookmarks")
     def bookmarks(u=Depends(current), db=dep):
         return [r.key for r in trading.records(db, u.id, "bookmark")]

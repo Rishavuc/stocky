@@ -42,7 +42,9 @@ export function Platform({ page }: { page: string }) {
                   ? "/analysis/options"
                   : page === "fundamentals"
                     ? "/analysis/fundamentals/RELIANCE"
-                    : "/learn/glossary";
+                    : page === "resources"
+                      ? "/learn/resources"
+                      : "/learn/glossary";
   useEffect(() => {
     let live = true;
     setError("");
@@ -101,6 +103,7 @@ export function Platform({ page }: { page: string }) {
     fundamentals: "Financial statement analysis",
     account: "Account and recovery",
     glossary: "Your market glossary",
+    resources: "Further learning",
   };
   return (
     <>
@@ -853,6 +856,18 @@ export function Platform({ page }: { page: string }) {
             not indicate that a message was delivered.
           </p>
         </section>
+      )}
+      {page === "resources" && Array.isArray(data) && (
+        <div className="lesson-grid">
+          {data.map((r: any) => (
+            <article key={r.link + r.title} className="panel feature-form">
+              <small>{r.provider} · {r.topic} · {r.language}</small>
+              <h2>{r.title}</h2>
+              <a className="button" href={r.link} target="_blank" rel="noopener noreferrer">Open external site</a>
+            </article>
+          ))}
+          <p>External sites are independent of InvestorsEYE and are not endorsements.</p>
+        </div>
       )}
       {page === "glossary" && Array.isArray(data) && (
         <div className="lesson-grid">

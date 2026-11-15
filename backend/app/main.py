@@ -917,6 +917,7 @@ if (DIST / "assets").exists():
 @app.get("/channels", include_in_schema=False)
 @app.get("/operations", include_in_schema=False)
 @app.get("/glossary", include_in_schema=False)
+@app.get("/resources", include_in_schema=False)
 @app.get("/options", include_in_schema=False)
 @app.get("/fundamentals", include_in_schema=False)
 @app.get("/account", include_in_schema=False)

@@ -84,6 +84,7 @@ const tabs = [
   { id: "channels", label: "Notification channels", icon: Bell },
   { id: "learn", label: "Learning studio", icon: BookOpen },
   { id: "glossary", label: "Glossary", icon: BookOpen },
+  { id: "resources", label: "Further learning", icon: BookOpen },
   { id: "connections", label: "Broker connections", icon: ShieldCheck },
   { id: "account", label: "Account and recovery", icon: ShieldCheck },
   { id: "operations", label: "System status", icon: Activity },
@@ -755,6 +756,7 @@ function App() {
             "channels",
             "operations",
             "glossary",
+            "resources",
           ].includes(tab) && (
             <Platform key={tab + ":" + (user?.id || "anonymous")} page={tab} />
           )}

@@ -124,9 +124,114 @@ TOPICS = {
 }
 
 
+# Ported from the teammate `stocky` quiz bank (150634a). Appended after TOPICS so
+# existing lesson ids, and the progress saved against them, stay unchanged.
+# Three items were corrected: RSI wording, put-call ratio meaning, long-call payoff.
+EXTRA_TOPICS = {
+    "equities": [
+        (
+            "Price-to-earnings ratio",
+            "P/E divides the share price by earnings per share. A P/E of 25 means buyers pay about 25 rupees per rupee of annual earnings. It needs dated, reported earnings and is most useful against similar companies.",
+            "What does a P/E ratio of 25 indicate?",
+            [
+                "Investors pay about 25 rupees for every rupee of annual earnings",
+                "The stock pays a 25% dividend yield",
+                "The share price grew 25 times in five years",
+                "The company has a 25% profit margin",
+            ],
+            0,
+        ),
+        (
+            "Return on equity",
+            "ROE is net income divided by shareholders' equity: profit generated per rupee owners have invested. Heavy borrowing can raise ROE without improving the business, so read it alongside debt.",
+            "Which metric measures profitability on shareholders' equity?",
+            ["Return on equity (ROE)", "Dividend yield", "Price-to-book ratio", "Current ratio"],
+            0,
+        ),
+        (
+            "Moving-average crossovers",
+            "A golden cross is the 50-day simple average crossing above the 200-day average; a death cross is the reverse. Both lag price because they average the past, and neither guarantees what follows.",
+            "When does a golden cross occur?",
+            [
+                "The 50-day average crosses below the 200-day average",
+                "The 50-day average crosses above the 200-day average",
+                "Price touches the upper Bollinger band",
+                "RSI rises above 50",
+            ],
+            1,
+        ),
+        (
+            "Reading RSI",
+            "RSI compares recent gains with recent losses on a 0-100 scale. Readings above 70 are conventionally called overbought and below 30 oversold. Strong trends can stay overbought for a long time, so a high reading is not a sell signal by itself.",
+            "What does an RSI of 82 on a daily chart describe?",
+            [
+                "A guaranteed fall in the next session",
+                "Strong recent gains relative to losses, conventionally called overbought",
+                "That the company is overvalued",
+                "Unusually low trading volume",
+            ],
+            1,
+        ),
+    ],
+    "intraday": [
+        (
+            "Intraday (MIS) versus delivery (CNC)",
+            "MIS is an intraday product: brokers allow leverage within exchange margin rules, and open positions are squared off before the close. CNC is delivery: you pay in full and the shares settle into your demat account.",
+            "What distinguishes MIS from CNC?",
+            [
+                "CNC positions are squared off the same day",
+                "MIS uses leverage and must be closed the same day",
+                "MIS shares settle into your demat account",
+                "There is no difference",
+            ],
+            1,
+        ),
+    ],
+    "derivatives": [
+        (
+            "Theta and time decay",
+            "Theta measures how much an option's premium is expected to fall per day as expiry approaches, all else equal. Time decay works against option buyers and in favour of option sellers.",
+            "What does theta measure?",
+            [
+                "Sensitivity to the underlying price",
+                "Daily erosion of the premium as expiry approaches",
+                "Sensitivity to implied volatility",
+                "Sensitivity to interest rates",
+            ],
+            1,
+        ),
+        (
+            "Put-call ratio",
+            "PCR divides put volume or open interest by call volume or open interest. A rising PCR only says put activity is growing relative to calls. Puts are bought for hedging and written for income, so the reading is ambiguous on its own.",
+            "What does a rising put-call ratio directly tell you?",
+            [
+                "The index will fall",
+                "Put activity is growing relative to call activity",
+                "Call writers are making losses",
+                "Implied volatility is falling",
+            ],
+            1,
+        ),
+        (
+            "Long call payoff",
+            "Buying a call costs the premium. If the underlying stays below the strike at expiry, the most you lose is that premium. Above the strike, profit grows with the underlying and has no fixed ceiling.",
+            "For a long call buyer, which is true?",
+            [
+                "Loss is unlimited and profit is capped",
+                "Loss is limited to the premium; profit is theoretically unlimited",
+                "Both loss and profit are unlimited",
+                "Both loss and profit are limited to the premium",
+            ],
+            1,
+        ),
+    ],
+}
+
+
 def lessons():
     result = []
     for segment, topics in TOPICS.items():
+        topics = topics + EXTRA_TOPICS.get(segment, [])
         for i, (title, body, question, options, correct) in enumerate(topics):
             result.append(
                 {
@@ -178,4 +283,28 @@ GLOSSARY = [
         "term": "Baseline",
         "definition": "A simple alternative used to judge whether a more complex model adds value.",
     },
+]
+
+
+# External learning links, adapted from the `stocky` course catalog. Entries are
+# labelled by what the link actually opens; unverified ratings, durations and
+# lesson counts were dropped.
+RESOURCES = [
+    {"title": "Zerodha Varsity: free market modules", "provider": "Zerodha", "topic": "basics", "language": "English", "link": "https://zerodha.com/varsity/"},
+    {"title": "Zerodha Varsity: futures trading module", "provider": "Zerodha", "topic": "derivatives", "language": "English", "link": "https://zerodha.com/varsity/module/futures-trading/"},
+    {"title": "Financial Markets (Yale, Robert Shiller)", "provider": "Coursera", "topic": "basics", "language": "English", "link": "https://www.coursera.org/learn/financial-markets-global"},
+    {"title": "Aswath Damodaran's valuation pages", "provider": "NYU Stern", "topic": "fundamentals", "language": "English", "link": "https://pages.stern.nyu.edu/~adamodar/"},
+    {"title": "NSE learning resources", "provider": "NSE India", "topic": "basics", "language": "English", "link": "https://www.nseindia.com/learn"},
+    {"title": "NPTEL course catalog (finance and economics)", "provider": "NPTEL", "topic": "fundamentals", "language": "English", "link": "https://nptel.ac.in/courses"},
+    {"title": "CA Rachana Phadke Ranade channel", "provider": "YouTube", "topic": "basics", "language": "Hindi", "link": "https://www.youtube.com/@CARachanaRanade"},
+    {"title": "Pranjal Kamra channel", "provider": "YouTube", "topic": "basics", "language": "Hindi", "link": "https://www.youtube.com/@PranjalKamra"},
+    {"title": "Asset Yogi channel", "provider": "YouTube", "topic": "technical", "language": "Hindi", "link": "https://www.youtube.com/@AssetYogi"},
+    {"title": "Rayner Teo channel", "provider": "YouTube", "topic": "technical", "language": "English", "link": "https://www.youtube.com/@RaynerTeo"},
+    {"title": "TradingView education", "provider": "TradingView", "topic": "technical", "language": "English", "link": "https://www.tradingview.com/education/"},
+    {"title": "Sensibull options education", "provider": "Sensibull", "topic": "derivatives", "language": "English", "link": "https://www.sensibull.com"},
+    {"title": "Machine Learning for Trading", "provider": "Coursera", "topic": "algo", "language": "English", "link": "https://www.coursera.org/learn/machine-learning-for-trading"},
+    {"title": "freeCodeCamp finance articles", "provider": "freeCodeCamp", "topic": "algo", "language": "English", "link": "https://www.freecodecamp.org/news/tag/finance/"},
+    {"title": "MIT OpenCourseWare (search 'Blockchain and Money')", "provider": "MIT", "topic": "crypto", "language": "English", "link": "https://ocw.mit.edu"},
+    {"title": "Whiteboard Crypto channel", "provider": "YouTube", "topic": "crypto", "language": "English", "link": "https://www.youtube.com/@WhiteboardCrypto"},
+    {"title": "freeCodeCamp blockchain articles", "provider": "freeCodeCamp", "topic": "crypto", "language": "English", "link": "https://www.freecodecamp.org/news/tag/blockchain/"},
 ]

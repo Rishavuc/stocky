@@ -86,3 +86,12 @@ Build and actual public-provider checks passed. This establishes a live public d
 - Added a distinct public HTTPS Compose configuration. This prepares hosting; it is not a deployed public URL.
 - Two targeted controlled tests passed for unavailable operator configuration, single-use callback state, server-secret exclusion, token encryption and account isolation. Actual broker acceptance remains unverified.
 - External requirements: an approved multi-user Kite application, operator secrets, final public domain, and renewed `investors-eye` cloud authentication. The latest CLI identity call reported session expiry. No resources were provisioned.
+
+### Ported from teammate `stocky` branch (15 November 2026)
+
+Selected features from Rishav's `stocky` commit `150634a` were re-implemented in the v2 modules rather than merged, because that commit edits the legacy routes/services stack that v2 no longer mounts.
+
+- Technical analysis: ATR, ADX/+DI/-DI and Stochastic %K/%D (`backend/app/indicators.py`), shown in both live and historical analysis. Verified against an independent pandas calculation.
+- NSE reference list: 116 symbols with editorial sector labels, no prices (`backend/app/nse_reference.py`). Tags Kite catalog search results, adds a sector filter and `/v1/reference/nse`.
+- Learning: eight quiz items turned into lessons (three corrected for accuracy) and a "Further learning" page of external resources. Unverified ratings, durations and lesson counts were dropped.
+- Deliberately not ported: synthetic fallback prices, randomized options chains and the hardcoded JWT secret.
