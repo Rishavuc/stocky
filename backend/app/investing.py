@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app import trading, market
 from app.store import Observation, now
 from app import live
+from app.indicators import range_indicators
 
 
 def identify(provider, symbol, exchange=None):
@@ -72,7 +73,7 @@ def technical(rows):
     rsi=100-100/(1+gain/loss) if loss>0 else (100 if gain>0 else 50)
     macd=close.ewm(span=12,adjust=False).mean()-close.ewm(span=26,adjust=False).mean()
     sma=close.rolling(20).mean().iloc[-1];std=close.rolling(20).std(ddof=0).iloc[-1]
-    return [{'name':'RSI (14 bars)','value':float(rsi),'meaning':'Recent upward versus downward closing-price momentum.'},{'name':'MACD (12/26 bars)','value':float(macd.iloc[-1]),'meaning':'Difference between fast and slow exponential moving averages.'},{'name':'MACD signal (9 bars)','value':float(macd.ewm(span=9,adjust=False).mean().iloc[-1]),'meaning':'Smoothed MACD for comparison with momentum.'},{'name':'Simple average (20 bars)','value':float(sma),'meaning':'Mean of the latest 20 completed closes.'},{'name':'Upper Bollinger band','value':float(sma+2*std),'meaning':'20-bar mean plus two population standard deviations.'},{'name':'Lower Bollinger band','value':float(sma-2*std),'meaning':'20-bar mean minus two population standard deviations.'}]
+    return [{'name':'RSI (14 bars)','value':float(rsi),'meaning':'Recent upward versus downward closing-price momentum.'},{'name':'MACD (12/26 bars)','value':float(macd.iloc[-1]),'meaning':'Difference between fast and slow exponential moving averages.'},{'name':'MACD signal (9 bars)','value':float(macd.ewm(span=9,adjust=False).mean().iloc[-1]),'meaning':'Smoothed MACD for comparison with momentum.'},{'name':'Simple average (20 bars)','value':float(sma),'meaning':'Mean of the latest 20 completed closes.'},{'name':'Upper Bollinger band','value':float(sma+2*std),'meaning':'20-bar mean plus two population standard deviations.'},{'name':'Lower Bollinger band','value':float(sma-2*std),'meaning':'20-bar mean minus two population standard deviations.'}]+range_indicators(rows,'meaning')
 
 
 class Watchlist(BaseModel):

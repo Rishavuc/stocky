@@ -191,6 +191,9 @@ def indicators(symbol, cutoff=None, version=None):
             "explanation": "20-session average minus two standard deviations.",
         },
     ]
+    from app.indicators import range_indicators
+
+    items += range_indicators(rows, "explanation")
     return {
         "symbol": symbol,
         "as_of": rows[-1]["date"],
