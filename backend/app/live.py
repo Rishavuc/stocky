@@ -117,6 +117,8 @@ def kite_catalog(owner,credentials):
 class LiveWatch(BaseModel):
     symbols:list[str]=Field(max_length=100)
 
+from app.nse_reference import NSE_REFERENCE, sector as reference_sector
+
 def install(app):
     from app.main import current,database
     dep=Depends(database,scope='function')
@@ -139,15 +141,20 @@ def install(app):
         trading.put(db,u.id,'live_watchlist','primary',data)
         return data
     @app.get('/v1/live/india/search')
-    def india(q:str=Query(default='',max_length=100),u=Depends(current),db=dep):
+    def india(q:str=Query(default='',max_length=100),sector:str=Query(default='',max_length=40),u=Depends(current),db=dep):
         from app.connections import credentials
         r=trading.get(db,u.id,'connection','kite')
         if not r:raise HTTPException(409,'Connect your Zerodha Kite account to search the broker instrument catalog and retrieve Indian-market quotes.')
         try:
             catalog=kite_catalog(u.id,credentials(r.data))
-            rows=[r for r in catalog['instruments'] if q.lower() in (r['symbol']+' '+r['name']).lower()]
+            rows=[{**r,'sector':reference_sector(r['symbol'])} for r in catalog['instruments'] if q.lower() in (r['symbol']+' '+r['name']).lower()]
+            if sector:rows=[r for r in rows if r['sector']==sector]
             return {'instruments':rows[:100],'total':len(rows),'source':catalog['source'],'catalog_retrieved_at':catalog['retrieved_at']}
         except (httpx.HTTPError,KeyError,ValueError):raise HTTPException(502,'Broker instrument discovery failed. Check your token and market-data entitlement.')
+    @app.get('/v1/reference/nse')
+    def nse_reference():
+        rows=[{'symbol':k,**v} for k,v in NSE_REFERENCE.items()]
+        return {'instruments':rows,'sectors':sorted({r['sector'] for r in rows}),'note':'Curated reference list without prices. Sector labels are editorial, not an official classification.'}
     @app.get('/v1/live/india/{symbol}/quote')
     def india_quote(symbol:str,u=Depends(current),db=dep):
         from app.connections import credentials,provider_timestamp
