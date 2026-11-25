@@ -873,7 +873,7 @@ function initQuickTools() {
                     <div id="watchlistStatus" style="font-size:12px; min-height:18px; margin-bottom:12px; color:var(--c-text-secondary);"></div>
                     <div id="watchlistItemsList" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto;"></div>
                     <div style="font-size:11px; color:var(--c-text-tertiary); margin-top:12px;">
-                        Prices update from the verified market feed. Watchlist is saved in this browser.
+                        Prices update every second from simulated live ticks anchored to verified market quotes. Watchlist is saved in this browser.
                     </div>
                 </div>
             </div>

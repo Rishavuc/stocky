@@ -20,6 +20,13 @@ class ApiClient {
         this.wsUrl = API_CONFIG.WS_URL;
         this.ws = null;
         this.tickListeners = [];
+        this._tickState = new Map();
+        this._simTimer = null;
+        this._seedPromise = null;
+        this._startSimulation();
+        window.addEventListener('beforeunload', () => {
+            if (this._simTimer) clearInterval(this._simTimer);
+        });
     }
 
     async _fetch(endpoint, options = {}) {
@@ -291,12 +298,219 @@ class ApiClient {
         } catch (e) {}
     }
 
-    // --- Real-time WebSocket ---
+    // --- Real-time WebSocket + 1-second live tick engine ---
     onTick(callback) {
         this.tickListeners.push(callback);
+        this._startSimulation();
+        return () => {
+            this.tickListeners = this.tickListeners.filter(cb => cb !== callback);
+        };
+    }
+
+    _startSimulation() {
+        if (this._simTimer) return;
+        this._simTimer = setInterval(() => {
+            if (!this._tickState.size) this._seedTickStateFromApi();
+            this._emitSimulatedTicks();
+        }, 1000);
+    }
+
+    _volatilityFor(symbol) {
+        const s = String(symbol || '').toUpperCase();
+        if (s.endsWith('USDT') || ['BTC', 'ETH', 'SOL', 'DOGE', 'ADA', 'AVAX', 'XRP'].includes(s)) return 0.00055;
+        if (s.includes('NIFTY') || s.includes('SENSEX')) return 0.00018;
+        return 0.00032;
+    }
+
+    _normaliseQuote(q) {
+        if (!q || !q.symbol || !Number.isFinite(Number(q.price)) || Number(q.price) <= 0) return null;
+        const symbol = String(q.symbol).toUpperCase().trim();
+        const price = Number(q.price);
+        const change = Number.isFinite(Number(q.change)) ? Number(q.change) : 0;
+        const previousClose = Math.max(0.01, price - change);
+        return {
+            symbol,
+            name: q.name || symbol,
+            source: q.source || 'verified feed',
+            price,
+            change,
+            change_pct: Number.isFinite(Number(q.change_pct))
+                ? Number(q.change_pct)
+                : (previousClose ? (change / previousClose) * 100 : 0),
+            high_24h: Number.isFinite(Number(q.high_24h)) ? Number(q.high_24h) : price,
+            low_24h: Number.isFinite(Number(q.low_24h)) ? Number(q.low_24h) : price,
+            volume: q.volume,
+            previousClose
+        };
+    }
+
+    _ingestRealQuotes(quotes, type = 'TICK', dispatch = true) {
+        const now = Date.now();
+        const clean = (Array.isArray(quotes) ? quotes : [])
+            .map(q => this._normaliseQuote(q))
+            .filter(Boolean);
+
+        const dispatchable = [];
+        clean.forEach(q => {
+            const existing = this._tickState.get(q.symbol);
+            const unchanged = existing && Math.abs(existing.anchor - q.price) < 0.005 && type !== 'INITIAL_SNAPSHOT';
+            this._tickState.set(q.symbol, {
+                ...q,
+                current: unchanged ? existing.current : q.price,
+                anchor: q.price,
+                volatility: existing?.volatility || this._volatilityFor(q.symbol),
+                updatedAt: now
+            });
+            if (!unchanged) dispatchable.push(q);
+        });
+
+        if (dispatch && dispatchable.length) {
+            const batch = dispatchable.map(q => ({
+                symbol: q.symbol,
+                name: q.name,
+                price: q.price,
+                change: q.change,
+                change_pct: q.change_pct,
+                high_24h: q.high_24h,
+                low_24h: q.low_24h,
+                volume: q.volume,
+                source: q.source,
+                verified_source: q.source,
+                tick_source: 'verified_snapshot',
+                is_simulated: false,
+                simulated: false
+            }));
+            this._dispatchTicks(batch, type);
+        }
+    }
+
+    async _seedTickStateFromApi() {
+        if (this._tickState.size) return;
+        if (this._seedPromise) return this._seedPromise;
+        this._seedPromise = Promise.all([
+            this.getStocksCatalog(),
+            this.getCryptoCatalog(),
+            this.getIndices()
+        ]).then(([stocks, crypto, indices]) => {
+            const quotes = [];
+            (Array.isArray(stocks) ? stocks : []).forEach(s => quotes.push({
+                symbol: s.symbol,
+                name: s.name,
+                price: s.price,
+                change: s.change,
+                change_pct: s.change_pct,
+                high_24h: s.high_24h,
+                low_24h: s.low_24h,
+                volume: s.volume,
+                source: s.api_source || 'verified feed'
+            }));
+            (Array.isArray(crypto) ? crypto : []).forEach(s => quotes.push({
+                symbol: s.symbol,
+                name: s.name,
+                price: s.price,
+                change: s.change,
+                change_pct: s.change_pct,
+                high_24h: s.high_24h,
+                low_24h: s.low_24h,
+                volume: s.volume,
+                source: s.api_source || 'Binance Spot API'
+            }));
+            (Array.isArray(indices) ? indices : []).forEach(s => quotes.push({
+                symbol: s.name,
+                name: s.name,
+                price: s.value,
+                change: s.change,
+                change_pct: s.change_pct,
+                source: 'Verified index feed'
+            }));
+            this._ingestRealQuotes(quotes, 'INITIAL_SNAPSHOT', true);
+        }).catch(e => {
+            console.warn('Tick seed from REST catalogues failed:', e.message);
+        }).finally(() => {
+            this._seedPromise = null;
+        });
+        return this._seedPromise;
+    }
+
+    getLiveQuote(symbol) {
+        const s = this._tickState.get(String(symbol || '').toUpperCase().trim());
+        if (!s) return null;
+        const change = Math.round((s.current - s.previousClose) * 100) / 100;
+        return {
+            symbol: s.symbol,
+            name: s.name,
+            price: s.current,
+            change,
+            change_pct: s.previousClose ? Math.round((change / s.previousClose) * 10000) / 100 : 0,
+            high_24h: Math.max(s.high_24h || s.current, s.current),
+            low_24h: Math.min(s.low_24h || s.current, s.current),
+            volume: s.volume,
+            source: `Simulated live (${s.source})`,
+            verified_source: s.source,
+            tick_source: 'simulated_live',
+            is_simulated: true,
+            simulated: true
+        };
+    }
+
+    _dispatchTicks(batch, type) {
+        this.tickListeners.forEach(cb => {
+            try {
+                cb(batch, type);
+            } catch (e) {
+                console.error('Tick listener error', e);
+            }
+        });
+    }
+
+    _emitSimulatedTicks() {
+        if (!this._tickState.size) return;
+        const now = Date.now();
+        const batch = [];
+
+        this._tickState.forEach((s, symbol) => {
+            const anchor = s.anchor || s.price;
+            const pull = ((anchor - s.current) / anchor) * 0.06;
+            const noise = (Math.random() - 0.5) * 2 * s.volatility;
+            let delta = s.current * (pull + noise);
+            const minTick = anchor >= 1000 ? 0.05 : 0.01;
+            if (Math.abs(delta) < minTick) delta = (delta >= 0 ? 1 : -1) * minTick;
+
+            let next = s.current + delta;
+            next = Math.min(anchor * 1.015, Math.max(anchor * 0.985, next));
+            next = Math.round(next * 100) / 100;
+            s.current = next;
+            s.updatedAt = now;
+
+            const change = Math.round((next - s.previousClose) * 100) / 100;
+            const changePct = s.previousClose
+                ? Math.round((change / s.previousClose) * 10000) / 100
+                : 0;
+
+            batch.push({
+                symbol,
+                name: s.name,
+                price: next,
+                change,
+                change_pct: changePct,
+                high_24h: Math.max(s.high_24h || next, next),
+                low_24h: Math.min(s.low_24h || next, next),
+                volume: s.volume,
+                source: `Simulated live (${s.source})`,
+                verified_source: s.source,
+                anchor_price: anchor,
+                tick_source: 'simulated_live',
+                is_simulated: true,
+                simulated: true,
+                timestamp: now
+            });
+        });
+
+        if (batch.length) this._dispatchTicks(batch, 'SIMULATED_TICK');
     }
 
     connectWebSocket() {
+        this._startSimulation();
         try {
             if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
                 return;
@@ -304,25 +518,27 @@ class ApiClient {
             this.ws = new WebSocket(this.wsUrl);
             this.ws.onopen = () => {
                 console.log('⚡ Connected to Investor\'s EYE Live WebSocket');
+                this._seedTickStateFromApi();
             };
             this.ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
                     if ((msg.type === 'TICK' || msg.type === 'INITIAL_SNAPSHOT') && Array.isArray(msg.data)) {
-                        this.tickListeners.forEach(cb => cb(msg.data, msg.type));
+                        this._ingestRealQuotes(msg.data, msg.type, true);
                     }
                 } catch (e) {
                     console.error('WS Parse error', e);
                 }
             };
             this.ws.onerror = (e) => {
-                console.warn('WS error (will retry or use fallback ticks):', e);
+                console.warn('WS error (simulated ticks will continue):', e);
             };
             this.ws.onclose = () => {
                 setTimeout(() => this.connectWebSocket(), 5000);
             };
         } catch (e) {
-            console.warn('WebSocket unavailable in current context:', e);
+            console.warn('WebSocket unavailable; simulated ticks will continue:', e);
+            this._seedTickStateFromApi();
         }
     }
 }

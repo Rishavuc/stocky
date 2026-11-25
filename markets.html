@@ -1905,7 +1905,7 @@
         // ========================================================
         // LIVE TICKS: apply authoritative provider quotes from WebSocket
         // ========================================================
-        function applyLiveTicks(ticks) {
+        function applyLiveTicks(ticks, type = 'TICK') {
             if (!Array.isArray(ticks) || !ticks.length) return;
             const bySymbol = new Map(ticks.map(q => [q.symbol, q]));
 
@@ -1947,7 +1947,7 @@
                 renderCryptoTable();
             }
 
-            if (bySymbol.has('NIFTY 50') || bySymbol.has('SENSEX')) {
+            if (type !== 'SIMULATED_TICK' && (bySymbol.has('NIFTY 50') || bySymbol.has('SENSEX'))) {
                 refreshLivePrices();
             }
         }
@@ -1955,23 +1955,43 @@
         // ========================================================
         // AUTO-REFRESH: keep prices & breadth moving without a manual reload
         // ========================================================
+        function mergeLivePrices(rows) {
+            if (!window.apiClient || !window.apiClient.getLiveQuote) return rows;
+            return rows.map(s => {
+                const q = window.apiClient.getLiveQuote(s.symbol || s.name);
+                if (!q) return s;
+                return {
+                    ...s,
+                    price: q.price,
+                    change: q.change,
+                    change_pct: q.change_pct,
+                    high_24h: q.high_24h,
+                    low_24h: q.low_24h,
+                    source: q.source
+                };
+            });
+        }
+
         function refreshLivePrices() {
             if (!window.apiClient) return;
             Promise.all([
                 window.apiClient.getIndices().catch(() => null),
                 window.apiClient.getQuotes().catch(() => null)
             ]).then(([idx, quotes]) => {
-                if (idx && idx.length) renderIndices(idx);
-                if (quotes && quotes.length) renderHeatmap(quotes);
+                if (idx && idx.length) renderIndices(idx.map(i => {
+                    const q = window.apiClient.getLiveQuote(i.name);
+                    return q ? { ...i, value: q.price, change: q.change, change_pct: q.change_pct } : i;
+                }));
+                if (quotes && quotes.length) renderHeatmap(mergeLivePrices(quotes));
             });
             if (window.apiClient.getStocksCatalog) {
                 window.apiClient.getStocksCatalog().then(d => {
-                    if (d && d.length) { stocksCatalogData = d; updateStocksKPIs(); renderStocksTable(); }
+                    if (d && d.length) { stocksCatalogData = mergeLivePrices(d); updateStocksKPIs(); renderStocksTable(); }
                 }).catch(() => {});
             }
             if (window.apiClient.getCryptoCatalog) {
                 window.apiClient.getCryptoCatalog().then(d => {
-                    if (d && d.length) { cryptoCatalogData = d; updateCryptoKPIs(); renderCryptoTable(); }
+                    if (d && d.length) { cryptoCatalogData = mergeLivePrices(d); updateCryptoKPIs(); renderCryptoTable(); }
                 }).catch(() => {});
             }
             if (window.apiClient.getCurrenciesCatalog) {
@@ -1999,7 +2019,7 @@
         }
 
         if (window.apiClient) {
-            window.apiClient.onTick((ticks) => applyLiveTicks(ticks));
+            window.apiClient.onTick((ticks, type) => applyLiveTicks(ticks, type));
             window.apiClient.connectWebSocket();
         }
     });
