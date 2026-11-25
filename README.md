@@ -95,6 +95,8 @@ Visit:
 - **LSTM Predictions:** `http://localhost:8000/predictions.html`
 - **Mock Trading:** `http://localhost:8000/mock-trading.html`
 - **Interactive OpenAPI Docs:** `http://localhost:8000/docs`
+- **Read-only SQLite Viewer:** `http://127.0.0.1:8011/`  
+  Start it with `venv/bin/python tools/db_viewer.py`. It opens `backend/investors_eye.db` in read-only mode, hides password hashes and salts, and has no write or arbitrary-SQL endpoints.
 
 ---
 
