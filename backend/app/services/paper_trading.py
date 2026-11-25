@@ -6,16 +6,10 @@ from app.schemas.schemas import PaperOrderRequest, PaperPortfolioResponse, Paper
 class PaperTradingEngine:
     def __init__(self):
         self.initial_capital: float = 1000000.0
-        self.cash: float = 909600.0
+        self.cash: float = self.initial_capital
         self.realized_pnl: float = 0.0
-        self.positions: Dict[str, Dict] = {
-            "RELIANCE_CNC": {"symbol": "RELIANCE", "product": "CNC", "qty": 30, "buy_price": 1180.00},
-            "INFY_MIS": {"symbol": "INFY", "product": "MIS", "qty": 50, "buy_price": 1100.00}
-        }
-        self.orders: List[Dict] = [
-            {"time": "10:15 AM", "side": "BUY", "symbol": "RELIANCE", "product": "CNC", "qty": 30, "price": 1180.00, "status": "EXECUTED"},
-            {"time": "11:42 AM", "side": "BUY", "symbol": "INFY", "product": "MIS", "qty": 50, "price": 1100.00, "status": "EXECUTED"},
-        ]
+        self.positions: Dict[str, Dict] = {}
+        self.orders: List[Dict] = []
 
     def get_portfolio(self) -> PaperPortfolioResponse:
         positions_res: List[PaperPositionResponse] = []
@@ -59,7 +53,8 @@ class PaperTradingEngine:
             unrealized_pnl=round(unrealized_pnl, 2),
             realized_pnl=round(self.realized_pnl, 2),
             total_trades_count=len(self.orders),
-            positions=positions_res
+            positions=positions_res,
+            orders=[dict(order) for order in self.orders]
         )
 
     def execute_order(self, req: PaperOrderRequest) -> Dict:
@@ -67,6 +62,7 @@ class PaperTradingEngine:
         side = req.side.upper()
         prod = req.product.upper()
         qty = req.qty
+        profit: Optional[float] = None
 
         quote = market_ingest.get_quote(sym)
         ltp = quote.price if quote else (req.price or 1000.0)
@@ -94,7 +90,7 @@ class PaperTradingEngine:
                 raise ValueError(f"You do not hold sufficient {qty} units of {sym} ({prod}) to sell")
 
             existing = self.positions[pos_key]
-            profit = (exec_price - existing["buy_price"]) * qty
+            profit = round((exec_price - existing["buy_price"]) * qty, 2)
             margin_to_return = (existing["buy_price"] * qty / 5) if prod == "MIS" else (existing["buy_price"] * qty)
 
             self.cash += margin_to_return + profit
@@ -113,7 +109,8 @@ class PaperTradingEngine:
             "product": prod,
             "qty": qty,
             "price": exec_price,
-            "status": "EXECUTED"
+            "status": "EXECUTED",
+            "pnl": round(profit, 2) if profit is not None else None
         })
 
         return {"success": True, "message": f"{side} {qty}x {sym} executed @ ₹{exec_price:.2f}"}
@@ -143,7 +140,8 @@ class PaperTradingEngine:
             "product": product.upper(),
             "qty": qty,
             "price": ltp,
-            "status": "SQUARED OFF"
+            "status": "SQUARED OFF",
+            "pnl": round(profit, 2)
         })
 
         return {"success": True, "pnl": round(profit, 2), "message": f"Squared off {symbol} @ ₹{ltp:.2f} (P&L: ₹{profit:+.2f})"}

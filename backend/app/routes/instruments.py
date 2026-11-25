@@ -15,7 +15,7 @@ def get_quotes():
 
 @router.get("/quotes/{symbol}", response_model=QuoteResponse)
 def get_single_quote(symbol: str):
-    q = market_ingest.get_quote(symbol)
+    q = market_ingest.get_quote(symbol, prefer_intraday=True)
     if not q:
         raise HTTPException(status_code=404, detail=f"Instrument {symbol} not found")
     return q

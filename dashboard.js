@@ -454,6 +454,303 @@ function initApiIntegrationsModal() {
     }
 }
 
+// ===== WATCHLIST STORE (shared by all dashboard pages) =====
+const WatchlistStore = (() => {
+    const STORAGE_KEY = 'ie_watchlist';
+    const DEFAULT_SYMBOLS = ['RELIANCE', 'TCS', 'INFY', 'BTCUSDT', 'ETHUSDT'];
+    const quoteCache = new Map();
+    const changeListeners = new Set();
+
+    function normalize(value) {
+        return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+    }
+
+    function read() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+            if (!Array.isArray(saved)) return [...DEFAULT_SYMBOLS];
+            const cleaned = [...new Set(saved.map(normalize).filter(Boolean))];
+            return cleaned.length ? cleaned : [...DEFAULT_SYMBOLS];
+        } catch (e) {
+            return [...DEFAULT_SYMBOLS];
+        }
+    }
+
+    let symbols = read();
+
+    function emitChange() {
+        window.dispatchEvent(new CustomEvent('watchlistchange', { detail: { symbols: [...symbols] } }));
+        changeListeners.forEach(fn => {
+            try { fn([...symbols]); } catch (e) { console.warn('Watchlist listener error', e); }
+        });
+    }
+
+    function emitQuotes() {
+        window.dispatchEvent(new CustomEvent('watchlistquotes'));
+    }
+
+    function persist() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(symbols));
+        emitChange();
+    }
+
+    function get() {
+        return [...symbols];
+    }
+
+    function has(symbol) {
+        return symbols.includes(normalize(symbol));
+    }
+
+    function add(symbol) {
+        const sym = normalize(symbol);
+        if (!sym || has(sym)) return false;
+        symbols.push(sym);
+        persist();
+        return true;
+    }
+
+    function remove(symbol) {
+        const sym = normalize(symbol);
+        const before = symbols.length;
+        symbols = symbols.filter(s => s !== sym);
+        if (symbols.length === before) return false;
+        persist();
+        return true;
+    }
+
+    function toggle(symbol) {
+        return has(symbol) ? (remove(symbol), false) : (add(symbol), true);
+    }
+
+    async function addVerified(rawSymbol) {
+        const sym = normalize(rawSymbol);
+        if (!sym) return { ok: false, message: 'Enter a ticker symbol first.' };
+        if (has(sym)) return { ok: false, message: `${sym} is already in your watchlist.` };
+
+        try {
+            const results = await window.apiClient.searchInstruments(sym) || [];
+            const exact = results.find(item => normalize(item.symbol) === sym);
+            if (!exact) {
+                const suggestion = results.length ? results[0].symbol : null;
+                return {
+                    ok: false,
+                    message: suggestion
+                        ? `No verified instrument named ${sym}. Did you mean ${suggestion}?`
+                        : `No verified instrument found for ${sym}.`
+                };
+            }
+            add(exact.symbol);
+            await refreshQuotes();
+            return { ok: true, symbol: exact.symbol, message: `${exact.symbol} added to your watchlist.` };
+        } catch (e) {
+            return { ok: false, message: `Could not verify ${sym}: ${e.message}` };
+        }
+    }
+
+    function getQuote(symbol) {
+        return quoteCache.get(normalize(symbol)) || null;
+    }
+
+    async function refreshQuotes() {
+        const missing = get().filter(sym => !quoteCache.has(sym));
+        if (missing.length && window.apiClient) {
+            await Promise.all(missing.map(async sym => {
+                try {
+                    const q = await window.apiClient.getQuote(sym);
+                    if (q && !q.is_synthetic && q.symbol) quoteCache.set(normalize(q.symbol), q);
+                } catch (e) {
+                    console.warn(`Watchlist quote unavailable for ${sym}:`, e.message);
+                }
+            }));
+        }
+        emitQuotes();
+    }
+
+    function onChange(fn) {
+        changeListeners.add(fn);
+        fn([...symbols]);
+        return () => changeListeners.delete(fn);
+    }
+
+    function onQuotes(fn) {
+        window.addEventListener('watchlistquotes', fn);
+        return () => window.removeEventListener('watchlistquotes', fn);
+    }
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEY) {
+            symbols = read();
+            emitChange();
+        }
+    });
+
+    if (window.apiClient) {
+        window.apiClient.onTick((ticks) => {
+            if (!Array.isArray(ticks)) return;
+            ticks.forEach(q => {
+                if (q && q.symbol) quoteCache.set(normalize(q.symbol), q);
+            });
+            emitQuotes();
+        });
+        window.apiClient.connectWebSocket();
+    }
+
+    // Generic add/remove buttons anywhere on the app.
+    document.addEventListener('click', async (e) => {
+        const toggleBtn = e.target.closest('[data-watchlist-toggle]');
+        const removeBtn = e.target.closest('[data-watchlist-remove]');
+        const btn = toggleBtn || removeBtn;
+        if (!btn) return;
+        e.preventDefault();
+        const sym = normalize(toggleBtn ? toggleBtn.dataset.watchlistToggle : removeBtn.dataset.watchlistRemove);
+        if (!sym) return;
+        const added = toggleBtn ? toggle(sym) : (remove(sym), false);
+        await refreshQuotes();
+        if (typeof window.showToast === 'function') {
+            window.showToast(added ? `${sym} added to watchlist` : `${sym} removed from watchlist`, 'success');
+        }
+    });
+
+    return { get, has, add, remove, toggle, addVerified, getQuote, refreshQuotes, onChange, onQuotes };
+})();
+window.Watchlist = WatchlistStore;
+
+// ===== GLOBAL VERIFIED SYMBOL SEARCH =====
+function initGlobalSearch() {
+    const selectors = ['#dashSearchInput', '#searchInput', '#analysisSearchInput'];
+
+    selectors.forEach((selector) => {
+        const input = document.querySelector(selector);
+        if (!input || input.dataset.globalSearchReady) return;
+        input.dataset.globalSearchReady = '1';
+
+        const host = input.parentElement || input;
+        if (window.getComputedStyle(host).position === 'static') host.style.position = 'relative';
+
+        const dropdown = document.createElement('div');
+        dropdown.className = 'global-search-results';
+        Object.assign(dropdown.style, {
+            position: 'absolute', top: 'calc(100% + 8px)', left: '0', right: '0',
+            zIndex: '1200', background: 'var(--c-bg-elevated, #111827)',
+            border: '1px solid var(--c-border)', borderRadius: '10px',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.35)', display: 'none',
+            maxHeight: '340px', overflowY: 'auto'
+        });
+        host.appendChild(dropdown);
+
+        let items = [];
+        let active = -1;
+        let timer = null;
+        let requestId = 0;
+
+        function hide() {
+            dropdown.style.display = 'none';
+            active = -1;
+        }
+
+        function message(text, color) {
+            dropdown.innerHTML = `<div style="padding:13px 14px; font-size:12px; color:${color || 'var(--c-text-secondary)'};">${text}</div>`;
+            dropdown.style.display = 'block';
+        }
+
+        function render() {
+            if (!items.length) {
+                message('No verified instrument found for this search.');
+                return;
+            }
+            dropdown.innerHTML = items.map((item, i) => {
+                const price = Number.isFinite(Number(item.price))
+                    ? Number(item.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })
+                    : '—';
+                return `
+                    <button type="button" class="global-search-result" data-index="${i}" style="display:block; width:100%; text-align:left; border:0; cursor:pointer; padding:10px 14px; background:${i === active ? 'rgba(0,208,156,0.10)' : 'transparent'}; color:var(--c-text-primary); border-bottom:1px solid var(--c-border);">
+                        <div style="display:flex; justify-content:space-between; gap:12px;">
+                            <strong style="font-family:var(--ff-mono);">${item.symbol}</strong>
+                            <span style="font-family:var(--ff-mono); font-size:12px; color:var(--c-accent);">${price}</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--c-text-secondary); margin-top:3px;">${item.name || ''} · ${item.segment || item.exchange || ''}</div>
+                    </button>
+                `;
+            }).join('');
+            dropdown.style.display = 'block';
+            dropdown.querySelectorAll('.global-search-result').forEach(btn => {
+                btn.addEventListener('click', () => choose(items[Number(btn.dataset.index)]));
+            });
+        }
+
+        async function search() {
+            const q = input.value.trim();
+            if (q.length < 2) {
+                items = [];
+                hide();
+                return;
+            }
+            const myRequest = ++requestId;
+            if (!window.apiClient) return;
+            try {
+                const results = await window.apiClient.searchInstruments(q);
+                if (myRequest !== requestId) return;
+                items = Array.isArray(results) ? results : [];
+                active = items.length ? 0 : -1;
+                render();
+            } catch (e) {
+                if (myRequest !== requestId) return;
+                items = [];
+                message(`Search unavailable: ${e.message}`, 'var(--c-negative)');
+            }
+        }
+
+        function choose(item) {
+            if (!item || !item.symbol) return;
+            const sym = String(item.symbol).toUpperCase().trim();
+            hide();
+            input.value = sym;
+            const url = `analysis.html?symbol=${encodeURIComponent(sym)}`;
+            if (window.location.pathname.endsWith('analysis.html')) {
+                history.replaceState(null, '', url);
+                window.dispatchEvent(new CustomEvent('analysis:symbol', { detail: { symbol: sym } }));
+            } else {
+                window.location.href = url;
+            }
+        }
+
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(search, 220);
+        });
+        input.addEventListener('focus', () => {
+            if (items.length) render();
+        });
+        input.addEventListener('blur', () => setTimeout(hide, 160));
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!items.length) await search();
+                active = Math.min(items.length - 1, active + 1);
+                render();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                active = Math.max(0, active - 1);
+                render();
+            } else if (e.key === 'Escape') {
+                hide();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (active >= 0 && items[active]) return choose(items[active]);
+                await search();
+                if (items.length) {
+                    const typed = input.value.trim().toUpperCase();
+                    const exact = items.find(i => i.symbol.toUpperCase() === typed);
+                    choose(exact || items[0]);
+                } else {
+                    message(`No verified instrument named "${input.value.trim()}". Try a symbol like RELIANCE, TCS, or BTCUSDT.`, 'var(--c-negative)');
+                }
+            }
+        });
+    });
+}
+
 // ===== QUICK TOOLS (SIP CALCULATOR, WATCHLIST, NOTIFICATIONS) =====
 function initQuickTools() {
     // 1. SIP Calculator Modal
@@ -561,7 +858,7 @@ function initQuickTools() {
     if (!document.getElementById('watchlistModalOverlay')) {
         const watchlistModalHTML = `
         <div class="api-modal-overlay" id="watchlistModalOverlay">
-            <div class="api-modal" style="max-width: 620px;">
+            <div class="api-modal" style="max-width: 680px;">
                 <div class="api-modal__header">
                     <div class="api-modal__title">
                         <span>⭐</span> My Tracked Watchlist
@@ -569,12 +866,14 @@ function initQuickTools() {
                     <button class="api-modal__close" id="watchlistModalClose">✕</button>
                 </div>
                 <div>
-                    <div style="display:flex; gap:10px; margin-bottom:16px;">
-                        <input type="text" class="api-token-input" id="addWatchlistInput" placeholder="Add ticker symbol (e.g. TCS, INFY, SOLUSDT)..." style="font-family:var(--ff-primary);">
+                    <div style="display:flex; gap:10px; margin-bottom:8px;">
+                        <input type="text" class="api-token-input" id="addWatchlistInput" placeholder="Add verified ticker (e.g. TCS, INFY, BTCUSDT)..." style="font-family:var(--ff-mono);">
                         <button class="btn btn--primary" id="addWatchlistBtn" style="padding:8px 16px; font-size:13px;">+ Add</button>
                     </div>
-                    <div id="watchlistItemsList" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto;">
-                        <!-- Rendered by JS -->
+                    <div id="watchlistStatus" style="font-size:12px; min-height:18px; margin-bottom:12px; color:var(--c-text-secondary);"></div>
+                    <div id="watchlistItemsList" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto;"></div>
+                    <div style="font-size:11px; color:var(--c-text-tertiary); margin-top:12px;">
+                        Prices update from the verified market feed. Watchlist is saved in this browser.
                     </div>
                 </div>
             </div>
@@ -591,44 +890,95 @@ function initQuickTools() {
             });
         }
 
-        let watchlist = JSON.parse(localStorage.getItem('ie_watchlist') || '["RELIANCE", "TCS", "INFY", "BTCUSDT", "ETHUSDT"]');
+        function money(value, sym) {
+            if (!Number.isFinite(value)) return '—';
+            const prefix = sym.includes('USDT') ? '$' : '₹';
+            return prefix + value.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: sym.includes('USDT') && value < 10 ? 4 : 2
+            });
+        }
 
         function renderWatchlist() {
             const list = document.getElementById('watchlistItemsList');
+            const status = document.getElementById('watchlistStatus');
             if (!list) return;
-            list.innerHTML = watchlist.map(sym => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.03); border:1px solid var(--c-border); border-radius:var(--r-sm);">
-                    <div style="font-weight:700; font-family:var(--ff-mono);">${sym}</div>
-                    <div style="display:flex; gap:8px;">
-                        <a href="analysis.html?cat=${sym.includes('USDT') ? 'crypto' : 'stocks'}" class="btn btn--secondary" style="font-size:11px; padding:4px 10px; text-decoration:none;">Analyze</a>
-                        <a href="predictions.html?symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 10px; text-decoration:none;">Predict</a>
-                        <button class="btn btn--secondary" onclick="removeWatchlist('${sym}')" style="font-size:11px; padding:4px 8px; color:var(--c-negative);">✕</button>
+
+            const items = window.Watchlist.get();
+            if (status) {
+                const liveCount = items.filter(sym => window.Watchlist.getQuote(sym)).length;
+                status.textContent = items.length
+                    ? `${items.length} instrument${items.length === 1 ? '' : 's'} tracked · ${liveCount}/${items.length} quotes from verified feed`
+                    : 'Your watchlist is empty. Add a verified symbol above.';
+            }
+
+            if (!items.length) {
+                list.innerHTML = `<div style="padding:24px; text-align:center; color:var(--c-text-tertiary); font-size:13px;">No instruments tracked yet.</div>`;
+                return;
+            }
+
+            list.innerHTML = items.map(sym => {
+                const q = window.Watchlist.getQuote(sym);
+                const isPos = q && q.change >= 0;
+                const price = q ? money(q.price, sym) : 'Loading…';
+                const change = q && Number.isFinite(q.change_pct)
+                    ? `${q.change_pct >= 0 ? '+' : ''}${q.change_pct.toFixed(2)}%`
+                    : '—';
+                const source = q?.source || 'awaiting feed';
+                return `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 14px; background:rgba(255,255,255,0.03); border:1px solid var(--c-border); border-radius:var(--r-sm);">
+                    <div style="min-width:0;">
+                        <div style="font-weight:700; font-family:var(--ff-mono);">${sym}</div>
+                        <div style="font-size:11px; color:var(--c-text-tertiary); margin-top:2px;">${q?.name || sym} · ${source}</div>
+                    </div>
+                    <div style="text-align:right; font-family:var(--ff-mono); font-size:12px;">
+                        <div style="font-weight:700;">${price}</div>
+                        <div class="${isPos ? 'positive' : 'negative'}">${change}</div>
+                    </div>
+                    <div style="display:flex; gap:6px; flex-shrink:0;">
+                        <a href="analysis.html?cat=${sym.includes('USDT') ? 'crypto' : 'stocks'}&symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px; text-decoration:none;">Analyze</a>
+                        <a href="predictions.html?symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px; text-decoration:none;">Predict</a>
+                        <button class="btn btn--secondary" data-watchlist-remove="${sym}" style="font-size:11px; padding:4px 8px; color:var(--c-negative);">✕</button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
-
-        window.removeWatchlist = function(sym) {
-            watchlist = watchlist.filter(s => s !== sym);
-            localStorage.setItem('ie_watchlist', JSON.stringify(watchlist));
-            renderWatchlist();
-        };
 
         const addBtn = document.getElementById('addWatchlistBtn');
         const addInput = document.getElementById('addWatchlistInput');
-        if (addBtn && addInput) {
-            addBtn.addEventListener('click', () => {
-                const s = addInput.value.trim().toUpperCase();
-                if (s && !watchlist.includes(s)) {
-                    watchlist.push(s);
-                    localStorage.setItem('ie_watchlist', JSON.stringify(watchlist));
-                    addInput.value = '';
-                    renderWatchlist();
+        const status = document.getElementById('watchlistStatus');
+
+        async function handleAdd() {
+            if (!addInput) return;
+            const raw = addInput.value.trim();
+            if (!raw) {
+                if (status) status.textContent = 'Enter a ticker symbol first.';
+                return;
+            }
+            if (addBtn) addBtn.disabled = true;
+            if (status) status.textContent = 'Verifying instrument…';
+            const result = await window.Watchlist.addVerified(raw);
+            if (result.ok) addInput.value = '';
+            if (status) status.textContent = result.message;
+            if (addBtn) addBtn.disabled = false;
+            renderWatchlist();
+        }
+
+        if (addBtn) addBtn.addEventListener('click', handleAdd);
+        if (addInput) {
+            addInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
                 }
             });
         }
 
+        window.Watchlist.onChange(renderWatchlist);
+        window.Watchlist.onQuotes(renderWatchlist);
         renderWatchlist();
+        window.Watchlist.refreshQuotes();
     }
 
     // 3. Notifications Popover
@@ -733,6 +1083,7 @@ function initUserSession() {
 document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initDashSearch();
+    initGlobalSearch();
     initApiIntegrationsModal();
     initQuickTools();
     initUserSession();

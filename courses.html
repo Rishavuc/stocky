@@ -627,19 +627,24 @@
                             <h3 style="font-size:18px; font-weight:700;">🧠 Quick Knowledge Check</h3>
                             <p style="font-size:12px; color:var(--c-text-secondary);">Test your market terminology comprehension</p>
                         </div>
-                        <span class="badge-type" id="quizScoreBadge">Question 1 of 8</span>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <span class="badge-type" id="quizScoreBadge">Question 1 of 8</span>
+                            <span class="badge-type" id="quizCorrectBadge">Score 0 / 0</span>
+                        </div>
+                    </div>
+
+                    <div style="height:6px; background:rgba(255,255,255,.07); border-radius:999px; overflow:hidden; margin:14px 0 18px;">
+                        <div id="quizProgressBar" style="height:100%; width:12.5%; background:linear-gradient(90deg,var(--c-accent),#00d09c); border-radius:999px; transition:width .3s ease;"></div>
                     </div>
 
                     <div id="quizContent">
-                        <div class="quiz-question" id="quizQuestionText">What does a P/E (Price-to-Earnings) Ratio of 25 indicate?</div>
-                        <div class="quiz-options" id="quizOptionsWrap">
-                            <button class="quiz-option-btn" onclick="answerQuiz(0)">Investors are paying ₹25 for every ₹1 of company earnings</button>
-                            <button class="quiz-option-btn" onclick="answerQuiz(1)">The stock will pay 25% dividend yield annually</button>
-                            <button class="quiz-option-btn" onclick="answerQuiz(2)">The stock price has grown 25 times in 5 years</button>
-                            <button class="quiz-option-btn" onclick="answerQuiz(3)">The company has 25% profit margin</button>
-                        </div>
+                        <div class="quiz-question" id="quizQuestionText">Loading question…</div>
+                        <div class="quiz-options" id="quizOptionsWrap"></div>
                     </div>
-                    <div id="quizFeedback" style="font-size:13px; font-weight:600; min-height:20px;"></div>
+                    <div id="quizFeedback" style="font-size:13px; font-weight:600; min-height:36px; line-height:1.5;"></div>
+                    <div id="quizActions" style="display:none; margin-top:14px;">
+                        <button class="btn btn--primary btn--sm" onclick="restartQuiz()">🔄 Try Again</button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -683,7 +688,10 @@
                     'Module 5: Key ratios: PE, PB, ROE, ROCE explained',
                     'Module 6: Building a diversified beginner portfolio'
                 ],
-                link: 'https://www.youtube.com/@CARachanaRanade'
+                link: 'https://www.youtube.com/@CARachanaRanade',
+                videoUrl: 'https://www.youtube.com/watch?v=Xn7KWR9EOGQ',
+                videoTitle: 'Basics of Stock Market For Beginners - Lecture 1',
+                videoAuthor: 'CA Rachana Phadke Ranade',
             },
             {
                 id: 'course-2',
@@ -706,7 +714,10 @@
                     'Module 5: Options Theory for Professional Trading',
                     'Module 6: Option Strategies & Hedging'
                 ],
-                link: 'https://zerodha.com/varsity/'
+                link: 'https://zerodha.com/varsity/',
+                videoUrl: 'https://www.youtube.com/watch?v=GcZW24SkbHM',
+                videoTitle: '1. Why should you invest? | Zerodha Varsity',
+                videoAuthor: 'Zerodha Varsity',
             },
             {
                 id: 'course-3',
@@ -728,7 +739,10 @@
                     'Module 4: Momentum Oscillators (RSI & Stochastic)',
                     'Module 5: Risk-to-reward ratio and trade entry/exit rules'
                 ],
-                link: 'https://www.youtube.com/@AssetYogi'
+                link: 'https://www.youtube.com/@AssetYogi',
+                videoUrl: 'https://www.youtube.com/watch?v=miaGZZusRnE',
+                videoTitle: 'Candlestick Trading Full Course',
+                videoAuthor: 'Trade with Purab',
             },
             {
                 id: 'course-4',
@@ -751,7 +765,10 @@
                     'Module 5: Non-directional strategies: Short Straddle & Iron Condor',
                     'Module 6: Capital allocation & Stop-loss management in F&O'
                 ],
-                link: 'https://www.sensibull.com'
+                link: 'https://www.sensibull.com',
+                videoUrl: 'https://www.youtube.com/watch?v=Ca66fN3oP1U',
+                videoTitle: 'Option Greeks Explained - Theta Delta Gamma Vega RHO',
+                videoAuthor: 'Pushkar Raj Thakur',
             },
             {
                 id: 'course-5',
@@ -774,7 +791,10 @@
                     'Module 5: Relative Valuation: PE, EV/EBITDA, EV/Sales',
                     'Module 6: Real-world valuation of tech and legacy companies'
                 ],
-                link: 'https://pages.stern.nyu.edu/~adamodar/'
+                link: 'https://pages.stern.nyu.edu/~adamodar/',
+                videoUrl: 'https://www.youtube.com/watch?v=znmQ7oMiQrM',
+                videoTitle: 'Session 1: Introduction to Valuation',
+                videoAuthor: 'Aswath Damodaran',
             },
             {
                 id: 'course-6',
@@ -796,7 +816,10 @@
                     'Module 4: Forward and futures markets',
                     'Module 5: Financial crises and regulation'
                 ],
-                link: 'https://www.coursera.org/learn/financial-markets-global'
+                link: 'https://www.coursera.org/learn/financial-markets-global',
+                videoUrl: 'https://www.youtube.com/watch?v=WQui_3Hpmmc',
+                videoTitle: '1. Introduction and What this Course Will Do for You',
+                videoAuthor: 'YaleCourses',
             },
             {
                 id: 'course-7',
@@ -817,7 +840,10 @@
                     'Module 3: Risk management system & margin requirements',
                     'Module 4: Clearing and settlement processes at NSCCL'
                 ],
-                link: 'https://www.nseindia.com/learn'
+                link: 'https://www.youtube.com/watch?v=YJx2JjdIgRQ',
+                videoUrl: 'https://www.youtube.com/watch?v=YJx2JjdIgRQ',
+                videoTitle: 'Capital Market Dealers Module - NSE NCFM Certification Tutorial',
+                videoAuthor: 'NIFM Institute',
             },
             {
                 id: 'course-8',
@@ -839,7 +865,10 @@
                     'Module 4: Machine Learning & LSTM architectures for price forecast',
                     'Module 5: Live API order placement and risk checks'
                 ],
-                link: 'https://www.edx.org'
+                link: 'https://www.edx.org',
+                videoUrl: 'https://www.youtube.com/watch?v=uk0irecL95o',
+                videoTitle: 'Start Algo Trading in Python (Part 1)',
+                videoAuthor: 'Algorithm Trading',
             },
             {
                 id: 'course-9',
@@ -861,7 +890,10 @@
                     'Module 4: Decentralized Finance (DeFi) & AMM Liquidity Pools',
                     'Module 5: Central Bank Digital Currencies (CBDCs) and Global Policy'
                 ],
-                link: 'https://ocw.mit.edu'
+                link: 'https://ocw.mit.edu',
+                videoUrl: 'https://www.youtube.com/watch?v=EH6vE97qIP4',
+                videoTitle: '1. Introduction for 15.S12 Blockchain and Money, Fall 2018',
+                videoAuthor: 'MIT OpenCourseWare',
             },
             {
                 id: 'course-10',
@@ -882,7 +914,10 @@
                     'Module 3: SIP vs lump sum and step-up SIP strategies',
                     'Module 4: Building a diversified fund portfolio'
                 ],
-                link: 'https://www.youtube.com/@CARachanaRanade'
+                link: 'https://www.youtube.com/@CARachanaRanade',
+                videoUrl: 'https://www.youtube.com/watch?v=6sq2o1atWLY',
+                videoTitle: 'Beginners guide to personal finance',
+                videoAuthor: 'Zerodha Varsity',
             },
             {
                 id: 'course-11',
@@ -903,7 +938,10 @@
                     'Module 3: Large-cap vs mid-cap vs small-cap',
                     'Module 4: Common beginner mistakes to avoid'
                 ],
-                link: 'https://www.youtube.com/@PranjalKamra'
+                link: 'https://www.youtube.com/@PranjalKamra',
+                videoUrl: 'https://www.youtube.com/watch?v=3UF0ymVdYLA',
+                videoTitle: 'Stock Market For Beginners - How can Beginners Start Investing?',
+                videoAuthor: 'Pranjal Kamra',
             },
             {
                 id: 'course-12',
@@ -924,7 +962,10 @@
                     'Module 3: Breakout vs false-breakout setups',
                     'Module 4: Position sizing and trailing stops'
                 ],
-                link: 'https://www.youtube.com/@RaynerTeo'
+                link: 'https://www.youtube.com/@RaynerTeo',
+                videoUrl: 'https://www.youtube.com/watch?v=PuboYnBc0t8',
+                videoTitle: 'Support and Resistance Secrets: Powerful Strategies',
+                videoAuthor: 'Rayner Teo',
             },
             {
                 id: 'course-13',
@@ -945,7 +986,10 @@
                     'Module 3: Volume spread analysis signals',
                     'Module 4: Spotting springs, upthrusts and tests'
                 ],
-                link: 'https://www.youtube.com/results?search_query=wyckoff+volume+price+analysis'
+                link: 'https://www.youtube.com/watch?v=M-WjjX6X3Pw',
+                videoUrl: 'https://www.youtube.com/watch?v=M-WjjX6X3Pw',
+                videoTitle: 'The Secret Language of Volume: Richard Wyckoff\'s Lessons',
+                videoAuthor: 'Richard Wyckoff Methods',
             },
             {
                 id: 'course-14',
@@ -966,7 +1010,10 @@
                     'Module 3: Alerts, watchlists and screeners',
                     'Module 4: Intro to Pine Script indicators'
                 ],
-                link: 'https://www.tradingview.com/education/'
+                link: 'https://www.tradingview.com/education/',
+                videoUrl: 'https://www.youtube.com/watch?v=sMHkuex7r8M',
+                videoTitle: 'Tradingview Tutorial FULL Course',
+                videoAuthor: 'Neeraj Joshi',
             },
             {
                 id: 'course-15',
@@ -988,7 +1035,10 @@
                     'Module 4: Bull, bear and range-bound strategies',
                     'Module 5: Hedging a portfolio with options'
                 ],
-                link: 'https://zerodha.com/varsity/module/futures-trading/'
+                link: 'https://zerodha.com/varsity/module/futures-trading/',
+                videoUrl: 'https://www.youtube.com/watch?v=J0sKv8cples',
+                videoTitle: '1. Introduction to forwards market | Zerodha Varsity',
+                videoAuthor: 'Zerodha Varsity',
             },
             {
                 id: 'course-16',
@@ -1009,7 +1059,10 @@
                     'Module 3: Iron condor, butterfly and calendar spreads',
                     'Module 4: Adjusting a losing options position'
                 ],
-                link: 'https://www.sensibull.com'
+                link: 'https://www.sensibull.com',
+                videoUrl: 'https://www.youtube.com/watch?v=5q6wxifVgkQ',
+                videoTitle: 'Sensibull Tutorial - Build Your Option Trading Strategy',
+                videoAuthor: 'Neeraj Joshi',
             },
             {
                 id: 'course-17',
@@ -1030,7 +1083,10 @@
                     'Module 3: Adjusting trades on trending days',
                     'Module 4: Event-day (budget/result) risk management'
                 ],
-                link: 'https://www.youtube.com/@BhanuPratap'
+                link: 'https://www.youtube.com/watch?v=XEw3xd1fQZk',
+                videoUrl: 'https://www.youtube.com/watch?v=XEw3xd1fQZk',
+                videoTitle: 'NIFTY Option Selling Strategy - 800 Point Hedging Setup',
+                videoAuthor: 'Vishal Bhingaradiya',
             },
             {
                 id: 'course-18',
@@ -1051,7 +1107,10 @@
                     'Module 3: Return ratios and working-capital cycles',
                     'Module 4: Building a fundamental screening checklist'
                 ],
-                link: 'https://www.nseindia.com/learn'
+                link: 'https://www.youtube.com/watch?v=3W_LwpeG8c8',
+                videoUrl: 'https://www.youtube.com/watch?v=3W_LwpeG8c8',
+                videoTitle: 'FINANCIAL RATIOS: How to Analyze Financial Statements',
+                videoAuthor: 'Accounting Stuff',
             },
             {
                 id: 'course-19',
@@ -1072,7 +1131,10 @@
                     'Module 3: Valuation multiples and mean reversion',
                     'Module 4: Constructing a value portfolio'
                 ],
-                link: 'https://nptel.ac.in/courses'
+                link: 'https://nptel.ac.in/courses',
+                videoUrl: 'https://www.youtube.com/watch?v=D8TYIYHwiY0',
+                videoTitle: 'Margin of Safety Summary (Seth Klarman)',
+                videoAuthor: 'The Swedish Investor',
             },
             {
                 id: 'course-20',
@@ -1093,7 +1155,10 @@
                     'Module 3: Writing an event-driven backtester',
                     'Module 4: Performance metrics and risk analytics'
                 ],
-                link: 'https://www.freecodecamp.org/news/tag/finance/'
+                link: 'https://www.freecodecamp.org/news/tag/finance/',
+                videoUrl: 'https://www.youtube.com/watch?v=GaZm_rcCsGI',
+                videoTitle: 'How To Use Python For Backtesting Strategies',
+                videoAuthor: 'FessorPro',
             },
             {
                 id: 'course-21',
@@ -1114,7 +1179,10 @@
                     'Module 3: LSTM / GRU sequence models',
                     'Module 4: Evaluation: MAE, RMSE, directional accuracy'
                 ],
-                link: 'https://www.coursera.org/learn/machine-learning-for-trading'
+                link: 'https://www.youtube.com/watch?v=CbTU92pbDKw',
+                videoUrl: 'https://www.youtube.com/watch?v=CbTU92pbDKw',
+                videoTitle: 'Stock Price Prediction & Forecasting with LSTM Neural Networks in Python',
+                videoAuthor: 'Greg Hogg',
             },
             {
                 id: 'course-22',
@@ -1135,7 +1203,10 @@
                     'Module 3: Staking, lending and liquidity pools',
                     'Module 4: Evaluating on-chain and smart-contract risk'
                 ],
-                link: 'https://www.youtube.com/@WhiteboardCrypto'
+                link: 'https://www.youtube.com/@WhiteboardCrypto',
+                videoUrl: 'https://www.youtube.com/watch?v=17QRFlml4pA',
+                videoTitle: 'What is DeFi? (Decentralized Finance Animated)',
+                videoAuthor: 'Whiteboard Crypto',
             },
             {
                 id: 'course-23',
@@ -1156,7 +1227,10 @@
                     'Module 3: ERC-20 and ERC-721 token standards',
                     'Module 4: Deploying to a testnet'
                 ],
-                link: 'https://www.freecodecamp.org/news/tag/blockchain/'
+                link: 'https://www.freecodecamp.org/news/tag/blockchain/',
+                videoUrl: 'https://www.youtube.com/watch?v=X1Kx9NWVRwI',
+                videoTitle: 'Solidity Tutorial: Create Your First Smart Contract on Ethereum',
+                videoAuthor: 'Justin Salmon',
             },
             {
                 id: 'course-24',
@@ -1177,7 +1251,10 @@
                     'Module 3: Managing drawdowns and revenge trading',
                     'Module 4: The five fundamental truths of trading'
                 ],
-                link: 'https://www.youtube.com/results?search_query=mark+douglas+trading+psychology'
+                link: 'https://www.youtube.com/watch?v=sg4YzRhILFE',
+                videoUrl: 'https://www.youtube.com/watch?v=sg4YzRhILFE',
+                videoTitle: 'Mark Douglas Discussed Trading Psychology, Risk and more',
+                videoAuthor: 'R.E.M',
             },
             {
                 id: 'course-25',
@@ -1198,12 +1275,17 @@
                     'Module 3: Rebalancing and tax-aware withdrawal',
                     'Module 4: Factor investing and index strategies'
                 ],
-                link: 'https://nptel.ac.in/courses'
+                link: 'https://nptel.ac.in/courses',
+                videoUrl: 'https://www.youtube.com/watch?v=ope5Y3Mrsaw',
+                videoTitle: 'Mod-01 Lec-01 Introduction to Investment Management',
+                videoAuthor: 'nptelhrd',
             }
         ];
 
         let savedCourses = JSON.parse(localStorage.getItem('investors_eye_saved_courses') || '[]');
-        let activeTopic = 'all';
+        let activeTopic = new URLSearchParams(window.location.search).get('topic') || 'all';
+        const validTopics = ['all', 'basics', 'technical', 'fno', 'fundamental', 'algo', 'crypto'];
+        if (!validTopics.includes(activeTopic)) activeTopic = 'all';
         let showOnlySaved = false;
 
         // Elements
@@ -1212,11 +1294,12 @@
         const platformSelect = document.getElementById('platformSelect');
         const langSelect = document.getElementById('langSelect');
         const catChips = document.querySelectorAll('.cat-chip');
-        const savedBadge = document.getElementById('savedCountBadge');
+        let savedBadge = document.getElementById('savedCountBadge');
         const btnToggleSaved = document.getElementById('btnToggleSaved');
 
         function updateSavedBadge() {
-            savedBadge.textContent = savedCourses.length;
+            savedBadge = document.getElementById('savedCountBadge');
+            if (savedBadge) savedBadge.textContent = savedCourses.length;
         }
 
         window.toggleBookmark = function(id) {
@@ -1245,6 +1328,11 @@
                 <div style="font-size:13px; color:var(--c-text-secondary); line-height:1.6; margin-bottom:20px;">
                     ${course.desc}
                 </div>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:12px; border-bottom:1px solid var(--c-border); padding-bottom:6px;">Featured Learning Video</h3>
+                <a href="${course.videoUrl}" target="_blank" rel="noopener noreferrer" class="btn btn--primary" style="width:100%; text-align:center; margin-bottom:20px;">
+                    ▶ ${course.videoTitle}
+                </a>
+                <p style="font-size:12px; color:var(--c-text-tertiary); margin-top:-12px; margin-bottom:22px;">${course.videoAuthor} · Opens on YouTube</p>
                 <h3 style="font-size:15px; font-weight:700; margin-bottom:12px; border-bottom:1px solid var(--c-border); padding-bottom:6px;">Course Curriculum & Modules</h3>
                 <div>
                     ${course.syllabus.map((mod, idx) => `
@@ -1324,7 +1412,7 @@
                                 <span class="c-tag">⏱ ${c.duration}</span>
                                 <span class="c-tag">📖 ${c.lessons} Lessons</span>
                                 <span class="c-tag">🗣 ${c.language}</span>
-                                <span class="c-tag">🆓 100% Free</span>
+                                <span class="c-tag">🎬 Video Included</span>
                             </div>
                         </div>
                         <div class="course-card-premium__footer">
@@ -1333,9 +1421,10 @@
                                 <span>${c.rating}</span>
                                 <span style="color:var(--c-text-tertiary); font-size:11px;">(${c.reviews})</span>
                             </div>
-                            <div style="display:flex; gap:8px;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <a href="${c.videoUrl}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm" title="${c.videoTitle}">▶ Video</a>
                                 <button class="btn btn--glass btn--sm" onclick="openSyllabusModal('${c.id}')">Syllabus</button>
-                                <a href="${c.link}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm">Start →</a>
+                                <a href="${c.link}" target="_blank" rel="noopener noreferrer" class="btn btn--glass btn--sm">Platform</a>
                             </div>
                         </div>
                     </div>
@@ -1356,6 +1445,7 @@
             activeTopic = 'all';
             showOnlySaved = false;
             btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+            updateSavedBadge();
             catChips.forEach(chip => chip.classList.toggle('active', chip.dataset.topic === 'all'));
             searchInput.value = '';
             platformSelect.value = 'all';
@@ -1371,6 +1461,13 @@
         });
 
         searchInput.addEventListener('input', renderCourses);
+        const dashSearchInput = document.getElementById('dashSearchInput');
+        if (dashSearchInput) {
+            dashSearchInput.addEventListener('input', () => {
+                searchInput.value = dashSearchInput.value;
+                renderCourses();
+            });
+        }
         platformSelect.addEventListener('change', renderCourses);
         langSelect.addEventListener('change', renderCourses);
 
@@ -1380,81 +1477,138 @@
                 btnToggleSaved.innerHTML = `⬅ Show All Courses`;
             } else {
                 btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+                updateSavedBadge();
             }
             renderCourses();
         });
 
-        // QUIZ LOGIC
-        const QUIZ_QUESTIONS = [
-            {
-                q: 'What does a P/E (Price-to-Earnings) Ratio of 25 indicate?',
-                options: [
-                    'Investors are paying ₹25 for every ₹1 of company earnings',
-                    'The stock will pay 25% dividend yield annually',
-                    'The stock price has grown 25 times in 5 years',
-                    'The company has 25% profit margin'
-                ],
-                correct: 0,
-                explanation: 'Correct! P/E ratio measures current share price relative to its per-share earnings.'
-            },
-            {
-                q: 'In Options Trading, what does "Theta" (θ) measure?',
-                options: [
-                    'The sensitivity of option price to underlying stock price',
-                    'The rate of time decay of the option premium over time',
-                    'The volatility sensitivity of the option contract',
-                    'The interest rate effect on future pricing'
-                ],
-                correct: 1,
-                explanation: 'Correct! Theta represents the rate at which an option’s value declines as expiration approaches.'
-            },
-            {
-                q: 'What is the primary difference between Intraday (MIS) and Delivery (CNC)?',
-                options: [
-                    'MIS offers 5x leverage and positions must be squared off on the same day',
-                    'CNC orders cannot be sold for 1 full year',
-                    'MIS orders do not incur any securities transaction tax',
-                    'CNC is exclusively for crypto trading'
-                ],
-                correct: 0,
-                explanation: 'Correct! MIS is Margin Intraday Square-off, auto-squared before market close.'
-            }
+        // QUIZ LOGIC — backed by the 8-question API bank with local fallback
+        const QUIZ_FALLBACK = [
+            { id: 1, q: 'What does a P/E (Price-to-Earnings) Ratio of 25 indicate?', options: ['Investors are paying ₹25 for every ₹1 of company earnings', 'The stock will pay 25% dividend yield annually', 'The stock price has grown 25 times in 5 years', 'The company has 25% profit margin'], correct: 0, explanation: 'Correct! P/E ratio measures current share price relative to per-share earnings.' },
+            { id: 2, q: 'In Options Trading, what does Theta (θ) measure?', options: ['Sensitivity of option price to underlying stock price', 'Rate of time decay of the option premium over time', 'Volatility sensitivity of the option contract', 'Interest rate effect on future pricing'], correct: 1, explanation: 'Correct! Theta is the rate at which an option’s value decays as expiration approaches.' },
+            { id: 3, q: 'What is the primary difference between Intraday (MIS) and Delivery (CNC)?', options: ['MIS offers leverage and must be squared off the same day', 'CNC orders cannot be sold for 1 full year', 'MIS orders do not incur any transaction tax', 'CNC is exclusively for crypto trading'], correct: 0, explanation: 'Correct! MIS is leveraged and auto-squared before market close.' },
+            { id: 4, q: 'An RSI reading of 82 on a daily chart most likely signals…', options: ['The stock is oversold and due for a bounce', 'The stock is overbought and may be due for a pullback', 'The trend has permanently reversed to bearish', 'Volume is about to spike by exactly 82%'], correct: 1, explanation: 'Correct! RSI above 70 is conventionally overbought.' },
+            { id: 5, q: 'What does a rising Put-Call Ratio (PCR) in an index suggest?', options: ['Traders are piling into calls, expecting a rally', 'Relatively more puts are being written than calls', 'The market is closed for settlement', 'Futures premiums have turned negative'], correct: 1, explanation: 'Correct! A rising PCR means put activity is growing relative to call activity.' },
+            { id: 6, q: 'Which metric best measures profitability on shareholder equity?', options: ['Return on Equity (ROE)', 'Debt-to-Equity ratio', 'Current ratio', 'Price-to-Book ratio'], correct: 0, explanation: 'Correct! ROE = Net Income / Shareholders’ Equity.' },
+            { id: 7, q: 'A Golden Cross occurs when…', options: ['The 50-day SMA crosses above the 200-day SMA', 'The 200-day SMA crosses above the 50-day SMA', 'Price touches the upper Bollinger Band', 'The VIX drops below 10'], correct: 0, explanation: 'Correct! A Golden Cross is the 50-day SMA moving above the 200-day SMA.' },
+            { id: 8, q: 'For a long Call option buyer, which statement is true?', options: ['Maximum loss is unlimited', 'Maximum profit is unlimited', 'Both profit and loss are unlimited', 'Neither profit nor loss is unlimited'], correct: 1, explanation: 'Correct! A long call has limited loss but theoretically unlimited upside.' }
         ];
 
-        let curQIdx = 0;
+        let quizQuestions = QUIZ_FALLBACK.slice();
+        let quizIdx = 0;
+        let quizScore = 0;
+        let quizAnswered = 0;
+        let quizLocked = false;
 
-        window.answerQuiz = function(optIdx) {
-            const q = QUIZ_QUESTIONS[curQIdx];
+        async function initQuiz() {
+            try {
+                const apiQuiz = await window.apiClient?.getQuiz();
+                if (Array.isArray(apiQuiz) && apiQuiz.length) {
+                    quizQuestions = apiQuiz.map(q => {
+                        const fallback = QUIZ_FALLBACK.find(f => f.id === q.id);
+                        return {
+                            id: q.id,
+                            q: q.question,
+                            options: q.options,
+                            correct: fallback ? fallback.correct : 0,
+                            explanation: fallback ? fallback.explanation : ''
+                        };
+                    });
+                }
+            } catch (e) {
+                console.warn('Quiz API unavailable, using built-in bank:', e.message);
+            }
+            restartQuiz();
+        }
+
+        window.restartQuiz = function() {
+            quizIdx = 0;
+            quizScore = 0;
+            quizAnswered = 0;
+            quizLocked = false;
+            document.getElementById('quizActions').style.display = 'none';
+            document.getElementById('quizCorrectBadge').textContent = `Score 0 / 0`;
+            loadQuizQuestion(0);
+        };
+
+        window.answerQuiz = async function(optIdx) {
+            if (quizLocked) return;
+            quizLocked = true;
+            quizAnswered += 1;
+
+            const q = quizQuestions[quizIdx];
             const feedback = document.getElementById('quizFeedback');
             const btns = document.querySelectorAll('.quiz-option-btn');
+            let result = null;
+
+            try {
+                result = await window.apiClient.submitQuizAnswer(q.id, optIdx);
+            } catch (e) {
+                console.warn('Quiz answer API unavailable, scoring locally:', e.message);
+            }
+
+            if (!result) {
+                const correct = optIdx === q.correct;
+                result = {
+                    correct,
+                    correct_option: q.correct,
+                    correct_answer: q.options[q.correct],
+                    explanation: correct
+                        ? q.explanation
+                        : `Not quite — the correct answer is: ${q.options[q.correct]}.`,
+                    next_question_id: quizQuestions[quizIdx + 1]?.id ?? null
+                };
+            }
+
+            if (result.correct) quizScore += 1;
+            const correctOption = result.correct_option ?? q.correct;
 
             btns.forEach((btn, idx) => {
                 btn.disabled = true;
-                if (idx === q.correct) btn.classList.add('correct');
+                if (idx === correctOption) btn.classList.add('correct');
                 else if (idx === optIdx) btn.classList.add('wrong');
             });
 
-            if (optIdx === q.correct) {
-                feedback.innerHTML = `<span style="color:var(--c-positive);">✓ ${q.explanation}</span>`;
-            } else {
-                feedback.innerHTML = `<span style="color:var(--c-negative);">✕ Incorrect. ${q.explanation}</span>`;
-            }
+            feedback.innerHTML = `<span style="color:${result.correct ? 'var(--c-positive)' : 'var(--c-negative)'};">${result.correct ? '✓' : '✕'} ${result.explanation}</span>`;
+            document.getElementById('quizCorrectBadge').textContent = `Score ${quizScore} / ${quizAnswered}`;
 
+            const nextId = result.next_question_id;
             setTimeout(() => {
-                curQIdx = (curQIdx + 1) % QUIZ_QUESTIONS.length;
-                loadQuizQuestion(curQIdx);
-            }, 3000);
+                if (nextId == null) {
+                    showQuizResults();
+                    return;
+                }
+                const nextIdx = quizQuestions.findIndex(item => item.id === nextId);
+                if (nextIdx < 0) showQuizResults();
+                else loadQuizQuestion(nextIdx);
+            }, 2600);
         };
 
         function loadQuizQuestion(idx) {
-            const q = QUIZ_QUESTIONS[idx];
-            document.getElementById('quizScoreBadge').textContent = `Question ${idx + 1} of ${QUIZ_QUESTIONS.length}`;
+            quizIdx = idx;
+            quizLocked = false;
+            const q = quizQuestions[idx];
+            const total = quizQuestions.length;
+            document.getElementById('quizScoreBadge').textContent = `Question ${idx + 1} of ${total}`;
+            document.getElementById('quizProgressBar').style.width = `${((idx + 1) / total) * 100}%`;
             document.getElementById('quizQuestionText').textContent = q.q;
             document.getElementById('quizFeedback').innerHTML = '';
             const wrap = document.getElementById('quizOptionsWrap');
             wrap.innerHTML = q.options.map((opt, oIdx) => `
                 <button class="quiz-option-btn" onclick="answerQuiz(${oIdx})">${opt}</button>
             `).join('');
+        }
+
+        function showQuizResults() {
+            const total = quizQuestions.length;
+            const pct = Math.round((quizScore / total) * 100);
+            const message = pct >= 80 ? 'Excellent — institutional-grade knowledge!' : pct >= 50 ? 'Good work — review the weaker topics and try again.' : 'Keep going — the courses above cover these concepts.';
+            document.getElementById('quizScoreBadge').textContent = `Final Score: ${quizScore} / ${total}`;
+            document.getElementById('quizProgressBar').style.width = '100%';
+            document.getElementById('quizQuestionText').textContent = `🎯 You scored ${quizScore} out of ${total} (${pct}%)`;
+            document.getElementById('quizOptionsWrap').innerHTML = `<p style="font-size:13px; color:var(--c-text-secondary); line-height:1.6;">${message}</p>`;
+            document.getElementById('quizFeedback').innerHTML = '';
+            document.getElementById('quizActions').style.display = 'block';
         }
 
         function updateLearnStats() {
@@ -1468,10 +1622,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            catChips.forEach(chip => chip.classList.toggle('active', chip.dataset.topic === activeTopic));
             updateLearnStats();
             updateSavedBadge();
             renderCourses();
-            loadQuizQuestion(0);
+            initQuiz();
         });
     </script>
 </body>

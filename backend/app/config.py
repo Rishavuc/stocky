@@ -1,6 +1,17 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import Optional
+
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
+def is_configured(value: Optional[str]) -> bool:
+    """Treat blank, placeholder and 'none' strings as an unset credential."""
+    if not value:
+        return False
+    lowered = value.strip().lower()
+    return not (lowered.startswith("your_") or "placeholder" in lowered or lowered == "none")
 
 class Settings(BaseSettings):
     APP_NAME: str = "Investor's EYE"
@@ -38,7 +49,7 @@ class Settings(BaseSettings):
     TELEGRAM_DEFAULT_CHAT_ID: Optional[str] = None
     
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE)
         extra = "allow"
 
 settings = Settings()

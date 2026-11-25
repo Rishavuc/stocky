@@ -3,12 +3,13 @@ import math
 import time
 import random
 import json
+import threading
 import urllib.request
 import hmac
 import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-from app.config import settings
+from app.config import settings, ENV_FILE, is_configured
 from app.schemas.schemas import QuoteResponse, CandleResponse, IndexOverview
 
 # Optional Kite Connect SDK
@@ -117,11 +118,15 @@ def _intraday_wobble(symbol: str) -> float:
 
 class MarketIngestService:
     def __init__(self):
-        self.binance_key = settings.BINANCE_API_KEY
-        self.binance_secret = settings.BINANCE_API_SECRET
+        self.binance_key = settings.BINANCE_API_KEY if is_configured(settings.BINANCE_API_KEY) else None
+        self.binance_secret = settings.BINANCE_API_SECRET if is_configured(settings.BINANCE_API_SECRET) else None
         self.kite_key = settings.KITE_API_KEY or settings.ZERODHA_API_KEY
+        if not is_configured(self.kite_key):
+            self.kite_key = None
         self.kite_secret = settings.KITE_API_SECRET or settings.ZERODHA_API_SECRET
-        self.kite_access_token = settings.KITE_ACCESS_TOKEN
+        if not is_configured(self.kite_secret):
+            self.kite_secret = None
+        self.kite_access_token = settings.KITE_ACCESS_TOKEN if is_configured(settings.KITE_ACCESS_TOKEN) else None
 
         self.kite_client: Optional[Any] = None
         if KITE_AVAILABLE and self.kite_key:
@@ -169,8 +174,103 @@ class MarketIngestService:
         self._universe_batch_time: float = 0.0
         self._universe_sparklines: Dict[str, List[float]] = {}
         self._universe_sparkline_times: Dict[str, List[str]] = {}
-        self._batch_ttl = 30.0
+        self._batch_ttl = 45.0
         self._tick_seq = 0
+
+        # Verified tickers discovered at runtime (any real Yahoo/Kite symbol).
+        # Nothing here is invented: a symbol is only registered after a live
+        # provider returns actual history for it.
+        self._dynamic_symbols: Dict[str, Dict[str, Any]] = {}
+        self._dynamic_missing: Dict[str, float] = {}
+        self._dynamic_lock = threading.RLock()
+        self._batch_lock = threading.RLock()
+        self._snapshot_lock = threading.RLock()
+        self._snapshot_cache: Dict[str, QuoteResponse] = {}
+        self._snapshot_time: float = 0.0
+
+    # ========================================================
+    # DYNAMIC VERIFIED SYMBOL DISCOVERY
+    # ========================================================
+    def _candidate_yfinance_tickers(self, sym: str) -> List[str]:
+        """Return likely Yahoo tickers for an arbitrary symbol.
+
+        Indian equities are tried first (.NS, then .BO) so a bare NSE ticker
+        never accidentally resolves to an unrelated global instrument. A plain
+        ticker is tried last for US/global equities.
+        """
+        if not sym or sym in CURRENCIES_MAP:
+            return []
+        if sym.endswith(".NS") or sym.endswith(".BO"):
+            return [sym]
+        if sym.endswith("USDT") or sym.endswith("INR"):
+            return []
+
+        base = sym.replace("/", "-").replace(" ", "")
+        if not base:
+            return []
+        plain = base.replace(".", "-")
+        candidates = [f"{base}.NS", f"{base}.BO", plain]
+        return list(dict.fromkeys(candidates))
+
+    def _ensure_dynamic_symbol(self, sym: str) -> Optional[Dict[str, Any]]:
+        """Register a real ticker on demand after verifying it with Yahoo.
+
+        Returns None when no provider can verify the symbol, so callers can
+        return 404/422 rather than fabricate a quote or candle series.
+        """
+        if not sym or sym in CURRENCIES_MAP:
+            return None
+        if sym in INDIAN_STOCKS_MAP:
+            return INDIAN_STOCKS_MAP[sym]
+        if sym in INDICES_MAP:
+            return INDICES_MAP[sym]
+        if sym in self._dynamic_symbols:
+            return self._dynamic_symbols[sym]
+        if not YFINANCE_AVAILABLE:
+            return None
+
+        missing_at = self._dynamic_missing.get(sym)
+        if missing_at and (time.time() - missing_at) < 300:
+            return None
+
+        with self._dynamic_lock:
+            if sym in self._dynamic_symbols:
+                return self._dynamic_symbols[sym]
+            missing_at = self._dynamic_missing.get(sym)
+            if missing_at and (time.time() - missing_at) < 300:
+                return None
+
+            for candidate in self._candidate_yfinance_tickers(sym):
+                try:
+                    df = yf.Ticker(candidate).history(
+                        period="5d", interval="1d"
+                    ).dropna(subset=["Close"])
+                    if df.empty:
+                        continue
+
+                    if candidate.endswith(".NS"):
+                        exchange = "NSE"
+                    elif candidate.endswith(".BO"):
+                        exchange = "BSE"
+                    else:
+                        exchange = "GLOBAL"
+
+                    meta = {
+                        "ticker": candidate,
+                        "name": sym,
+                        "segment": "EQ",
+                        "exchange": exchange,
+                        "sector": "Equities",
+                        "dynamic": True,
+                    }
+                    self._dynamic_symbols[sym] = meta
+                    self._dynamic_missing.pop(sym, None)
+                    return meta
+                except Exception:
+                    continue
+
+            self._dynamic_missing[sym] = time.time()
+            return None
 
     # ========================================================
     # BINANCE REAL-TIME CRYPTO METHODS
@@ -227,7 +327,8 @@ class MarketIngestService:
                         high=round(float(k[2]), 2),
                         low=round(float(k[3]), 2),
                         close=round(float(k[4]), 2),
-                        volume=round(float(k[5]), 2)
+                        volume=round(float(k[5]), 2),
+                        source="binance_live",
                     ))
                 self._candle_cache[cache_key] = candles
                 self._candle_cache_time[cache_key] = now
@@ -277,9 +378,9 @@ class MarketIngestService:
                 self.kite_client.set_access_token(access_token)
             except Exception as e:
                 print(f"[Kite Set Token Warning]: {e}")
-        # Try persisting to backend/.env
+        # Persist to the same root .env that Settings loads on startup.
         try:
-            env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+            env_path = ENV_FILE
             if os.path.exists(env_path):
                 with open(env_path, "r", encoding="utf-8") as f:
                     content = f.read()
@@ -354,7 +455,9 @@ class MarketIngestService:
                     high_24h=high,
                     low_24h=low,
                     volume=vol,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.utcnow(),
+                    source="kite_live",
+                    as_of=datetime.utcnow(),
                 )
                 self._quote_cache[cache_key] = q
                 self._quote_cache_time[cache_key] = now
@@ -411,7 +514,8 @@ class MarketIngestService:
                         high=round(float(r["high"]), 2),
                         low=round(float(r["low"]), 2),
                         close=round(float(r["close"]), 2),
-                        volume=round(float(r["volume"]), 2)
+                        volume=round(float(r["volume"]), 2),
+                        source="kite_live",
                     ))
                 self._candle_cache[cache_key] = candles
                 self._candle_cache_time[cache_key] = now
@@ -423,8 +527,8 @@ class MarketIngestService:
     # ========================================================
     # REAL INDIAN STOCKS & INDICES (LIVE NSE/BSE)
     # ========================================================
-    def fetch_yfinance_quote(self, symbol: str, ticker_sym: str, name: str) -> Optional[QuoteResponse]:
-        cache_key = f"yf_quote_{symbol}"
+    def fetch_yfinance_quote(self, symbol: str, ticker_sym: str, name: str, intraday: bool = True) -> Optional[QuoteResponse]:
+        cache_key = f"yf_quote_{symbol}_intraday" if intraday else f"yf_quote_{symbol}"
         now = time.time()
         if cache_key in self._quote_cache and (now - self._quote_cache_time.get(cache_key, 0)) < self._cache_ttl:
             return self._quote_cache[cache_key]
@@ -434,14 +538,27 @@ class MarketIngestService:
 
         try:
             ticker = yf.Ticker(ticker_sym)
-            df = ticker.history(period="5d", interval="1d").dropna(subset=["Close"])
-            if df.empty:
+            daily = ticker.history(period="5d", interval="1d").dropna(subset=["Close"])
+            intraday = ticker.history(period="1d", interval="1m").dropna(subset=["Close"])
+            if daily.empty and intraday.empty:
                 return None
 
+            # Prefer the newest verified intraday close; fall back to daily EOD.
+            source = "yfinance_delayed" if not intraday.empty else "yfinance_eod"
+            df = intraday if not intraday.empty else daily
             latest = df.iloc[-1]
-            prev = df.iloc[-2] if len(df) > 1 else latest
+
+            prev_close = 0.0
+            if not daily.empty:
+                prev_close = round(
+                    float(daily.iloc[-2]["Close"]) if len(daily) > 1 else float(daily.iloc[-1]["Close"]),
+                    2,
+                )
+            if not prev_close:
+                prev = df.iloc[-2] if len(df) > 1 else latest
+                prev_close = round(float(prev["Close"]), 2)
+
             price = round(float(latest["Close"]), 2)
-            prev_close = round(float(prev["Close"]), 2)
             change = round(price - prev_close, 2)
             change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
@@ -453,8 +570,10 @@ class MarketIngestService:
                 change_pct=change_pct,
                 high_24h=round(float(latest.get("High", price)), 2),
                 low_24h=round(float(latest.get("Low", price)), 2),
-                volume=int(latest.get("Volume", 0)),
-                timestamp=datetime.utcnow()
+                volume=int(latest.get("Volume", 0) or 0),
+                timestamp=datetime.utcnow(),
+                source=source,
+                as_of=datetime.utcnow(),
             )
             self._quote_cache[cache_key] = q
             self._quote_cache_time[cache_key] = now
@@ -491,7 +610,8 @@ class MarketIngestService:
                     high=round(float(row["High"]), 2),
                     low=round(float(row["Low"]), 2),
                     close=round(float(row["Close"]), 2),
-                    volume=round(float(row.get("Volume", 0)), 2)
+                    volume=round(float(row.get("Volume", 0)), 2),
+                    source="yfinance_delayed" if yf_interval != "1d" else "yfinance_eod",
                 ))
             self._candle_cache[cache_key] = candles
             self._candle_cache_time[cache_key] = now
@@ -501,11 +621,11 @@ class MarketIngestService:
             return self._candle_cache.get(cache_key, [])
 
     def fetch_yfinance_universe_batch(self, force: bool = False) -> Dict[str, QuoteResponse]:
-        """Fetch live quotes for every stock & index in ONE yfinance request.
+        """Fetch verified batched EOD quotes for catalog and dynamic symbols.
 
-        The catalog, heatmap and market breadth all need ~24 instruments at once;
-        querying them individually meant 24 sequential network calls. This batches
-        them and caches the result so the terminal stays fast.
+        One daily request keeps the whole market responsive. Individually viewed
+        symbols use intraday history in `fetch_yfinance_quote`, and Kite/Binance
+        provide true realtime ticks when connected.
         """
         now = time.time()
         if not force and self._universe_batch and (now - self._universe_batch_time) < self._batch_ttl:
@@ -513,35 +633,74 @@ class MarketIngestService:
         if not YFINANCE_AVAILABLE:
             return self._universe_batch
 
-        tickers = {}
-        for sym, meta in INDIAN_STOCKS_MAP.items():
-            tickers[meta["ticker"]] = (sym, meta["name"])
-        for sym, meta in INDICES_MAP.items():
-            tickers[meta["ticker"]] = (sym, meta["name"])
+        with self._batch_lock:
+            now = time.time()
+            if not force and self._universe_batch and (now - self._universe_batch_time) < self._batch_ttl:
+                return self._universe_batch
+            # Reserve the refresh window before the slow network call so parallel
+            # ticks do not launch duplicate downloads.
+            self._universe_batch_time = now
 
-        try:
-            df = yf.download(
-                list(tickers.keys()),
-                period="1mo",
-                interval="1d",
-                progress=False,
-                threads=True,
-                auto_adjust=False,
-            )
-            closes = df["Close"] if "Close" in df else df
+            tickers = {}
+            for sym, meta in INDIAN_STOCKS_MAP.items():
+                tickers[meta["ticker"]] = (sym, meta["name"])
+            for sym, meta in INDICES_MAP.items():
+                tickers[meta["ticker"]] = (sym, meta["name"])
+            for sym, meta in self._dynamic_symbols.items():
+                tickers[meta["ticker"]] = (sym, meta["name"])
+
+            def _series(df, field, ticker):
+                try:
+                    if df is None or getattr(df, "empty", True):
+                        return None
+                    if field in df.columns:
+                        frame = df[field]
+                    elif hasattr(df.columns, "get_level_values") and field in df.columns.get_level_values(0):
+                        # yfinance returns a MultiIndex for multi-ticker downloads.
+                        frame = df.xs(field, axis=1, level=0)
+                    else:
+                        return None
+                    if ticker in frame:
+                        return frame[ticker].dropna()
+                except Exception:
+                    return None
+                return None
+
+            try:
+                daily = yf.download(
+                    list(tickers.keys()),
+                    period="1mo",
+                    interval="1d",
+                    progress=False,
+                    threads=True,
+                    auto_adjust=False,
+                )
+            except Exception as e:
+                print(f"[YFinance Daily Batch Error]: {e}")
+                daily = None
+
             out: Dict[str, QuoteResponse] = {}
             for ticker, (sym, name) in tickers.items():
                 try:
-                    series = closes[ticker].dropna()
-                    if len(series) == 0:
+                    series = _series(daily, "Close", ticker)
+                    if series is None or series.empty:
                         continue
+
                     price = round(float(series.iloc[-1]), 2)
                     prev_close = round(float(series.iloc[-2]), 2) if len(series) > 1 else price
                     change = round(price - prev_close, 2)
                     change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
-                    highs = df["High"][ticker].dropna() if "High" in df else series
-                    lows = df["Low"][ticker].dropna() if "Low" in df else series
-                    vols = df["Volume"][ticker].dropna() if "Volume" in df else series
+
+                    highs = _series(daily, "High", ticker)
+                    if highs is None or highs.empty:
+                        highs = series
+                    lows = _series(daily, "Low", ticker)
+                    if lows is None or lows.empty:
+                        lows = series
+                    vols = _series(daily, "Volume", ticker)
+                    if vols is None or vols.empty:
+                        vols = series
+
                     out[sym] = QuoteResponse(
                         symbol=sym,
                         name=name,
@@ -552,6 +711,8 @@ class MarketIngestService:
                         low_24h=round(float(lows.iloc[-1]), 2) if len(lows) else price,
                         volume=float(vols.iloc[-1]) if len(vols) else 0.0,
                         timestamp=datetime.utcnow(),
+                        source="yfinance_eod",
+                        as_of=datetime.utcnow(),
                     )
                     spark = [round(float(s), 2) for s in series.tail(12)]
                     if spark:
@@ -561,20 +722,18 @@ class MarketIngestService:
                         ]
                 except Exception:
                     continue
+
             if out:
                 self._universe_batch = out
-                self._universe_batch_time = now
                 for sym, q in out.items():
                     self._quote_cache[f"yf_quote_{sym}"] = q
                     self._quote_cache_time[f"yf_quote_{sym}"] = now
-        except Exception as e:
-            print(f"[YFinance Universe Batch Error]: {e}")
-        return self._universe_batch
+            return self._universe_batch
 
     # ========================================================
     # UNIFIED PUBLIC METHODS
     # ========================================================
-    def get_quote(self, symbol: str) -> Optional[QuoteResponse]:
+    def get_quote(self, symbol: str, prefer_intraday: bool = False) -> Optional[QuoteResponse]:
         sym = symbol.upper().strip()
 
         # 1. Primary for Indian Equities / Indices: Zerodha Kite Connect API
@@ -583,7 +742,20 @@ class MarketIngestService:
             if k_quote:
                 return k_quote
 
-        # 2. Check Crypto (Binance API)
+        # 1b. Single-symbol detail requests use real intraday history when no
+        #     broker stream is connected, so the displayed price keeps moving.
+        if prefer_intraday and not self.kite_access_token:
+            detail_meta = INDIAN_STOCKS_MAP.get(sym) or INDICES_MAP.get(sym)
+            if detail_meta:
+                intraday_quote = self.fetch_yfinance_quote(sym, detail_meta["ticker"], detail_meta["name"])
+                if intraday_quote:
+                    return intraday_quote
+
+        # 2. Currency pairs are quoted from the static FX reference table, not Binance
+        if sym in CURRENCIES_MAP:
+            return self._fallback_quote(sym)
+
+        # 3. Check Crypto (Binance API)
         if sym in CRYPTO_MAP or sym.endswith("USDT") or sym.endswith("INR"):
             info = CRYPTO_MAP.get(sym)
             pair = info["pair"] if info else sym
@@ -613,16 +785,27 @@ class MarketIngestService:
                     high_24h=high,
                     low_24h=low,
                     volume=round(vol, 2),
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.utcnow(),
+                    source="binance_live",
+                    as_of=datetime.utcnow(),
                 )
 
-        # 3. Real Live NSE / BSE Standby Engine (yfinance — batched & cached)
+        # 4. Catalog equities/indices: fast batched EOD snapshot.
         if sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP:
             batch = self.fetch_yfinance_universe_batch()
             if sym in batch:
                 return batch[sym]
 
-        # 5. Instrument-specific deterministic fallback (None if truly unknown)
+        # 5. Any other real symbol: verify it on demand, then quote it from
+        #    intraday history so its price keeps moving during market hours.
+        if sym not in INDIAN_STOCKS_MAP and sym not in INDICES_MAP:
+            meta = self._dynamic_symbols.get(sym) or self._ensure_dynamic_symbol(sym)
+            if meta:
+                dynamic_quote = self.fetch_yfinance_quote(sym, meta["ticker"], meta["name"])
+                if dynamic_quote:
+                    return dynamic_quote
+
+        # 6. Flagged fallback for known catalog symbols only (provider outage).
         return self._fallback_quote(sym)
 
     def _fallback_quote(self, sym: str) -> Optional[QuoteResponse]:
@@ -656,10 +839,23 @@ class MarketIngestService:
             low_24h=low,
             volume=float(rng.randint(500_000, 8_000_000)),
             timestamp=datetime.utcnow(),
+            source="synthetic",
+            is_synthetic=True,
+            as_of=datetime.utcnow(),
         )
 
     def get_candles(self, symbol: str, timeframe: str = "1d", limit: int = 30) -> List[CandleResponse]:
         sym = symbol.upper().strip()
+        known = (sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP
+                 or sym in CRYPTO_MAP or sym in CURRENCIES_MAP
+                 or sym in self._dynamic_symbols
+                 or sym.endswith("USDT"))
+        if not known:
+            if not self._ensure_dynamic_symbol(sym):
+                return []
+        # Currency pairs have no candle provider in this build; never fabricate one.
+        if sym in CURRENCIES_MAP:
+            return []
 
         # 1. Primary for Indian Equities / Indices: Zerodha Kite Connect API
         if (sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP) and self.kite_access_token:
@@ -684,7 +880,8 @@ class MarketIngestService:
                             high=round(c.high * USD_INR_RATE, 2),
                             low=round(c.low * USD_INR_RATE, 2),
                             close=round(c.close * USD_INR_RATE, 2),
-                            volume=c.volume
+                            volume=c.volume,
+                            source="binance_live",
                         ))
                     return inr_candles
                 return b_candles
@@ -703,27 +900,16 @@ class MarketIngestService:
             if candles:
                 return candles
 
-        # 5. Instrument-specific deterministic fallback series (never all-identical)
-        base_price = _base_price(sym)
-        closes = _deterministic_walk(sym, limit, base_price)
-        now = datetime.utcnow()
-        candles = []
-        prev = closes[0]
-        for i, close in enumerate(closes):
-            dt = now - timedelta(days=limit - i)
-            op = prev
-            hi = round(max(op, close) * 1.008, 2)
-            lo = round(min(op, close) * 0.992, 2)
-            candles.append(CandleResponse(
-                time=dt.strftime("%Y-%m-%d"),
-                open=round(op, 2),
-                high=hi,
-                low=lo,
-                close=round(close, 2),
-                volume=float(500_000 + (_stable_seed(sym) + i * 7919) % 4_500_000),
-            ))
-            prev = close
-        return candles
+        # 5. Runtime-verified equities (NSE/BSE/global)
+        meta = self._dynamic_symbols.get(sym)
+        if meta:
+            candles = self.fetch_yfinance_candles(meta["ticker"], timeframe, limit)
+            if candles:
+                return candles
+
+        # 6. Never fabricate history. Unknown symbols or provider outages return
+        #    an empty series instead of a synthetic price walk.
+        return []
 
     def get_indices(self) -> List[IndexOverview]:
         indices_list = ["NIFTY 50", "SENSEX", "BANK NIFTY", "NIFTY IT"]
@@ -731,8 +917,11 @@ class MarketIngestService:
         for name in indices_list:
             q = self.get_quote(name)
             if q:
-                # 10 point sparkline
-                spark = [round(q.price * (1 + (i - 5) * 0.002), 2) for i in range(10)]
+                # Real captured candle closes when available; otherwise a flat
+                # line rather than a fabricated pattern.
+                spark = self._universe_sparklines.get(name, [])[-10:]
+                if len(spark) < 2:
+                    spark = [round(q.price, 2)] * 10
                 out.append(IndexOverview(
                     name=name,
                     value=q.price,
@@ -744,7 +933,8 @@ class MarketIngestService:
         return out
 
     def get_all_quotes(self) -> List[QuoteResponse]:
-        syms = list(INDIAN_STOCKS_MAP.keys()) + ["BTCINR", "ETHINR", "SOLINR"]
+        syms = list(INDIAN_STOCKS_MAP.keys()) + ["BTCINR", "ETHINR", "SOLINR"] + list(self._dynamic_symbols.keys())
+        syms = list(dict.fromkeys(syms))
         res = []
         for s in syms:
             q = self.get_quote(s)
@@ -793,26 +983,17 @@ class MarketIngestService:
         return rows
 
     def get_fii_dii_flows(self) -> Dict[str, Any]:
-        """Get live institutional flows estimate"""
-        quotes = self.get_all_quotes()
-        avg_change = sum(q.change_pct for q in quotes) / max(1, len(quotes))
-        fii_net = round(1200 + (avg_change * 850), 2)
-        dii_net = round(850 + (avg_change * -350), 2)
-
+        """Institutional flows require a dedicated feed; never estimate them."""
         return {
-            "fii_net": fii_net,
-            "fii_buy": round(11500 + abs(fii_net * 0.8), 2),
-            "fii_sell": round(11500 - (fii_net * 0.2), 2),
-            "dii_net": dii_net,
-            "dii_buy": round(8900 + abs(dii_net * 0.7), 2),
-            "dii_sell": round(8900 - (dii_net * 0.3), 2),
-            "historical_5d": [
-                {"day": "Mon", "fii": round(fii_net * 0.85, 2), "dii": round(dii_net * 0.9, 2)},
-                {"day": "Tue", "fii": round(fii_net * -0.6, 2), "dii": round(dii_net * 1.2, 2)},
-                {"day": "Wed", "fii": round(fii_net * 1.1, 2), "dii": round(dii_net * -0.4, 2)},
-                {"day": "Thu", "fii": round(fii_net * -0.3, 2), "dii": round(dii_net * 0.8, 2)},
-                {"day": "Fri", "fii": fii_net, "dii": dii_net}
-            ]
+            "available": False,
+            "message": "FII / DII feed not connected",
+            "fii_net": 0,
+            "fii_buy": 0,
+            "fii_sell": 0,
+            "dii_net": 0,
+            "dii_buy": 0,
+            "dii_sell": 0,
+            "historical_5d": []
         }
 
     def search_instruments(self, query: str) -> List[Dict]:
@@ -829,6 +1010,18 @@ class MarketIngestService:
                     "price": quote.price if quote else 0.0,
                     "exchange": item["exchange"]
                 })
+        # Search Indices
+        for sym, item in INDICES_MAP.items():
+            name = str(item.get("name", "")).upper()
+            if q in sym.upper() or q in name:
+                quote = self.get_quote(sym)
+                results.append({
+                    "symbol": sym,
+                    "name": item.get("name", sym),
+                    "segment": "INDEX",
+                    "price": quote.price if quote else 0.0,
+                    "exchange": item.get("exchange", "NSE")
+                })
         # Search Crypto
         for sym, item in CRYPTO_MAP.items():
             if q in sym or q in item["name"].upper():
@@ -840,10 +1033,25 @@ class MarketIngestService:
                     "price": quote.price if quote else 0.0,
                     "exchange": "BINANCE"
                 })
+
+        # On-demand verified symbol: any real ticker not in the static catalog.
+        exact = {item["symbol"].upper() for item in results}
+        if len(q) >= 2 and q not in exact:
+            meta = self._ensure_dynamic_symbol(q)
+            if meta:
+                quote = self.fetch_yfinance_quote(q, meta["ticker"], meta["name"])
+                if quote:
+                    results.append({
+                        "symbol": q,
+                        "name": meta["name"],
+                        "segment": "EQUITY",
+                        "price": quote.price,
+                        "exchange": meta["exchange"]
+                    })
         return results
 
     def get_stocks_catalog(self) -> List[Dict[str, Any]]:
-        """Return all Indian equities available on Kite Connect API key with live metrics"""
+        """Return catalog equities plus any runtime-verified symbol with live metrics"""
         # 1. High-speed batch quote via Kite Connect API
         if self.kite_client and self.kite_access_token:
             try:
@@ -875,21 +1083,33 @@ class MarketIngestService:
                             high_24h=high,
                             low_24h=low,
                             volume=vol,
-                            timestamp=datetime.utcnow()
+                            timestamp=datetime.utcnow(),
+                            source="kite_live",
+                            as_of=datetime.utcnow(),
                         )
                         self._quote_cache[f"kite_quote_{sym}"] = q
                         self._quote_cache_time[f"kite_quote_{sym}"] = now
             except Exception as e:
                 print(f"[Kite Batch Quote Error]: {e}")
 
+        catalog = dict(INDIAN_STOCKS_MAP)
+        for sym, meta in self._dynamic_symbols.items():
+            catalog[sym] = {
+                "ticker": meta["ticker"],
+                "name": meta["name"],
+                "sector": meta.get("sector", "Equities"),
+                "segment": meta.get("segment", "EQ"),
+                "exchange": meta.get("exchange", "NSE"),
+            }
+
         results = []
-        for sym, meta in INDIAN_STOCKS_MAP.items():
+        for sym, meta in catalog.items():
             q = self.get_quote(sym)
             spark = list(self._universe_sparklines.get(sym, [q.price] if q else []))
             if len(spark) < 8 and q:
                 spark = list(self._universe_sparklines.get(sym, []))
             if len(spark) < 2 and q:
-                spark = [round(q.price * (1 + (i - 4) * 0.0035), 2) for i in range(8)]
+                spark = [round(q.price, 2)] * 8
             results.append({
                 "symbol": sym,
                 "name": meta["name"],
@@ -897,7 +1117,7 @@ class MarketIngestService:
                 "segment": meta["segment"],
                 "exchange": meta["exchange"],
                 "token": self._kite_instrument_tokens.get(sym, meta.get("token")),
-                "api_source": "Zerodha Kite Connect" if self.kite_access_token else "Live NSE Feed",
+                "api_source": "Zerodha Kite Connect" if (self.kite_access_token and sym in INDIAN_STOCKS_MAP) else "Verified Yahoo Feed",
                 "price": q.price if q else 0.0,
                 "change": q.change if q else 0.0,
                 "change_pct": q.change_pct if q else 0.0,
@@ -914,10 +1134,12 @@ class MarketIngestService:
         results = []
         for sym, meta in CRYPTO_MAP.items():
             q = self.get_quote(sym)
-            spark = []
-            if len(spark) < 2 and q:
-                spark = [round(q.price * (1 + (i - 4) * 0.005), 2) for i in range(8)]
             is_inr = sym.endswith("INR") or meta.get("quote") == "INR"
+            multiplier = USD_INR_RATE if is_inr else 1.0
+            crypto_candles = self.fetch_binance_candles(meta["pair"], "1d", 12)
+            spark = [round(c.close * multiplier, 2) for c in crypto_candles]
+            if len(spark) < 2 and q:
+                spark = [round(q.price, 2)] * 8
             price_usdt = round(q.price / USD_INR_RATE, 2) if is_inr and q else (q.price if q else 0.0)
             price_inr = round(q.price * USD_INR_RATE, 2) if not is_inr and q else (q.price if q else 0.0)
 
@@ -947,7 +1169,7 @@ class MarketIngestService:
         """Return major currency pairs and exchange rates"""
         results = []
         for sym, meta in CURRENCIES_MAP.items():
-            spark = [round(meta["price"] * (1 + (i - 4) * 0.0015), 2) for i in range(8)]
+            spark = [round(meta["price"], 2)] * 8
             results.append({
                 "symbol": sym,
                 "name": meta["name"],
@@ -960,28 +1182,29 @@ class MarketIngestService:
             })
         return results
 
-    def simulate_tick(self) -> Dict[str, QuoteResponse]:
-        """Apply small live micro-fluctuations to the current quote snapshot.
+    def get_tick_snapshot(self) -> Dict[str, QuoteResponse]:
+        """Return the authoritative provider snapshot — no simulated drift.
 
-        Each tick wobbles the authoritative (cached) quote by a bounded, seeded
-        amount so the WebSocket stream shows genuine movement without drifting
-        away from the real price between provider refreshes.
+        Prices only change when a real provider (Kite / Binance / yfinance)
+        returns a newer value. Synthetic fallback quotes are flagged as such so
+        the UI can label them instead of presenting random wobble as live ticks.
         """
-        quotes = self.get_all_quotes()
-        self._tick_seq += 1
-        updated: Dict[str, QuoteResponse] = {}
-        for q in quotes:
-            rng = random.Random(_stable_seed(q.symbol) + self._tick_seq)
-            drift = (rng.random() - 0.5) * 0.0016  # +/- 0.08% per tick
-            digits = 4 if q.price < 1 else 2
-            new_price = round(q.price * (1 + drift), digits)
-            updated[q.symbol] = q.model_copy(update={
-                "price": new_price,
-                "change": round(q.change + (new_price - q.price), 2),
-                "change_pct": round(q.change_pct + drift * 100, 2),
-                "timestamp": datetime.utcnow(),
-            })
-        return updated
+        now = time.time()
+        with self._snapshot_lock:
+            if self._snapshot_cache and (now - self._snapshot_time) < 5.0:
+                return dict(self._snapshot_cache)
+
+            self._tick_seq += 1
+            self._snapshot_time = now
+            syms = list(INDIAN_STOCKS_MAP.keys()) + list(CRYPTO_MAP.keys()) + list(self._dynamic_symbols.keys())
+            syms = list(dict.fromkeys(syms))
+            quotes = [self.get_quote(s) for s in syms]
+            self._snapshot_cache = {q.symbol: q for q in quotes if q}
+            return dict(self._snapshot_cache)
+
+    def simulate_tick(self) -> Dict[str, QuoteResponse]:
+        """Backwards-compatible alias for the non-synthetic tick snapshot."""
+        return self.get_tick_snapshot()
 
 
 market_ingest = MarketIngestService()

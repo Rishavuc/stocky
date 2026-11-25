@@ -223,11 +223,14 @@ async def get_current_user(authorization: Optional[str] = Header(None), db: Asyn
     if not authorization:
         return {"authenticated": False, "user": None}
 
-    # Extract user ID token prefix
+    # Extract the user ID from `ie_sec_<user_id>_<issued_at>`.
+    # User IDs themselves contain underscores (e.g. usr_demo_1001), so split
+    # only the trailing timestamp instead of assuming a fixed number of parts.
     try:
-        parts = authorization.replace("Bearer ", "").split("_")
-        if len(parts) >= 3 and parts[0] == "ie" and parts[1] == "sec":
-            user_uid = f"{parts[2]}_{parts[3]}"
+        token = authorization.replace("Bearer ", "").strip()
+        prefix = "ie_sec_"
+        if token.startswith(prefix) and "_" in token[len(prefix):]:
+            user_uid = token[len(prefix):].rsplit("_", 1)[0]
             stmt = select(User).where(User.user_id == user_uid)
             res = await db.execute(stmt)
             user = res.scalars().first()

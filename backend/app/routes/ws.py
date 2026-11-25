@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.ws_gateway import ws_gateway
 from app.services.market_ingest import market_ingest
@@ -12,10 +11,10 @@ async def websocket_stream_endpoint(websocket: WebSocket):
     await ws_gateway.connect(websocket)
     try:
         # Send initial full quote snapshot
-        initial_quotes = market_ingest.get_all_quotes()
+        initial_quotes = (await asyncio.to_thread(market_ingest.get_tick_snapshot)).values()
         await websocket.send_text(json.dumps({
             "type": "INITIAL_SNAPSHOT",
-            "data": [q.dict() for q in initial_quotes]
+            "data": [q.model_dump() for q in initial_quotes]
         }, default=str))
 
         while True:
@@ -27,18 +26,11 @@ async def websocket_stream_endpoint(websocket: WebSocket):
                 if msg.get("action") == "PING":
                     await websocket.send_text(json.dumps({"type": "PONG"}))
             except asyncio.TimeoutError:
-                # Send updated tick
-                ticks = market_ingest.simulate_tick()
-                # Rotate the sampled symbols each tick to mimic live exchange throughput
-                symbols = list(ticks.keys())
-                if symbols:
-                    start = int(time.time() // 2) % len(symbols)
-                    sample_syms = [symbols[(start + i) % len(symbols)] for i in range(min(6, len(symbols)))]
-                else:
-                    sample_syms = []
+                # Send the authoritative provider snapshot. No simulated drift.
+                ticks = await asyncio.to_thread(market_ingest.get_tick_snapshot)
                 tick_payload = {
                     "type": "TICK",
-                    "data": [ticks[s].dict() for s in sample_syms]
+                    "data": [q.model_dump() for q in ticks.values()]
                 }
                 await websocket.send_text(json.dumps(tick_payload, default=str))
     except (WebSocketDisconnect, Exception):

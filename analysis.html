@@ -165,8 +165,8 @@
                             <p class="page-header__subtitle">Reliance Industries Limited · NSE</p>
                         </div>
                         <div class="page-header__actions">
-                            <button class="btn btn--outline btn--sm">+ Add to Watchlist</button>
-                            <button class="btn btn--primary btn--sm">Full Report</button>
+                            <button class="btn btn--outline btn--sm" id="btnAddAnalysisWatchlist" data-watchlist-toggle="RELIANCE">+ Add to Watchlist</button>
+                            <button class="btn btn--primary btn--sm" id="btnFullReport">Full Report</button>
                         </div>
                     </div>
 
@@ -250,313 +250,396 @@
     <script src="api-client.js"></script>
     <script src="dashboard.js"></script>
     <script>
-    const ASSET_DATA = {
-        stocks: {
-            title: 'RELIANCE — Stock Analysis',
-            subtitle: 'Reliance Industries Limited · NSE',
-            price: '₹2,456.70',
-            priceChange: '▲ +3.32% today',
-            val2Label: 'Market Cap', val2: '₹16.8T', val2Sub: 'Mega Cap',
-            val3Label: 'P/E Ratio', val3: '28.4', val3Sub: 'Above Industry Avg',
-            val4Label: 'Dividend Yield', val4: '0.32%', val4Sub: '₹8.00 per share',
-            chartBase: 2300,
-            indicators: [
-                { name: 'RSI (14)', value: '62.4', signal: 'Neutral', cls: 'signal-neutral' },
-                { name: 'MACD', value: '18.2', signal: 'Buy', cls: 'signal-buy' },
-                { name: 'EMA (20)', value: '2,412', signal: 'Buy', cls: 'signal-buy' },
-                { name: 'SMA (50)', value: '2,380', signal: 'Buy', cls: 'signal-buy' },
-                { name: 'Bollinger', value: 'Upper', signal: 'Sell', cls: 'signal-sell' },
-                { name: 'ADX', value: '34.8', signal: 'Buy', cls: 'signal-buy' },
-                { name: 'Stochastic', value: '78.2', signal: 'Neutral', cls: 'signal-neutral' },
-                { name: 'Williams %R', value: '-22', signal: 'Sell', cls: 'signal-sell' },
-                { name: 'CCI', value: '156', signal: 'Buy', cls: 'signal-buy' }
-            ],
-            ratios: [
-                { label: 'P/E Ratio', value: '28.4' }, { label: 'P/B Ratio', value: '2.1' },
-                { label: 'EPS (TTM)', value: '₹86.5' }, { label: 'ROE', value: '9.8%' },
-                { label: 'ROCE', value: '12.4%' }, { label: 'D/E Ratio', value: '0.42' },
-                { label: 'Book Value', value: '₹1,168' }, { label: 'Face Value', value: '₹10' },
-                { label: '52W High', value: '₹2,856' }, { label: '52W Low', value: '₹2,180' },
-                { label: 'Promoter Hold', value: '50.3%' }, { label: 'Avg Volume', value: '18.9M' }
-            ]
-        },
-        fno: {
-            title: 'NIFTY 50 — F&O Derivatives Analysis',
-            subtitle: 'Near Month Expiry · Options Chain & Open Interest',
-            price: '22,456.80',
-            priceChange: '▲ +1.24% index spot',
-            val2Label: 'Put-Call Ratio (PCR)', val2: '1.28', val2Sub: 'Bullish Sentiment',
-            val3Label: 'Max Pain Strike', val3: '22,400', val3Sub: 'Expiry Anchor Strike',
-            val4Label: 'ATM Implied Vol (IV)', val4: '13.8%', val4Sub: 'Low Volatility Environment',
-            chartBase: 22100,
-            indicators: [
-                { name: 'Total Call OI', value: '1.42 Cr', signal: 'Resistance 22,600', cls: 'signal-sell' },
-                { name: 'Total Put OI', value: '1.82 Cr', signal: 'Support 22,300', cls: 'signal-buy' },
-                { name: 'PCR Volume', value: '1.14', signal: 'Neutral-Bullish', cls: 'signal-buy' },
-                { name: 'Straddle Price', value: '₹184.50', signal: 'Breakeven ±0.8%', cls: 'signal-neutral' },
-                { name: 'Delta (ATM CE)', value: '+0.52', signal: 'Neutral Delta', cls: 'signal-neutral' },
-                { name: 'Theta Decay', value: '-₹14.20/day', signal: 'Premium Erosion', cls: 'signal-sell' },
-                { name: 'Vega Sensitivity', value: '₹18.40', signal: 'Vol Risk', cls: 'signal-neutral' },
-                { name: 'Gamma Risk', value: '0.0024', signal: 'Expiry Gamma', cls: 'signal-neutral' },
-                { name: 'OI Build-up', value: 'Long Buildup', signal: 'Bullish Trend', cls: 'signal-buy' }
-            ],
-            ratios: [
-                { label: 'ATM Strike', value: '22,450' }, { label: 'Highest Call OI Strike', value: '22,600' },
-                { label: 'Highest Put OI Strike', value: '22,300' }, { label: 'Lot Size', value: '50 units' },
-                { label: 'Days to Expiry', value: '3 Days' }, { label: 'Historical Volatility', value: '11.8%' },
-                { label: 'Futures Premium', value: '+₹42.30' }, { label: 'Rollover Cost', value: '0.45%' },
-                { label: 'FII Net Index Futures', value: '+34,200 contracts' }, { label: 'DII Net Long', value: '+12,400 contracts' },
-                { label: 'Option Turnover', value: '₹48.2 Lakh Cr' }, { label: 'Put-Call Volume Ratio', value: '1.18' }
-            ]
-        },
-        mf: {
-            title: 'Parag Parikh Flexi Cap Fund — Mutual Fund Analysis',
-            subtitle: 'Direct Growth Plan · Equity: Flexi Cap · 5 Star Rated',
-            price: '₹84.62',
-            priceChange: '▲ +0.82% latest NAV',
-            val2Label: 'AUM (Fund Size)', val2: '₹64,280 Cr', val2Sub: 'Top Quintile Size',
-            val3Label: '3Y Return (CAGR)', val3: '+22.4%', val3Sub: 'Category Avg: 16.8%',
-            val4Label: 'Expense Ratio', val4: '0.62%', val4Sub: 'Direct Plan (Low)',
-            chartBase: 65,
-            indicators: [
-                { name: 'Alpha (3Y)', value: '+6.42%', signal: 'High Outperformance', cls: 'signal-buy' },
-                { name: 'Beta', value: '0.78', signal: 'Low Volatility', cls: 'signal-buy' },
-                { name: 'Sharpe Ratio', value: '1.82', signal: 'Excellent Risk-Reward', cls: 'signal-buy' },
-                { name: 'Sortino Ratio', value: '2.64', signal: 'Superior Downside', cls: 'signal-buy' },
-                { name: 'Standard Deviation', value: '12.4%', signal: 'Below Benchmark', cls: 'signal-buy' },
-                { name: 'Portfolio Turnover', value: '14.2%', signal: 'Buy & Hold Low Churn', cls: 'signal-buy' },
-                { name: 'Domestic Equity', value: '68.4%', signal: 'Large/Mid/Small', cls: 'signal-neutral' },
-                { name: 'Foreign Equity', value: '18.2%', signal: 'US Tech Exposure', cls: 'signal-neutral' },
-                { name: 'Cash & Debt', value: '13.4%', signal: 'Dry Powder Buffer', cls: 'signal-neutral' }
-            ],
-            ratios: [
-                { label: 'Category', value: 'Flexi Cap Fund' }, { label: 'Benchmark', value: 'NIFTY 500 TRI' },
-                { label: 'Fund Launch Date', value: 'May 2013' }, { label: 'Min SIP Investment', value: '₹1,000 / month' },
-                { label: 'Exit Load', value: '2% within 365 days, 1% up to 730 days' }, { label: 'Fund Manager', value: 'Rajeev Thakkar' },
-                { label: 'Top Holding #1', value: 'HDFC Bank (8.4%)' }, { label: 'Top Holding #2', value: 'Bajaj Holdings (7.1%)' },
-                { label: 'Top Holding #3', value: 'ITC Limited (6.8%)' }, { label: 'Top Holding #4', value: 'Alphabet / Google (5.4%)' },
-                { label: '5Y CAGR Return', value: '+24.1%' }, { label: 'Since Inception CAGR', value: '+19.8%' }
-            ]
-        },
-        crypto: {
-            title: 'Bitcoin (BTC / USD) — Crypto Market Analysis',
-            subtitle: 'Digital Gold · Decentralized Store of Value · Layer 1',
-            price: '$67,240.00',
-            priceChange: '▲ +3.42% 24h',
-            val2Label: 'Market Capitalization', val2: '$1.32T', val2Sub: 'Dominance: 54.8%',
-            val3Label: 'Crypto Fear & Greed', val3: '74 / 100', val3Sub: 'Greed Zone',
-            val4Label: '24h Trading Volume', val4: '$38.4B', val4Sub: 'High Global Liquidity',
-            chartBase: 62000,
-            indicators: [
-                { name: 'RSI (14D)', value: '64.2', signal: 'Bullish Momentum', cls: 'signal-buy' },
-                { name: 'MACD (12,26)', value: '+1,420', signal: 'Bullish Cross', cls: 'signal-buy' },
-                { name: '200 Day EMA', value: '$56,200', signal: 'Trading Far Above', cls: 'signal-buy' },
-                { name: 'On-chain MVRV', value: '2.14', signal: 'Mid-Cycle Zone', cls: 'signal-neutral' },
-                { name: 'Exchange Netflow', value: '-8,420 BTC', signal: 'Outflow (Accumulation)', cls: 'signal-buy' },
-                { name: 'Funding Rate', value: '+0.012%', signal: 'Long Bias Normal', cls: 'signal-neutral' },
-                { name: 'Network Hashrate', value: '624 EH/s', signal: 'All-Time High Security', cls: 'signal-buy' },
-                { name: 'Active Addresses', value: '984,000 / day', signal: 'Strong Network Use', cls: 'signal-buy' },
-                { name: 'Whale Holdings (>1k)', value: '42.8%', signal: 'Concentrated Wallets', cls: 'signal-neutral' }
-            ],
-            ratios: [
-                { label: 'Circulating Supply', value: '19,740,000 BTC' }, { label: 'Max Hard Cap', value: '21,000,000 BTC' },
-                { label: 'All-Time High (ATH)', value: '$73,750 (Mar 2024)' }, { label: 'Distance from ATH', value: '-8.8%' },
-                { label: '24h High', value: '$67,950' }, { label: '24h Low', value: '$64,800' },
-                { label: 'Stock-to-Flow Ratio', value: '112 (Post-Halving)' }, { label: 'Next Halving Year', value: '2028' },
-                { label: 'Realized Price', value: '$31,400' }, { label: 'Liquidations 24h', value: '$124M Short squeezed' },
-                { label: 'Lightning Capacity', value: '5,400 BTC' }, { label: 'Institutional ETF Inflows', value: '+$480M Yesterday' }
-            ]
-        }
+    const TIMEFRAMES = {
+        '1d': { timeframe: '1h', limit: 30 },
+        '1w': { timeframe: '1d', limit: 7 },
+        '1m': { timeframe: '1d', limit: 30 },
+        '1y': { timeframe: '1d', limit: 252 },
+        '5y': { timeframe: '1d', limit: 500 }
     };
 
-    function renderAssetView(key) {
-        const d = ASSET_DATA[key] || ASSET_DATA.stocks;
-        
-        // Header
-        const headerTitle = document.querySelector('#analysisPanel .page-header__title');
-        const headerSub = document.querySelector('#analysisPanel .page-header__subtitle');
-        if (headerTitle) headerTitle.textContent = d.title;
-        if (headerSub) headerSub.textContent = d.subtitle;
+    let currentSymbol = 'RELIANCE';
+    let currentQuote = null;
+    let currentTech = null;
+    let currentCandles = [];
+    let activeTimeframe = '1m';
 
-        // Stat cards
-        const statCards = document.querySelectorAll('#analysisPanel .stat-card');
-        if (statCards.length >= 4) {
-            // Card 1: Price
-            statCards[0].querySelector('.stat-card__value').textContent = d.price;
-            statCards[0].querySelector('.stat-card__trend').textContent = d.priceChange;
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
 
-            // Card 2
-            statCards[1].querySelector('.stat-card__label').textContent = d.val2Label;
-            statCards[1].querySelector('.stat-card__value').textContent = d.val2;
-            statCards[1].querySelector('.stat-card__trend').textContent = d.val2Sub;
+    function isCryptoSymbol(sym) {
+        return sym.includes('USDT') || sym.endsWith('INR') || /^(BTC|ETH|SOL)/.test(sym);
+    }
 
-            // Card 3
-            statCards[2].querySelector('.stat-card__label').textContent = d.val3Label;
-            statCards[2].querySelector('.stat-card__value').textContent = d.val3;
-            statCards[2].querySelector('.stat-card__trend').textContent = d.val3Sub;
+    function money(value, sym = currentSymbol) {
+        if (!Number.isFinite(Number(value))) return '—';
+        const prefix = isCryptoSymbol(sym) ? '$' : '₹';
+        return prefix + Number(value).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: Number(value) < 10 ? 4 : 2
+        });
+    }
 
-            // Card 4
-            statCards[3].querySelector('.stat-card__label').textContent = d.val4Label;
-            statCards[3].querySelector('.stat-card__value').textContent = d.val4;
-            statCards[3].querySelector('.stat-card__trend').textContent = d.val4Sub;
+    function setNodeText(selector, text) {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+    }
+
+    function canvasContext(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.clientWidth || canvas.offsetWidth || 600;
+        const h = canvas.clientHeight || canvas.offsetHeight || 260;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        return { ctx, w, h };
+    }
+
+    function drawLineChart(canvasId, values, labels, color = '#00d09c') {
+        const setup = canvasContext(canvasId);
+        if (!setup) return;
+        const { ctx, w, h } = setup;
+        const clean = values.filter(v => Number.isFinite(Number(v))).map(Number);
+        if (clean.length < 2) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Not enough verified history to draw this chart.', w / 2, h / 2);
+            return;
         }
 
-        // Indicators
-        const indGrid = document.getElementById('indicatorGrid');
-        if (indGrid) {
-            indGrid.innerHTML = d.indicators.map(ind => `
-                <div class="indicator-item">
-                    <div>
-                        <div class="indicator-item__name">${ind.name}</div>
-                        <div class="indicator-item__value">${ind.value}</div>
-                    </div>
-                    <span class="indicator-item__signal ${ind.cls}">${ind.signal}</span>
+        const pad = { top: 18, right: 16, bottom: 34, left: 70 };
+        const cw = w - pad.left - pad.right;
+        const ch = h - pad.top - pad.bottom;
+        const min = Math.min(...clean);
+        const max = Math.max(...clean);
+        const range = (max - min) || Math.max(1, max * 0.01);
+        const lo = min - range * 0.08;
+        const hi = max + range * 0.08;
+        const span = hi - lo;
+        const gx = i => pad.left + (i / (clean.length - 1)) * cw;
+        const gy = v => pad.top + ch - ((v - lo) / span) * ch;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = pad.top + (i / 4) * ch;
+            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px JetBrains Mono';
+            ctx.textAlign = 'right';
+            ctx.fillText(money(hi - (i / 4) * span), pad.left - 8, y + 4);
+        }
+
+        ctx.beginPath();
+        clean.forEach((v, i) => { if (i === 0) ctx.moveTo(gx(i), gy(v)); else ctx.lineTo(gx(i), gy(v)); });
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        ctx.lineTo(gx(clean.length - 1), pad.top + ch);
+        ctx.lineTo(gx(0), pad.top + ch);
+        ctx.closePath();
+        const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
+        gradient.addColorStop(0, color + '35');
+        gradient.addColorStop(1, color + '00');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px Inter';
+        ctx.textAlign = 'center';
+        const ticks = Math.min(6, clean.length);
+        for (let i = 0; i < ticks; i++) {
+            const idx = Math.round(i * (clean.length - 1) / Math.max(1, ticks - 1));
+            const label = labels && labels[idx] ? labels[idx] : String(idx + 1);
+            ctx.fillText(label, gx(idx), pad.top + ch + 18);
+        }
+    }
+
+    function drawBarChart(canvasId, labels, values) {
+        const setup = canvasContext(canvasId);
+        if (!setup) return;
+        const { ctx, w, h } = setup;
+        const clean = values.filter(v => Number.isFinite(Number(v))).map(Number);
+        if (!clean.length) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('No verified volume data available.', w / 2, h / 2);
+            return;
+        }
+        const pad = { top: 18, right: 16, bottom: 32, left: 70 };
+        const cw = w - pad.left - pad.right;
+        const ch = h - pad.top - pad.bottom;
+        const max = Math.max(...clean) || 1;
+        const bw = Math.max(3, (cw / clean.length) * 0.65);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        for (let i = 0; i <= 3; i++) {
+            const y = pad.top + (i / 3) * ch;
+            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px JetBrains Mono';
+            ctx.textAlign = 'right';
+            ctx.fillText(Math.round(max - (i / 3) * max).toLocaleString('en-IN'), pad.left - 8, y + 4);
+        }
+
+        clean.forEach((v, i) => {
+            const x = pad.left + (i / Math.max(1, clean.length - 1)) * cw - bw / 2;
+            const barH = (v / max) * ch;
+            const gradient = ctx.createLinearGradient(0, pad.top + ch - barH, 0, pad.top + ch);
+            gradient.addColorStop(0, 'rgba(0,208,156,0.85)');
+            gradient.addColorStop(1, 'rgba(0,208,156,0.18)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, pad.top + ch - barH, bw, barH);
+        });
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px Inter';
+        ctx.textAlign = 'center';
+        const ticks = Math.min(5, clean.length);
+        for (let i = 0; i < ticks; i++) {
+            const idx = Math.round(i * (clean.length - 1) / Math.max(1, ticks - 1));
+            ctx.fillText(labels && labels[idx] ? labels[idx] : String(idx + 1), pad.left + (idx / Math.max(1, clean.length - 1)) * cw, pad.top + ch + 17);
+        }
+    }
+
+    function renderHeader() {
+        const title = `${currentSymbol} — Technical Analysis`;
+        const subtitleParts = [currentQuote?.name || currentSymbol];
+        if (currentQuote?.source) subtitleParts.push(`Source: ${currentQuote.source}`);
+        if (currentQuote?.is_synthetic) subtitleParts.push('Delayed fallback quote');
+        setNodeText('#analysisPanel .page-header__title', title);
+        setNodeText('#analysisPanel .page-header__subtitle', subtitleParts.join(' · '));
+
+        const btn = document.getElementById('btnAddAnalysisWatchlist');
+        if (btn && window.Watchlist) {
+            const added = window.Watchlist.has(currentSymbol);
+            btn.dataset.watchlistToggle = currentSymbol;
+            btn.textContent = added ? '★ In Watchlist' : '+ Add to Watchlist';
+        }
+    }
+
+    function renderStats() {
+        const cards = document.querySelectorAll('#analysisPanel .stat-card');
+        if (cards.length < 4) return;
+        const quote = currentQuote || {};
+        const tech = currentTech || {};
+
+        const setCard = (idx, label, value, trend, trendClass = '') => {
+            const card = cards[idx];
+            if (!card) return;
+            const valueEl = card.querySelector('.stat-card__value');
+            const labelEl = card.querySelector('.stat-card__label');
+            const trendEl = card.querySelector('.stat-card__trend');
+            if (labelEl) labelEl.textContent = label;
+            if (valueEl) valueEl.textContent = value;
+            if (trendEl) {
+                trendEl.textContent = trend;
+                trendEl.className = `stat-card__trend ${trendClass}`.trim();
+            }
+        };
+
+        const chg = Number(quote.change_pct || 0);
+        const high = Number(quote.high_24h || 0);
+        const low = Number(quote.low_24h || 0);
+        const avgVolText = tech.ratios?.['Avg Volume (20D)'] || '—';
+        const atrText = tech.ratios?.['Volatility (ATR 14)'] || '—';
+
+        setCard(0, 'Live Price', money(quote.price), `${chg >= 0 ? '▲ +' : '▼ '}${chg.toFixed(2)}% today`, chg >= 0 ? 'positive' : 'negative');
+        setCard(1, 'Day Range', high && low ? `${money(high)} / ${money(low)}` : '—', quote.source || 'verified feed');
+        setCard(2, 'Composite Signal', String(tech.summary_signal || '—').replace(/_/g, ' '), 'From 4 real indicators', String(tech.summary_signal || '').includes('SELL') ? 'negative' : 'positive');
+        setCard(3, '20D Avg Volume', avgVolText, `ATR: ${atrText}`);
+    }
+
+    function renderIndicators() {
+        const grid = document.getElementById('indicatorGrid');
+        if (!grid) return;
+        const items = currentTech?.indicators || [];
+        if (!items.length) {
+            grid.innerHTML = `<div style="padding:18px; font-size:12px; color:var(--c-text-secondary);">Indicators unavailable for this instrument.</div>`;
+            return;
+        }
+        grid.innerHTML = items.map(ind => `
+            <div class="indicator-item">
+                <div>
+                    <div class="indicator-item__name">${esc(ind.name)}</div>
+                    <div class="indicator-item__value">${esc(ind.value)}</div>
                 </div>
-            `).join('');
+                <span class="indicator-item__signal signal-${esc(ind.signal_type)}">${esc(ind.signal)}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderRatios() {
+        const grid = document.getElementById('ratioGrid');
+        if (!grid) return;
+        const ratios = { ...(currentTech?.ratios || {}) };
+        (currentTech?.support_levels || []).forEach((v, i) => { ratios[`Support ${i + 1}`] = money(v); });
+        (currentTech?.resistance_levels || []).forEach((v, i) => { ratios[`Resistance ${i + 1}`] = money(v); });
+        const entries = Object.entries(ratios);
+        if (!entries.length) {
+            grid.innerHTML = `<div style="padding:18px; font-size:12px; color:var(--c-text-secondary);">Verified ratios unavailable.</div>`;
+            return;
         }
+        grid.innerHTML = entries.map(([label, value]) => `
+            <div class="ratio-item">
+                <span class="ratio-item__label">${esc(label)}</span>
+                <span class="ratio-item__value">${esc(value)}</span>
+            </div>
+        `).join('');
+    }
 
-        // Ratios
-        const ratioGrid = document.getElementById('ratioGrid');
-        if (ratioGrid) {
-            ratioGrid.innerHTML = d.ratios.map(r => `
-                <div class="ratio-item">
-                    <span class="ratio-item__label">${r.label}</span>
-                    <span class="ratio-item__value">${r.value}</span>
-                </div>
-            `).join('');
+    function renderVolumeChart(candles) {
+        const card = document.getElementById('revenueChart')?.closest('.dash-card');
+        const title = card?.querySelector('.dash-card__title');
+        if (title) title.textContent = 'Volume Trend (20 Sessions)';
+        const recent = (candles || []).slice(-20);
+        drawBarChart('revenueChart', recent.map(c => String(c.time || '').slice(5)), recent.map(c => c.volume || 0));
+    }
+
+    async function loadChart(timeframe) {
+        activeTimeframe = timeframe;
+        document.querySelectorAll('#chartTimeTabs .dash-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === timeframe);
+        });
+        const cfg = TIMEFRAMES[timeframe] || TIMEFRAMES['1m'];
+        if (!window.apiClient) return;
+        try {
+            const candles = await window.apiClient.getCandlesStrict(currentSymbol, cfg.timeframe, cfg.limit);
+            const real = (candles || []).filter(c => !c.is_synthetic);
+            currentCandles = real.length ? real : currentCandles;
+            const positive = (real.at(-1)?.close || 0) >= (real[0]?.close || 0);
+            drawLineChart(
+                'priceChart',
+                real.map(c => c.close),
+                real.map(c => String(c.time || '').slice(5)),
+                positive ? '#00d09c' : '#f6465d'
+            );
+        } catch (e) {
+            drawLineChart('priceChart', [], []);
         }
+    }
 
-        // Real Chart & Live Market Data
-        const symbolMap = { stocks: 'RELIANCE', fno: 'NIFTY 50', crypto: 'BTCUSDT', mf: 'PPFCF' };
-        const sym = symbolMap[key] || (key && key.length >= 2 ? key.toUpperCase().trim() : 'RELIANCE');
+    async function loadAnalysis(symbol) {
+        currentSymbol = String(symbol || 'RELIANCE').toUpperCase().trim();
+        const input = document.getElementById('analysisSearchInput');
+        if (input) input.value = currentSymbol;
 
-        if (window.apiClient) {
-            // 1. Fetch Real Historical Candles for Price Chart
-            window.apiClient.getCandles(sym, '1d', 30).then(candles => {
-                if (candles && candles.length > 0) {
-                    const priceData = candles.map(c => c.close);
-                    const labels = candles.map((c, i) => i % 6 === 0 ? c.time.slice(5) : '');
-                    const isPositive = priceData[priceData.length - 1] >= priceData[0];
-                    const color = isPositive ? '#00d09c' : '#f6465d';
-                    const fill = isPositive ? 'rgba(0,208,156,0.12)' : 'rgba(246,70,93,0.12)';
-                    drawAreaChart('priceChart', priceData, color, fill, false, labels.filter(l => l));
+        setNodeText('#analysisPanel .page-header__title', `${currentSymbol} — Loading verified data…`);
+        setNodeText('#analysisPanel .page-header__subtitle', 'Fetching live quote, candles, and indicators');
 
-                    // Dynamic Revenue / Growth Bars for Asset
-                    const lastClose = priceData[priceData.length - 1];
-                    const revLabels = ['FY21', 'FY22', 'FY23', 'FY24', 'FY25 (Est)'];
-                    const revData = [Math.round(lastClose * 180), Math.round(lastClose * 220), Math.round(lastClose * 270), Math.round(lastClose * 315), Math.round(lastClose * 360)];
-                    drawBarChart('revenueChart', revLabels, revData, ['rgba(0,208,156,0.4)', 'rgba(0,208,156,0.5)', 'rgba(0,208,156,0.6)', 'rgba(0,208,156,0.8)', '#00d09c']);
-                } else {
-                    const priceData = generateChartData(d.chartBase, d.chartBase * 0.015, 30, 'up');
-                    const labels = Array.from({length: 30}, (_, i) => i % 5 === 0 ? `D${i+1}` : '');
-                    drawAreaChart('priceChart', priceData, '#00d09c', 'rgba(0,208,156,0.12)', false, labels.filter(l => l));
-                }
-            }).catch(() => {
-                const priceData = generateChartData(d.chartBase, d.chartBase * 0.015, 30, 'up');
-                drawAreaChart('priceChart', priceData, '#00d09c', 'rgba(0,208,156,0.12)', false, ['D1', 'D10', 'D20', 'D30']);
-            });
-
-            // 2. Fetch Real Live Quote
-            window.apiClient.getQuote(sym).then(quote => {
-                if (quote && statCards.length > 0) {
-                    const pEl = statCards[0].querySelector('.stat-card__value');
-                    const cEl = statCards[0].querySelector('.stat-card__trend');
-                    const prefix = sym.includes('USDT') ? '$' : '₹';
-                    if (pEl) pEl.textContent = `${prefix}${quote.price.toLocaleString('en-IN')}`;
-                    if (cEl) {
-                        const sign = quote.change >= 0 ? '▲ +' : '▼ ';
-                        cEl.textContent = `${sign}${quote.change_pct}% today`;
-                        cEl.className = `stat-card__trend ${quote.change >= 0 ? 'positive' : 'negative'}`;
-                    }
-                    if (statCards[1]) {
-                        statCards[1].querySelector('.stat-card__value').textContent = `${prefix}${quote.high_24h.toLocaleString('en-IN')} / ${prefix}${quote.low_24h.toLocaleString('en-IN')}`;
-                    }
-                    if (statCards[3]) {
-                        statCards[3].querySelector('.stat-card__value').textContent = quote.volume ? quote.volume.toLocaleString('en-IN') : '14.2M';
-                    }
-                }
-            }).catch(() => {});
-
-            // 3. Fetch Real Technical Indicators & Ratios
-            window.apiClient.getTechnicalAnalysis(sym).then(tech => {
-                if (tech) {
-                    if (headerTitle && !key.startsWith('mf') && !key.startsWith('fno')) {
-                        headerTitle.textContent = `${sym} — Technical & Quantitative Analysis`;
-                    }
-                    if (statCards.length >= 3 && statCards[2]) {
-                        statCards[2].querySelector('.stat-card__value').textContent = tech.summary_signal.replace('_', ' ');
-                        statCards[2].querySelector('.stat-card__trend').textContent = `Strength: ${tech.change_pct >= 0 ? 'Bullish' : 'Bearish'}`;
-                    }
-                    const indGrid = document.getElementById('indicatorGrid');
-                    if (indGrid && tech.indicators && tech.indicators.length > 0) {
-                        indGrid.innerHTML = tech.indicators.map(ind => `
-                            <div class="indicator-item">
-                                <div>
-                                    <div class="indicator-item__name">${ind.name}</div>
-                                    <div class="indicator-item__value">${ind.value}</div>
-                                </div>
-                                <span class="indicator-item__signal signal-${ind.signal_type}">${ind.signal}</span>
-                            </div>
-                        `).join('');
-                    }
-                    const rGrid = document.getElementById('ratioGrid');
-                    if (rGrid && tech.ratios) {
-                        rGrid.innerHTML = Object.entries(tech.ratios).map(([label, value]) => `
-                            <div class="ratio-item">
-                                <span class="ratio-item__label">${label}</span>
-                                <span class="ratio-item__value">${value}</span>
-                            </div>
-                        `).join('');
-                    }
-                }
-            }).catch(() => {});
-        } else {
-            const priceData = generateChartData(d.chartBase, d.chartBase * 0.015, 30, 'up');
-            const labels = Array.from({length: 30}, (_, i) => i % 5 === 0 ? `D${i+1}` : '');
-            drawAreaChart('priceChart', priceData, '#00d09c', 'rgba(0,208,156,0.12)', false, labels.filter(l => l));
+        if (!window.apiClient) return;
+        try {
+            const [quote, tech, candles] = await Promise.all([
+                window.apiClient.getQuote(currentSymbol),
+                window.apiClient.getTechnicalAnalysis(currentSymbol),
+                window.apiClient.getCandlesStrict(currentSymbol, '1d', 252)
+            ]);
+            if (!quote) throw new Error(`No verified instrument found for ${currentSymbol}`);
+            currentQuote = quote;
+            currentTech = tech;
+            currentCandles = (candles || []).filter(c => !c.is_synthetic);
+            renderHeader();
+            renderStats();
+            renderIndicators();
+            renderRatios();
+            renderVolumeChart(currentCandles);
+            await loadChart(activeTimeframe);
+        } catch (e) {
+            currentQuote = null;
+            currentTech = null;
+            currentCandles = [];
+            setNodeText('#analysisPanel .page-header__title', `${currentSymbol} — Data Unavailable`);
+            setNodeText('#analysisPanel .page-header__subtitle', e.message || 'No verified data returned by the market feed');
+            renderStats();
+            renderIndicators();
+            renderRatios();
+            drawLineChart('priceChart', [], []);
+            renderVolumeChart([]);
         }
     }
 
     function showAnalysis(type) {
-        renderAssetView(type);
-        document.getElementById('analysisPanel').scrollIntoView({ behavior: 'smooth' });
+        const key = String(type || '').toLowerCase();
+        const shortcuts = { stocks: 'RELIANCE', fno: 'NIFTY 50', crypto: 'BTCUSDT' };
+        if (key === 'mf') {
+            const sipLink = [...document.querySelectorAll('.sidebar__link')].find(l => l.textContent.includes('SIP Calculator'));
+            if (sipLink) sipLink.click();
+            return;
+        }
+        const sym = shortcuts[key] || String(type || '').toUpperCase().trim() || 'RELIANCE';
+        loadAnalysis(sym);
+        document.getElementById('analysisPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function exportAnalysis() {
+        if (!currentTech) return;
+        const lines = [
+            ['Instrument', currentSymbol],
+            ['Name', currentQuote?.name || ''],
+            ['Source', currentQuote?.source || ''],
+            ['Price', currentQuote?.price ?? ''],
+            ['Change %', currentQuote?.change_pct ?? ''],
+            ['Signal', currentTech.summary_signal || ''],
+            [],
+            ['Indicator', 'Value', 'Signal']
+        ];
+        (currentTech.indicators || []).forEach(i => lines.push([i.name, i.value, i.signal]));
+        lines.push([], ['Metric', 'Value']);
+        Object.entries(currentTech.ratios || {}).forEach(([k, v]) => lines.push([k, v]));
+        const csv = 'data:text/csv;charset=utf-8,' + lines.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+        const link = document.createElement('a');
+        link.href = csv;
+        link.download = `${currentSymbol}_analysis.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Parse URL query parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const cat = urlParams.get('cat') || 'stocks';
-        renderAssetView(cat);
+        const params = new URLSearchParams(window.location.search);
+        const requested = params.get('symbol') || params.get('cat') || 'RELIANCE';
+        loadAnalysis(requested);
 
-        // Revenue Chart baseline
-        const revLabels = ['FY20', 'FY21', 'FY22', 'FY23', 'FY24'];
-        const revData = [560000, 480000, 720000, 890000, 980000];
-        drawBarChart('revenueChart', revLabels, revData, ['rgba(0,208,156,0.4)', 'rgba(0,208,156,0.5)', 'rgba(0,208,156,0.6)', 'rgba(0,208,156,0.8)', '#00d09c']);
+        document.querySelectorAll('#chartTimeTabs .dash-tab').forEach(tab => {
+            tab.addEventListener('click', () => loadChart(tab.dataset.tab));
+        });
 
-        // Search in analysis
         const searchInput = document.getElementById('analysisSearchInput');
         const analyzeBtn = document.getElementById('btnAnalyzeSearch');
-        function executeSearch() {
-            if (!searchInput) return;
-            const val = searchInput.value.toUpperCase().trim();
-            if (!val) return;
-            if (val.includes('BTC') || val.includes('CRYPTO') || val.includes('ETH') || val.includes('SOL')) showAnalysis('crypto');
-            else if (val.includes('NIFTY') || val.includes('CALL') || val.includes('PUT') || val.includes('FNO') || val.includes('BANK')) showAnalysis('fno');
-            else if (val.includes('FUND') || val.includes('MF') || val.includes('PARAG')) showAnalysis('mf');
-            else {
-                // Direct symbol analysis (e.g., TCS, INFY, HDFCBANK, ITC, SBIN)
-                renderAssetView(val);
-                document.getElementById('analysisPanel').scrollIntoView({ behavior: 'smooth' });
-            }
+        function runSearch() {
+            const val = searchInput?.value.trim();
+            if (val) loadAnalysis(val);
+        }
+        if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+        if (analyzeBtn) analyzeBtn.addEventListener('click', runSearch);
+
+        const reportBtn = document.getElementById('btnFullReport');
+        if (reportBtn) reportBtn.addEventListener('click', exportAnalysis);
+
+        window.addEventListener('analysis:symbol', (e) => loadAnalysis(e.detail?.symbol || 'RELIANCE'));
+
+        if (window.Watchlist) {
+            window.Watchlist.onChange(renderHeader);
         }
 
-        if (searchInput) {
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') executeSearch();
+        if (window.apiClient) {
+            window.apiClient.onTick((ticks) => {
+                const tick = (ticks || []).find(t => t.symbol === currentSymbol);
+                if (!tick || !currentQuote) return;
+                currentQuote = { ...currentQuote, ...tick };
+                renderStats();
             });
-        }
-        if (analyzeBtn) {
-            analyzeBtn.addEventListener('click', executeSearch);
         }
     });
     </script>

@@ -185,6 +185,7 @@
                             <div>
                                 <div class="dash-card__title" id="predChartTitle">RELIANCE — 7 Day Forecast</div>
                                 <div class="dash-card__subtitle" id="predChartSubtitle">Model: LSTM · Real Market Feed · Quantile 10%/50%/90%</div>
+                                <div id="predLivePrice" style="font-size:12px; font-family:var(--ff-mono); color:var(--c-accent); margin-top:4px;">Live price: —</div>
                             </div>
                             <div class="pred-actions-bar">
                                 <button class="btn btn--secondary" id="btnBacktest" title="View Model Architecture & Backtest Scorecard" style="font-size:12px; padding:7px 14px;">
@@ -291,6 +292,57 @@
     let latestPredictionData = null;
     let latestCandlesData = null;
 
+    function canvasSetup(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.clientWidth || canvas.offsetWidth || 600;
+        const h = canvas.clientHeight || canvas.offsetHeight || 140;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        return { ctx, w, h };
+    }
+
+    function drawScoreGauge(score) {
+        const setup = canvasSetup('accuracyChart');
+        if (!setup) return;
+        const { ctx, w, h } = setup;
+        const pct = Math.max(0, Math.min(100, Number(score) || 0));
+        const y = h / 2 - 16;
+        const barW = w - 130;
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(65, y, barW, 32);
+        const gradient = ctx.createLinearGradient(65, 0, 65 + barW, 0);
+        gradient.addColorStop(0, 'rgba(167,139,250,0.35)');
+        gradient.addColorStop(1, '#a78bfa');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(65, y, barW * (pct / 100), 32);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px Inter';
+        ctx.textAlign = 'right';
+        ctx.fillText('0%', 58, y + 21);
+        ctx.textAlign = 'left';
+        ctx.fillText('100%', 72 + barW, y + 21);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#c4b5fd';
+        ctx.font = '700 13px JetBrains Mono';
+        ctx.fillText(`${pct.toFixed(0)}% model confidence`, w / 2, y + 22);
+    }
+
+    function updateLivePrice(price, source) {
+        const el = document.getElementById('predLivePrice');
+        if (!el) return;
+        if (!Number.isFinite(Number(price))) {
+            el.textContent = 'Live price: unavailable';
+            return;
+        }
+        const prefix = getCurrencyPrefix(currentSymbol);
+        el.textContent = `Live price: ${prefix}${Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${source ? ` · ${source}` : ''}`;
+    }
+
     function setSymbol(sym) {
         currentSymbol = sym.toUpperCase();
         const input = document.getElementById('predStockInput');
@@ -316,7 +368,7 @@
         const titleEl = document.getElementById('predChartTitle');
         const subEl = document.getElementById('predChartSubtitle');
         if (titleEl) titleEl.textContent = `${currentSymbol} — ${currentHorizon} Day Forecast`;
-        if (subEl) subEl.textContent = `Model: ${currentModel.toUpperCase()} · Ingesting Real Market Feed · Quantile Bounds`;
+        if (subEl) subEl.textContent = `Model: ${currentModel.toUpperCase()} · Verified market data only · Quantile Bounds`;
 
         if (btn) {
             btn.innerHTML = '⏳ Model Running...';
@@ -327,18 +379,25 @@
             try {
                 const [pred, candles] = await Promise.all([
                     window.apiClient.getPrediction(currentSymbol, currentHorizon, currentModel),
-                    window.apiClient.getCandles(currentSymbol, '1d', 30)
+                    window.apiClient.getCandlesStrict(currentSymbol, '1d', 30)
                 ]);
                 latestPredictionData = pred;
                 latestCandlesData = candles;
+                updateLivePrice(pred?.current_price, pred?.data_source);
             } catch (e) {
-                console.warn('Backend prediction notice:', e);
+                console.warn('Prediction unavailable:', e.message);
+                latestPredictionData = null;
+                latestCandlesData = null;
+                updateLivePrice(null);
             }
         }
 
         if (btn) {
             btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" width="16" height="16"><polygon points="6,4 16,10 6,16" fill="currentColor"/></svg> Run Prediction';
             btn.disabled = false;
+        }
+        if (subEl && latestPredictionData) {
+            subEl.textContent = `Model: ${currentModel.toUpperCase()} · Source: ${latestPredictionData.data_source || 'verified feed'} · Quantile Bounds`;
         }
 
         drawPredictionChart();
@@ -373,26 +432,21 @@
         if (latestCandlesData && latestCandlesData.length > 0) {
             actual = latestCandlesData.map(c => c.close);
         } else {
-            let v = isCrypto(currentSymbol) ? 68000 : 2380;
-            for (let i = 0; i < 25; i++) { 
-                v += (Math.random() - 0.45) * (v * 0.015); 
-                actual.push(v); 
-            }
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('No verified historical data available for this instrument.', w / 2, h / 2);
+            return;
         }
 
         const pts = latestPredictionData ? (latestPredictionData.forecast_points || latestPredictionData.predictions) : null;
+        const hasForecast = !!(pts && pts.length > 0);
         let predicted = [actual[actual.length - 1]];
         let lowerBand = null, upperBand = null;
-        if (pts && pts.length > 0) {
+        if (hasForecast) {
             predicted = [actual[actual.length - 1], ...pts.map(p => p.predicted)];
             lowerBand = [actual[actual.length - 1], ...pts.map(p => p.lower_band)];
             upperBand = [actual[actual.length - 1], ...pts.map(p => p.upper_band)];
-        } else {
-            let v = actual[actual.length - 1];
-            for (let i = 0; i < currentHorizon; i++) {
-                v += v * 0.004;
-                predicted.push(v);
-            }
         }
 
         const all = [...actual, ...predicted.slice(1)];
@@ -427,18 +481,6 @@
             for (let i = upperBand.length - 1; i >= 0; i--) {
                 ctx.lineTo(gX(bandStart + i), gY(upperBand[i]));
             }
-        } else {
-            predicted.forEach((val, i) => {
-                const x = gX(bandStart + i);
-                const offset = (i + 1) * (val * 0.008);
-                if (i === 0) ctx.moveTo(x, gY(val - offset));
-                else ctx.lineTo(x, gY(val - offset));
-            });
-            for (let i = predicted.length - 1; i >= 0; i--) {
-                const x = gX(bandStart + i);
-                const offset = (i + 1) * (predicted[i] * 0.008);
-                ctx.lineTo(x, gY(predicted[i] + offset));
-            }
         }
         ctx.closePath(); ctx.fill();
 
@@ -471,8 +513,13 @@
                 if (idx <= actual.length - 1 && latestCandlesData[idx]) {
                     label = fmtDate(new Date(latestCandlesData[idx].time));
                 } else {
-                    const daysAhead = idx - (actual.length - 1);
-                    label = fmtDate(new Date(lastCandleDate.getTime() + daysAhead * 86400000));
+                    const point = pts && pts[idx - actual.length];
+                    if (point && point.date) {
+                        label = fmtDate(new Date(point.date));
+                    } else {
+                        const daysAhead = idx - (actual.length - 1);
+                        label = fmtDate(new Date(lastCandleDate.getTime() + daysAhead * 86400000));
+                    }
                 }
                 ctx.fillText(label, gX(idx), pad.top + cH + 16);
             }
@@ -482,6 +529,10 @@
         ctx.fillText('← Historical Data', dx - 55, pad.top + cH + 34);
         ctx.fillStyle = '#00d09c';
         ctx.fillText('Quantile Forecast →', dx + 65, pad.top + cH + 34);
+        if (!hasForecast) {
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('Forecast unavailable — no verified forecast returned', w / 2, pad.top + cH + 50);
+        }
 
         // End dots
         ctx.beginPath(); ctx.arc(dx, gY(actual[actual.length-1]), 5, 0, Math.PI*2); ctx.fillStyle = '#4a9eff'; ctx.fill();
@@ -499,13 +550,15 @@
 
         const pts = latestPredictionData ? (latestPredictionData.forecast_points || latestPredictionData.predictions) : null;
         if (pts && pts.length > 0) {
-            const baseClose = latestCandlesData && latestCandlesData.length > 0
-                ? latestCandlesData[latestCandlesData.length - 1].close
-                : pts[0].predicted;
+            const baseClose = latestPredictionData?.current_price
+                || (latestCandlesData && latestCandlesData.length > 0
+                    ? latestCandlesData[latestCandlesData.length - 1].close
+                    : pts[0].predicted);
+            const baseConfidence = latestPredictionData?.confidence_score || 70;
 
             tbody.innerHTML = pts.map((p, idx) => {
                 const pct = (((p.predicted - baseClose) / baseClose) * 100);
-                const confidence = Math.max(72, 96 - (idx + 1) * 3);
+                const confidence = Math.max(50, Math.round(baseConfidence - idx * 1.5));
                 return `<tr>
                     <td>${p.day} <span class="predicted-tag">${currentModel.toUpperCase()}</span></td>
                     <td style="font-family:var(--ff-mono); font-weight:600;">${prefix}${p.predicted.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -514,43 +567,30 @@
                 </tr>`;
             }).join('');
         } else {
-            const today = new Date();
-            let price = isCrypto(currentSymbol) ? 68000 : 2456.70;
-            const rows = [];
-            for (let i = 1; i <= currentHorizon; i++) {
-                const date = new Date(today); date.setDate(today.getDate() + i);
-                const change = price * 0.004;
-                price += change;
-                const pct = (change / price * 100);
-                const confidence = Math.max(72, 95 - i * 2.5).toFixed(0);
-                rows.push(`<tr>
-                    <td>${date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} <span class="predicted-tag">${currentModel.toUpperCase()}</span></td>
-                    <td style="font-family:var(--ff-mono); font-weight:600;">${prefix}${price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td class="${pct >= 0 ? 'positive' : 'negative'}" style="font-family:var(--ff-mono); font-weight:600;">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</td>
-                    <td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="flex:1;"><div class="progress-bar__fill progress-bar__fill--green" style="width:${confidence}%"></div></div><span style="font-family:var(--ff-mono);font-size:12px;font-weight:600;">${confidence}%</span></div></td>
-                </tr>`);
-            }
-            tbody.innerHTML = rows.join('');
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--c-text-secondary);">
+                No forecast is available for this instrument. Only verified market data is used.
+            </td></tr>`;
         }
     }
 
     function updateModelMetrics() {
-        const crypto = isCrypto(currentSymbol);
         const items = document.querySelectorAll('.model-info-grid .model-info-item__value');
         if (items.length >= 6) {
             const metrics = latestPredictionData && latestPredictionData.accuracy_metrics;
-            items[0].textContent = metrics ? metrics.root_mean_squared_error_rmse : (crypto ? '482.4' : '18.4'); // RMSE
-            items[1].textContent = metrics ? metrics.mean_absolute_error_mae : (crypto ? '312.8' : '12.7'); // MAE
-            items[2].textContent = metrics ? metrics.r2_score : (currentModel === 'bilstm' ? '0.96' : '0.94'); // R2
-            items[3].textContent = (metrics && metrics.history_years) ? `${metrics.history_years} Years` : (crypto ? '4 Years' : '5 Years'); // Training Data
-            items[4].textContent = 'OHLCV+TI'; // Features
-            items[5].textContent = (metrics && metrics.epochs_trained) ? metrics.epochs_trained : (currentModel === 'bilstm' ? '120' : '100'); // Epochs
+            const dash = '—';
+            items[0].textContent = metrics?.root_mean_squared_error_rmse ?? dash; // RMSE
+            items[1].textContent = metrics?.mean_absolute_error_mae ?? dash; // MAE
+            items[2].textContent = metrics?.r2_score ?? dash; // R2
+            items[3].textContent = metrics?.history_years ? `${metrics.history_years} Years` : dash; // Training Data
+            items[4].textContent = metrics?.features || dash; // Features
+            items[5].textContent = metrics?.epochs_trained ?? dash; // Epochs
         }
-        if (latestPredictionData && latestPredictionData.confidence_score) {
-            const score = Math.round(latestPredictionData.confidence_score);
-            const trend = [score - 6, score - 4, score - 5, score - 2, score - 3, score - 1, score - 2, score, score];
-            drawAreaChart('accuracyChart', trend, '#a78bfa', 'rgba(167,139,250,0.12)', true, ['M1','M2','M3','M4','M5','M6','M7','M8','Live']);
-        }
+        const meterFill = document.querySelector('.confidence-meter__fill');
+        const meterValue = document.querySelector('.confidence-meter__value');
+        const score = latestPredictionData ? Math.round(latestPredictionData.confidence_score || 0) : 0;
+        if (meterFill) meterFill.style.width = `${score}%`;
+        if (meterValue) meterValue.textContent = latestPredictionData ? `${score}%` : '—';
+        drawScoreGauge(score);
     }
 
     // Export CSV
@@ -604,16 +644,14 @@
         }
 
         if (!data) {
-            data = {
-                symbol: currentSymbol,
-                historical_runs: 52,
-                profitable_directional_calls_pct: 74.5,
-                win_loss_ratio: 2.92,
-                max_drawdown_observed: -4.2,
-                sharpe_ratio_of_strategy: 2.14,
-                validation_method: 'Walk-forward expanding window with 5-day purge gap',
-                status: 'CHAMPION_ACTIVE'
-            };
+            content.innerHTML = `<div style="padding:24px; font-size:13px; color:var(--c-text-secondary); line-height:1.6;">
+                No verified backtest scorecard is available for ${escHtml(currentSymbol)} yet. Run a prediction first; validation metrics are generated from real, non-synthetic candles only.
+            </div>`;
+            return;
+        }
+
+        function escHtml(value) {
+            return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         content.innerHTML = `
@@ -652,12 +690,17 @@
 
                 <div class="api-card" style="margin-bottom:0;">
                     <div style="font-size:13px; font-weight:700; margin-bottom:8px;">Network Layer Blueprint</div>
+                    <div style="font-size:12px; color:var(--c-text-secondary); margin-bottom:8px;">
+                        ${data.model_architecture?.model_type || 'LSTM'} · ${data.model_architecture?.framework || 'PyTorch'} ·
+                        Features: ${data.model_architecture?.features || 'Close price (log returns)'} ·
+                        Loss: ${data.model_architecture?.loss_function || 'Pinball Quantile Loss'}
+                    </div>
                     <div style="display:flex; flex-direction:column; gap:6px; font-family:var(--ff-mono); font-size:12px;">
-                        <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">Layer 1: LSTM (128 units, return_sequences=True, ReLU)</div>
-                        <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">Layer 2: Dropout (rate=0.20 Regularization)</div>
-                        <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">Layer 3: LSTM (64 units, return_sequences=False)</div>
-                        <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">Layer 4: Dropout (rate=0.20 Regularization)</div>
-                        <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">Output: Dense (3 units: q10 Lower, q50 Median, q90 Upper)</div>
+                        ${(data.model_architecture?.layers || []).map((layer, i) => `
+                            <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:4px;">
+                                ${i + 1}. ${layer.type}${layer.units ? ` (${layer.units} units` : ' ('}${layer.rate ? `, rate=${layer.rate}` : ''}${layer.return_sequences !== undefined ? `, return_sequences=${layer.return_sequences}` : ''})
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             </div>
@@ -680,10 +723,6 @@
 
         // Run initial prediction
         runPrediction();
-
-        // Accuracy trend chart
-        const accData = [85, 88, 87, 91, 89, 92, 90, 93, 91, 92];
-        drawAreaChart('accuracyChart', accData, '#a78bfa', 'rgba(167,139,250,0.12)', true, ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct']);
 
         // Wire event listeners to make ALL buttons 100% functioning
         const stockInput = document.getElementById('predStockInput');
@@ -721,13 +760,11 @@
             });
         }
 
-        // Topbar search sync
-        const dashSearch = document.getElementById('dashSearchInput');
-        if (dashSearch) {
-            dashSearch.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && dashSearch.value.trim()) {
-                    setSymbol(dashSearch.value.trim());
-                }
+        // Live price strip follows the verified WebSocket feed.
+        if (window.apiClient) {
+            window.apiClient.onTick((ticks) => {
+                const tick = (ticks || []).find(t => t.symbol === currentSymbol);
+                if (tick) updateLivePrice(tick.price, tick.source);
             });
         }
     });

@@ -40,6 +40,20 @@ except Exception:  # pragma: no cover - environment without torch
 QUANTILES = (0.1, 0.5, 0.9)
 
 
+def _business_days(last_date: Optional[str], horizon: int) -> List[str]:
+    """Return ISO business-day labels starting after the last historical bar."""
+    try:
+        current = datetime.strptime(last_date[:10], "%Y-%m-%d") if last_date else datetime.utcnow()
+    except (ValueError, TypeError):
+        current = datetime.utcnow()
+    dates = []
+    while len(dates) < horizon:
+        current += timedelta(days=1)
+        if current.weekday() < 5:
+            dates.append(current.strftime("%Y-%m-%d"))
+    return dates
+
+
 if TORCH_AVAILABLE:
 
     class QuantileRecurrent(nn.Module):
@@ -78,8 +92,8 @@ def _pinball_loss(pred, target, quantiles=QUANTILES):
 class LSTMPredictionEngine:
     WINDOW = 60           # lookback bars fed to the network (per Untitled.md spec)
     MIN_SAMPLES = 90      # minimum history required to train an LSTM
-    MODEL_TTL = 3600.0    # seconds before a trained model is refreshed
-    RESULT_TTL = 300.0    # seconds a prediction result is cached
+    MODEL_TTL = 900.0     # seconds before a trained model is refreshed
+    RESULT_TTL = 60.0     # seconds a prediction result is cached
 
     def __init__(self):
         self._architectures = {
@@ -101,12 +115,12 @@ class LSTMPredictionEngine:
                 {"type": first, "units": 48, "return_sequences": True},
                 {"type": "Dropout", "rate": 0.2},
                 {"type": cell, "units": 24, "return_sequences": False},
-                {"type": "Dropout", "rate": 0.2},
                 {"type": "Dense", "units": 3, "activation": "linear"},
             ],
             "bidirectional": bidirectional,
             "loss_function": "Pinball Quantile Loss (q=0.1, 0.5, 0.9)",
             "sequence_window": f"{self.WINDOW} bars historical lookback",
+            "features": "Close price (log returns)",
             "target": "next-period log return (quantile regression)",
         }
 
@@ -122,15 +136,26 @@ class LSTMPredictionEngine:
     # ========================================================
     # DATA
     # ========================================================
-    def _load_series(self, symbol: str) -> Tuple[List[str], np.ndarray]:
-        candles = market_ingest.get_candles(symbol, "1d", 500)
+    def _load_series(self, symbol: str) -> Tuple[List[str], np.ndarray, str]:
+        """Load verified real candles only.
+
+        Synthetic fallback candles are explicitly excluded so the LSTM can never
+        train on fabricated prices and then claim to be a real market forecast.
+        """
+        candles = [
+            c for c in market_ingest.get_candles(symbol, "1d", 500)
+            if not getattr(c, "is_synthetic", False)
+            and getattr(c, "source", "unknown") != "synthetic"
+        ]
         if not candles:
-            return [], np.array([])
+            return [], np.array([]), "unavailable"
+        source = candles[-1].source or "unknown"
         times = [c.time for c in candles]
         closes = np.array([c.close for c in candles], dtype=np.float64)
-        closes = closes[np.isfinite(closes) & (closes > 0)]
-        times = times[-len(closes):]
-        return times, closes
+        valid = np.isfinite(closes) & (closes > 0)
+        closes = closes[valid]
+        times = [t for t, ok in zip(times, valid) if ok]
+        return times, closes, source
 
     # ========================================================
     # PUBLIC API
@@ -143,12 +168,14 @@ class LSTMPredictionEngine:
         horizon_days = max(1, min(int(horizon_days), 90))
 
         cache_key = f"{sym}:{horizon_days}:{model}"
-        cached = self._result_cache.get(cache_key)
-        if cached and (time.time() - cached[1]) < self.RESULT_TTL:
-            return cached[0]
+        with self._lock:
+            cached = self._result_cache.get(cache_key)
+            if cached and (time.time() - cached[1]) < self.RESULT_TTL:
+                return cached[0]
 
         result = self._compute_prediction(sym, horizon_days, model)
-        self._result_cache[cache_key] = (result, time.time())
+        with self._lock:
+            self._result_cache[cache_key] = (result, time.time())
         return result
 
     def get_backtest_scorecard(self, symbol: str, model: str = "lstm") -> Dict[str, Any]:
@@ -177,33 +204,39 @@ class LSTMPredictionEngine:
     # CORE
     # ========================================================
     def _compute_prediction(self, sym: str, horizon: int, model: str = "lstm") -> PredictionResponse:
-        times, closes = self._load_series(sym)
+        times, closes, candle_source = self._load_series(sym)
+        if len(closes) < 2:
+            raise ValueError(
+                f"No verified historical price data for {sym}. "
+                "Connect a live broker/feed or choose a tracked instrument."
+            )
 
         quote = market_ingest.get_quote(sym)
-        if len(closes) >= 2:
-            current_price = float(closes[-1])
-        elif quote:
+        quote_source = quote.source if quote else "unavailable"
+        # Anchor to the freshest verified quote; never to a fabricated price.
+        if quote and not quote.is_synthetic and quote.price > 0:
             current_price = float(quote.price)
         else:
-            current_price = 1000.0
+            current_price = float(closes[-1])
 
-        if quote and len(closes) < 2:
-            # Only a quote available; synthesise a flat series to anchor quantiles.
-            closes = np.array([current_price], dtype=np.float64)
-
+        data_source = quote_source if quote_source != "unavailable" else candle_source
         model_used = "empirical-quantile"
         points: List[PredictionPoint] = []
         metrics: Dict[str, Any] = {}
 
         lstm_out = None
         if TORCH_AVAILABLE and len(closes) >= self.MIN_SAMPLES:
-            lstm_out = self._lstm_forecast(sym, model, closes, horizon, current_price)
+            lstm_out = self._lstm_forecast(sym, model, closes, horizon, current_price, times)
             if lstm_out is not None:
                 points, metrics = lstm_out
                 model_used = "lstm"
 
         if not points:
-            points, metrics = self._empirical_forecast(sym, closes, horizon, current_price)
+            points, metrics = self._empirical_forecast(sym, closes, horizon, current_price, times)
+
+        metrics["data_source"] = data_source
+        metrics["data_as_of"] = (quote.as_of if quote and quote.as_of else None)
+        metrics["features"] = "Close price (log returns)"
 
         target_price = points[-1].predicted
         expected_return = round(((target_price - current_price) / current_price) * 100, 2) if current_price else 0.0
@@ -231,6 +264,8 @@ class LSTMPredictionEngine:
             accuracy_metrics=metrics,
             forecast_points=points,
             predictions=points,
+            data_source=data_source,
+            as_of=(quote.as_of if quote and quote.as_of else None),
             disclaimer=(
                 "SEBI Compliance: Model outputs are statistical deep-learning forecasts "
                 "based on historical data. They do not constitute financial advice or "
@@ -242,10 +277,11 @@ class LSTMPredictionEngine:
     # LSTM PATH
     # ========================================================
     def _get_or_train(self, sym: str, model_type: str, closes: np.ndarray) -> Optional[Tuple[Any, Dict[str, Any]]]:
-        cache_key = f"{sym}:{model_type}"
-        cached = self._model_cache.get(cache_key)
-        if cached and (time.time() - cached[2]) < self.MODEL_TTL:
-            return cached[0], cached[1]
+        cache_key = f"{sym}:{model_type}:{len(closes)}"
+        with self._lock:
+            cached = self._model_cache.get(cache_key)
+            if cached and (time.time() - cached[2]) < self.MODEL_TTL:
+                return cached[0], cached[1]
         try:
             trained = self._train_model(closes, model_type)
         except Exception as e:  # pragma: no cover
@@ -255,7 +291,8 @@ class LSTMPredictionEngine:
             return None
         model, scale, holdout, epochs = trained
         meta = {"scale": scale, "holdout": holdout, "epochs": epochs}
-        self._model_cache[cache_key] = (model, meta, time.time())
+        with self._lock:
+            self._model_cache[cache_key] = (model, meta, time.time())
         return model, meta
 
     def _train_model(self, closes: np.ndarray, model_type: str = "lstm"):
@@ -263,23 +300,26 @@ class LSTMPredictionEngine:
         if len(returns) < self.MIN_SAMPLES:
             return None
 
-        scale = float(np.std(returns)) or 1e-4
+        window = self.WINDOW
+        total_windows = len(returns) - window
+        # Hold out the tail for walk-forward validation (never shuffled).
+        holdout = max(20, int(0.2 * total_windows))
+        train_n = total_windows - holdout
+        if train_n < 40:
+            return None
+
+        # Scale is fitted on the TRAINING window only — no holdout leakage.
+        scale = float(np.std(returns[:train_n + window])) or 1e-4
         norm = returns / scale
 
-        window = self.WINDOW
         # Build supervised windows
         X, y = [], []
-        for i in range(len(norm) - window):
+        for i in range(total_windows):
             X.append(norm[i:i + window])
             y.append(norm[i + window])
         X = np.array(X, dtype=np.float32)[..., None]
         y = np.array(y, dtype=np.float32)[:, None]
 
-        # Hold out the tail for walk-forward validation (never shuffled).
-        holdout = max(20, int(0.2 * len(X)))
-        train_n = len(X) - holdout
-        if train_n < 40:
-            return None
         Xtr = torch.tensor(X[:train_n])
         ytr = torch.tensor(y[:train_n])
 
@@ -325,7 +365,8 @@ class LSTMPredictionEngine:
             x = x[:, :, None]
         return model(x).numpy()
 
-    def _lstm_forecast(self, sym: str, model_type: str, closes: np.ndarray, horizon: int, current_price: float):
+    def _lstm_forecast(self, sym: str, model_type: str, closes: np.ndarray, horizon: int,
+                       current_price: float, times: Optional[List[str]] = None):
         trained = self._get_or_train(sym, model_type, closes)
         if trained is None:
             return None
@@ -338,7 +379,7 @@ class LSTMPredictionEngine:
 
         # --- Walk-forward validation on the held-out tail (no leakage) ---
         dir_correct = 0
-        abs_errs, sq_errs, base_errs = [], [], []
+        abs_errs, sq_errs, base_errs, ma_errs = [], [], [], []
         actuals, preds = [], []
         correct_moves, wrong_moves = [], []
         strat_returns = []
@@ -364,6 +405,8 @@ class LSTMPredictionEngine:
                 abs_errs.append(abs(pred_price - actual_price))
                 sq_errs.append((pred_price - actual_price) ** 2)
                 base_errs.append(abs(closes[i] - actual_price))
+                ma_baseline = float(np.mean(closes[max(0, i - 5):i + 1]))
+                ma_errs.append(abs(ma_baseline - actual_price))
                 if (r50 >= 0) == (actual_ret >= 0):
                     dir_correct += 1
                     correct_moves.append(abs(actual_ret))
@@ -374,6 +417,7 @@ class LSTMPredictionEngine:
         metrics = self._build_metrics(
             preds, actuals, abs_errs, sq_errs, base_errs,
             dir_correct, correct_moves, wrong_moves, strat_returns,
+            ma_errs,
         )
         metrics["forecast_method"] = "lstm-quantile"
         metrics["epochs_trained"] = meta.get("epochs")
@@ -384,11 +428,14 @@ class LSTMPredictionEngine:
         cum_log = 0.0
         cum_var = 0.0
         points: List[PredictionPoint] = []
-        now = datetime.utcnow()
+        forecast_dates = _business_days(times[-1] if times else None, horizon)
 
         for step in range(1, horizon + 1):
             q = self._predict_quantiles(model, np.array(recent[-self.WINDOW:]))[0] * scale
             r50, r10, r90 = float(q[1]), float(q[0]), float(q[2])
+            # Quantile heads can cross; clamp to a valid monotone band.
+            r10 = min(r10, r50)
+            r90 = max(r90, r50)
             half = max(abs(r90 - r10) / 2.0, 1e-5)
             cum_log += r50
             cum_var += half * half
@@ -397,8 +444,10 @@ class LSTMPredictionEngine:
             spread = math.sqrt(cum_var)
             lower = last_price * math.exp(cum_log - spread)
             upper = last_price * math.exp(cum_log + spread)
+            iso_date = forecast_dates[step - 1]
             points.append(PredictionPoint(
-                day=(now + timedelta(days=step)).strftime("%d %b"),
+                day=datetime.strptime(iso_date, "%Y-%m-%d").strftime("%d %b"),
+                date=iso_date,
                 predicted=round(max(median_price, 0.01), 2),
                 lower_band=round(max(lower, 0.01), 2),
                 upper_band=round(max(upper, 0.01), 2),
@@ -409,12 +458,13 @@ class LSTMPredictionEngine:
     # ========================================================
     # EMPIRICAL QUANTILE PATH (fallback / no torch)
     # ========================================================
-    def _empirical_forecast(self, sym: str, closes: np.ndarray, horizon: int, current_price: float):
+    def _empirical_forecast(self, sym: str, closes: np.ndarray, horizon: int,
+                            current_price: float, times: Optional[List[str]] = None):
         returns = np.diff(np.log(closes)) if len(closes) >= 2 else np.array([0.0])
 
         # One-step walk-forward error metrics (predict using expanding median drift)
         dir_correct = 0
-        abs_errs, sq_errs, base_errs = [], [], []
+        abs_errs, sq_errs, base_errs, ma_errs = [], [], [], []
         actuals, preds = [], []
         correct_moves, wrong_moves, strat_returns = [], [], []
         if len(returns) >= 10:
@@ -431,6 +481,8 @@ class LSTMPredictionEngine:
                 abs_errs.append(abs(pred_price - actual_price))
                 sq_errs.append((pred_price - actual_price) ** 2)
                 base_errs.append(abs(closes[i] - actual_price))
+                ma_baseline = float(np.mean(closes[max(0, i - 5):i + 1]))
+                ma_errs.append(abs(ma_baseline - actual_price))
                 if (r_pred >= 0) == (actual_ret >= 0):
                     dir_correct += 1
                     correct_moves.append(abs(actual_ret))
@@ -441,11 +493,12 @@ class LSTMPredictionEngine:
         metrics = self._build_metrics(
             preds, actuals, abs_errs, sq_errs, base_errs,
             dir_correct, correct_moves, wrong_moves, strat_returns,
+            ma_errs,
         )
 
         # Quantile path from empirical h-step return distribution
         last_price = current_price
-        now = datetime.utcnow()
+        forecast_dates = _business_days(times[-1] if times else None, horizon)
         points: List[PredictionPoint] = []
         for step in range(1, horizon + 1):
             if len(returns) > step + 5:
@@ -457,8 +510,10 @@ class LSTMPredictionEngine:
                 q50 = drift * step
                 q10 = q50 - 1.2816 * vol * math.sqrt(step)
                 q90 = q50 + 1.2816 * vol * math.sqrt(step)
+            iso_date = forecast_dates[step - 1]
             points.append(PredictionPoint(
-                day=(now + timedelta(days=step)).strftime("%d %b"),
+                day=datetime.strptime(iso_date, "%Y-%m-%d").strftime("%d %b"),
+                date=iso_date,
                 predicted=round(max(last_price * math.exp(float(q50)), 0.01), 2),
                 lower_band=round(max(last_price * math.exp(float(q10)), 0.01), 2),
                 upper_band=round(max(last_price * math.exp(float(q90)), 0.01), 2),
@@ -471,7 +526,8 @@ class LSTMPredictionEngine:
     # METRICS HELPERS
     # ========================================================
     def _build_metrics(self, preds, actuals, abs_errs, sq_errs, base_errs,
-                       dir_correct, correct_moves, wrong_moves, strat_returns) -> Dict[str, Any]:
+                       dir_correct, correct_moves, wrong_moves, strat_returns,
+                       ma_errs=None) -> Dict[str, Any]:
         n = len(abs_errs)
         if n == 0:
             return {
@@ -491,6 +547,7 @@ class LSTMPredictionEngine:
         mae = float(np.mean(abs_errs))
         rmse = float(np.sqrt(np.mean(sq_errs)))
         base_mae = float(np.mean(base_errs))
+        ma_mae = float(np.mean(ma_errs)) if ma_errs else base_mae
         mean_actual = float(np.mean(actuals))
         ss_tot = float(np.sum((np.array(actuals) - mean_actual) ** 2))
         ss_res = float(np.sum(sq_errs))
@@ -518,11 +575,13 @@ class LSTMPredictionEngine:
             "directional_accuracy_pct": dir_acc,
             "beats_naive_baseline": mae < base_mae,
             "baseline_last_value_mae": round(base_mae, 2),
+            "baseline_moving_average_mae": round(ma_mae, 2),
+            "beats_moving_average_baseline": mae < ma_mae,
             "improvement_over_baseline_pct": improvement,
             "training_samples": int(len(abs_errs)),
             "validation_samples": int(len(abs_errs)),
             "last_retrained": datetime.utcnow().strftime("%Y-%m-%d"),
-            "validation_method": "Walk-forward holdout (tail 20%), no shuffling across time",
+            "validation_method": "Walk-forward holdout (tail 20%), train-window scaling, no shuffling across time",
             "backtest": {
                 "win_loss_ratio": win_loss,
                 "sharpe_ratio": sharpe,

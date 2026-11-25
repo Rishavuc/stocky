@@ -24,22 +24,26 @@ class ApiClient {
 
     async _fetch(endpoint, options = {}) {
         try {
-            const res = await fetch(`${this.baseUrl}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(options.headers || {})
-                },
-                ...options
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ detail: res.statusText }));
-                throw new Error(err.detail || 'API request failed');
-            }
-            return await res.json();
+            return await this._fetchStrict(endpoint, options);
         } catch (error) {
             console.warn(`[API Offline Fallback] ${endpoint}:`, error.message);
             return null;
         }
+    }
+
+    async _fetchStrict(endpoint, options = {}) {
+        const res = await fetch(`${this.baseUrl}${endpoint}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            },
+            ...options
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: res.statusText }));
+            throw new Error(err.detail || 'API request failed');
+        }
+        return await res.json();
     }
 
     // --- Market & Quotes ---
@@ -55,12 +59,20 @@ class ApiClient {
         return await this._fetch('/markets/indices');
     }
 
+    async searchInstruments(query) {
+        return await this._fetchStrict(`/instruments/search?q=${encodeURIComponent(query)}`);
+    }
+
     async getTrending() {
         return await this._fetch('/markets/trending');
     }
 
     async getCandles(symbol, timeframe = '1d', limit = 30) {
         return await this._fetch(`/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`);
+    }
+
+    async getCandlesStrict(symbol, timeframe = '1d', limit = 30) {
+        return await this._fetchStrict(`/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`);
     }
 
     async getBreadth() {
@@ -104,9 +116,25 @@ class ApiClient {
         return await this._fetch(`/analysis/crypto/${symbol}`);
     }
 
+    // --- Learning & Quizzes ---
+    async getCourses() {
+        return await this._fetch('/learn/courses');
+    }
+
+    async getQuiz() {
+        return await this._fetch('/learn/quiz');
+    }
+
+    async submitQuizAnswer(questionId, selectedOption) {
+        return await this._fetchStrict('/learn/quiz/answer', {
+            method: 'POST',
+            body: JSON.stringify({ question_id: questionId, selected_option: selectedOption })
+        });
+    }
+
     // --- LSTM Predictions ---
     async getPrediction(symbol, horizon = 7, model = 'lstm') {
-        return await this._fetch(`/predictions/${symbol}?horizon=${horizon}&model=${model}`);
+        return await this._fetchStrict(`/predictions/${symbol}?horizon=${horizon}&model=${model}`);
     }
 
     async getBacktest(symbol, model = 'lstm') {
@@ -118,6 +146,10 @@ class ApiClient {
         return await this._fetch('/paper/portfolio');
     }
 
+    async getPaperPortfolioStrict() {
+        return await this._fetchStrict('/paper/portfolio');
+    }
+
     async placePaperOrder(order) {
         return await this._fetch('/paper/orders', {
             method: 'POST',
@@ -125,14 +157,33 @@ class ApiClient {
         });
     }
 
+    async placePaperOrderStrict(order) {
+        return await this._fetchStrict('/paper/orders', {
+            method: 'POST',
+            body: JSON.stringify(order)
+        });
+    }
+
     async squareOffPaper(symbol, product = 'CNC') {
-        return await this._fetch(`/paper/square-off?symbol=${symbol}&product=${product}`, {
+        return await this._fetch(`/paper/square-off?symbol=${encodeURIComponent(symbol)}&product=${encodeURIComponent(product)}`, {
+            method: 'POST'
+        });
+    }
+
+    async squareOffPaperStrict(symbol, product = 'CNC') {
+        return await this._fetchStrict(`/paper/square-off?symbol=${encodeURIComponent(symbol)}&product=${encodeURIComponent(product)}`, {
             method: 'POST'
         });
     }
 
     async resetPaperPortfolio() {
         return await this._fetch('/paper/reset', {
+            method: 'POST'
+        });
+    }
+
+    async resetPaperPortfolioStrict() {
+        return await this._fetchStrict('/paper/reset', {
             method: 'POST'
         });
     }
@@ -247,6 +298,9 @@ class ApiClient {
 
     connectWebSocket() {
         try {
+            if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
             this.ws = new WebSocket(this.wsUrl);
             this.ws.onopen = () => {
                 console.log('⚡ Connected to Investor\'s EYE Live WebSocket');
@@ -254,8 +308,8 @@ class ApiClient {
             this.ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.type === 'TICK' && Array.isArray(msg.data)) {
-                        this.tickListeners.forEach(cb => cb(msg.data));
+                    if ((msg.type === 'TICK' || msg.type === 'INITIAL_SNAPSHOT') && Array.isArray(msg.data)) {
+                        this.tickListeners.forEach(cb => cb(msg.data, msg.type));
                     }
                 } catch (e) {
                     console.error('WS Parse error', e);

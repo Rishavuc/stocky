@@ -25,6 +25,9 @@ class QuoteResponse(BaseModel):
     low_24h: float
     volume: float
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+    source: str = "unknown"
+    is_synthetic: bool = False
+    as_of: Optional[datetime] = None
 
 class CandleResponse(BaseModel):
     time: str
@@ -33,6 +36,8 @@ class CandleResponse(BaseModel):
     low: float
     close: float
     volume: float
+    source: str = "unknown"
+    is_synthetic: bool = False
 
 class IndexOverview(BaseModel):
     name: str
@@ -86,6 +91,7 @@ class OptionChainResponse(BaseModel):
 # ========================================================
 class PredictionPoint(BaseModel):
     day: str
+    date: Optional[str] = None
     predicted: float
     lower_band: float
     upper_band: float
@@ -102,6 +108,8 @@ class PredictionResponse(BaseModel):
     accuracy_metrics: Dict[str, Any] # mae, rmse, r2, win_rate
     forecast_points: List[PredictionPoint]
     predictions: List[PredictionPoint] = []  # alias of forecast_points for client compatibility
+    data_source: str = "unknown"
+    as_of: Optional[datetime] = None
     disclaimer: str
 
 # ========================================================
@@ -133,6 +141,7 @@ class PaperPortfolioResponse(BaseModel):
     realized_pnl: float
     total_trades_count: int
     positions: List[PaperPositionResponse]
+    orders: List[Dict[str, Any]] = []
 
 # ========================================================
 # BROKER & UNIFIED TRADE BOOK SCHEMAS
@@ -175,10 +184,12 @@ class AlertRuleResponse(BaseModel):
 # LEARN & QUIZ SCHEMAS
 # ========================================================
 class QuizAnswerRequest(BaseModel):
-    question_id: int
-    selected_option: int
+    question_id: int = Field(..., ge=1)
+    selected_option: int = Field(..., ge=0, le=3)
 
 class QuizAnswerResponse(BaseModel):
     correct: bool
     explanation: str
-    next_question_id: Optional[int]
+    next_question_id: Optional[int] = None
+    correct_option: Optional[int] = None
+    correct_answer: Optional[str] = None

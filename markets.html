@@ -778,12 +778,12 @@
                         <div class="filter-pills" id="stocksSectorPills">
                             <button class="filter-pill active" data-sector="ALL">All Sectors</button>
                             <button class="filter-pill" data-sector="Banking">Banking</button>
-                            <button class="filter-pill" data-sector="Information Technology">IT</button>
-                            <button class="filter-pill" data-sector="Oil & Gas">Energy</button>
+                            <button class="filter-pill" data-sector="IT">IT</button>
+                            <button class="filter-pill" data-sector="Energy">Energy</button>
                             <button class="filter-pill" data-sector="Automobile">Auto</button>
-                            <button class="filter-pill" data-sector="Pharmaceuticals">Pharma</button>
+                            <button class="filter-pill" data-sector="Pharma">Pharma</button>
                             <button class="filter-pill" data-sector="FMCG">FMCG</button>
-                            <button class="filter-pill" data-sector="Metals & Mining">Metals</button>
+                            <button class="filter-pill" data-sector="Metals">Metals</button>
                         </div>
                         <select class="catalog-sort-select" id="stocksSortSelect">
                             <option value="gainers">Top Gainers (%)</option>
@@ -1288,6 +1288,9 @@
                             <a href="mock-trading.html?symbol=${s.symbol}" class="action-btn-sm" title="Paper Trade">
                                 ⚡ Trade
                             </a>
+                            <button class="action-btn-sm" data-watchlist-toggle="${s.symbol}" title="${window.Watchlist?.has(s.symbol) ? 'Remove from' : 'Add to'} watchlist">
+                                ${window.Watchlist?.has(s.symbol) ? '★' : '☆'}
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -1509,6 +1512,9 @@
                             <a href="mock-trading.html?symbol=${c.symbol}" class="action-btn-sm" title="Paper Trade">
                                 ⚡ Trade
                             </a>
+                            <button class="action-btn-sm" data-watchlist-toggle="${c.symbol}" title="${window.Watchlist?.has(c.symbol) ? 'Remove from' : 'Add to'} watchlist">
+                                ${window.Watchlist?.has(c.symbol) ? '★' : '☆'}
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -1841,36 +1847,110 @@
         function loadFiiDii() {
             if (window.apiClient) {
                 window.apiClient.getFiiDii().then(f => {
-                    if (f) {
-                        const grid = document.getElementById('fiiDiiGrid');
+                    const grid = document.getElementById('fiiDiiGrid');
+                    const canvas = document.getElementById('fiiDiiChart');
+                    if (!f || f.available === false || !Array.isArray(f.historical_5d) || !f.historical_5d.length) {
                         if (grid) {
                             grid.innerHTML = `
-                                <div class="fii-dii-card">
-                                    <div class="fii-dii-card__label">FII Net</div>
-                                    <div class="fii-dii-card__value ${f.fii_net >= 0 ? 'positive' : 'negative'}">${f.fii_net >= 0 ? '+' : ''}₹${f.fii_net.toLocaleString('en-IN')} Cr</div>
-                                    <div class="fii-dii-card__sub">Buy: ₹${f.fii_buy.toLocaleString('en-IN')} | Sell: ₹${f.fii_sell.toLocaleString('en-IN')}</div>
-                                </div>
-                                <div class="fii-dii-card">
-                                    <div class="fii-dii-card__label">DII Net</div>
-                                    <div class="fii-dii-card__value ${f.dii_net >= 0 ? 'positive' : 'negative'}">${f.dii_net >= 0 ? '+' : ''}₹${f.dii_net.toLocaleString('en-IN')} Cr</div>
-                                    <div class="fii-dii-card__sub">Buy: ₹${f.dii_buy.toLocaleString('en-IN')} | Sell: ₹${f.dii_sell.toLocaleString('en-IN')}</div>
+                                <div class="fii-dii-card" style="grid-column: 1 / -1;">
+                                    <div class="fii-dii-card__label">FII / DII Activity</div>
+                                    <div class="fii-dii-card__value" style="font-size:15px;">Feed not connected</div>
+                                    <div class="fii-dii-card__sub">Institutional flow data is shown only when a verified provider is connected.</div>
                                 </div>
                             `;
                         }
-                        if (f.historical_5d) {
-                            const labels = f.historical_5d.map(h => h.day);
-                            const vals = f.historical_5d.map(h => h.fii);
-                            drawBarChart('fiiDiiChart', labels, vals);
+                        if (canvas && canvas.getContext) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
                         }
+                        return;
                     }
+                    if (grid) {
+                        grid.innerHTML = `
+                            <div class="fii-dii-card">
+                                <div class="fii-dii-card__label">FII Net</div>
+                                <div class="fii-dii-card__value ${f.fii_net >= 0 ? 'positive' : 'negative'}">${f.fii_net >= 0 ? '+' : ''}₹${f.fii_net.toLocaleString('en-IN')} Cr</div>
+                                <div class="fii-dii-card__sub">Buy: ₹${f.fii_buy.toLocaleString('en-IN')} | Sell: ₹${f.fii_sell.toLocaleString('en-IN')}</div>
+                            </div>
+                            <div class="fii-dii-card">
+                                <div class="fii-dii-card__label">DII Net</div>
+                                <div class="fii-dii-card__value ${f.dii_net >= 0 ? 'positive' : 'negative'}">${f.dii_net >= 0 ? '+' : ''}₹${f.dii_net.toLocaleString('en-IN')} Cr</div>
+                                <div class="fii-dii-card__sub">Buy: ₹${f.dii_buy.toLocaleString('en-IN')} | Sell: ₹${f.dii_sell.toLocaleString('en-IN')}</div>
+                            </div>
+                        `;
+                    }
+                    const labels = f.historical_5d.map(h => h.day);
+                    const vals = f.historical_5d.map(h => h.fii);
+                    drawBarChart('fiiDiiChart', labels, vals);
                 }).catch(() => {
-                    const fiiLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                    const fiiVals = [2456, -1890, 3200, -560, 2456];
-                    drawBarChart('fiiDiiChart', fiiLabels, fiiVals);
+                    const grid = document.getElementById('fiiDiiGrid');
+                    const canvas = document.getElementById('fiiDiiChart');
+                    if (grid) {
+                        grid.innerHTML = `
+                            <div class="fii-dii-card" style="grid-column: 1 / -1;">
+                                <div class="fii-dii-card__label">FII / DII Activity</div>
+                                <div class="fii-dii-card__value" style="font-size:15px;">Feed not connected</div>
+                            </div>
+                        `;
+                    }
+                    if (canvas && canvas.getContext) {
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
                 });
             }
         }
         loadFiiDii();
+
+        // ========================================================
+        // LIVE TICKS: apply authoritative provider quotes from WebSocket
+        // ========================================================
+        function applyLiveTicks(ticks) {
+            if (!Array.isArray(ticks) || !ticks.length) return;
+            const bySymbol = new Map(ticks.map(q => [q.symbol, q]));
+
+            if (stocksCatalogData.length) {
+                stocksCatalogData = stocksCatalogData.map(s => {
+                    const q = bySymbol.get(s.symbol);
+                    if (!q) return s;
+                    return {
+                        ...s,
+                        price: q.price,
+                        change: q.change,
+                        change_pct: q.change_pct,
+                        high_24h: q.high_24h,
+                        low_24h: q.low_24h,
+                        volume: q.volume,
+                        source: q.source
+                    };
+                });
+                updateStocksKPIs();
+                renderStocksTable();
+            }
+
+            if (cryptoCatalogData.length) {
+                cryptoCatalogData = cryptoCatalogData.map(c => {
+                    const q = bySymbol.get(c.symbol);
+                    if (!q) return c;
+                    return {
+                        ...c,
+                        price: q.price,
+                        change: q.change,
+                        change_pct: q.change_pct,
+                        high_24h: q.high_24h,
+                        low_24h: q.low_24h,
+                        volume: q.volume,
+                        source: q.source
+                    };
+                });
+                updateCryptoKPIs();
+                renderCryptoTable();
+            }
+
+            if (bySymbol.has('NIFTY 50') || bySymbol.has('SENSEX')) {
+                refreshLivePrices();
+            }
+        }
 
         // ========================================================
         // AUTO-REFRESH: keep prices & breadth moving without a manual reload
@@ -1901,6 +1981,7 @@
             }
             loadMarketBreadth();
         }
+        refreshLivePrices();
         setInterval(refreshLivePrices, 15000);
 
         // Check if page opened with subdashboard query param (e.g. ?type=stocks)
@@ -1908,6 +1989,18 @@
         const initType = urlParams.get('type') || urlParams.get('tab');
         if (initType && ['stocks', 'crypto', 'currencies'].includes(initType)) {
             switchSubdashboard(initType);
+        }
+
+        if (window.Watchlist) {
+            window.Watchlist.onChange(() => {
+                renderStocksTable();
+                renderCryptoTable();
+            });
+        }
+
+        if (window.apiClient) {
+            window.apiClient.onTick((ticks) => applyLiveTicks(ticks));
+            window.apiClient.connectWebSocket();
         }
     });
     </script>

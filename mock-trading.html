@@ -543,31 +543,31 @@
                             Total Portfolio Value
                             <span style="color:var(--c-accent);">● Live</span>
                         </div>
-                        <div class="portfolio-card__value" id="dispTotalVal">₹10,24,680</div>
+                        <div class="portfolio-card__value" id="dispTotalVal">₹10,00,000</div>
                         <div class="portfolio-card__sub positive" id="dispTotalChange">
-                            <span>▲ +₹24,680 (+2.47%)</span>
+                            <span>Awaiting live positions</span>
                         </div>
                     </div>
 
                     <div class="portfolio-card">
                         <div class="portfolio-card__label">Available Cash / Margin</div>
-                        <div class="portfolio-card__value" id="dispCashVal">₹8,45,200</div>
+                        <div class="portfolio-card__value" id="dispCashVal">₹10,00,000</div>
                         <div class="portfolio-card__sub" style="color:var(--c-text-tertiary);">
-                            Margin Used: <span id="dispMarginUsed">₹1,54,800</span>
+                            Margin Used: <span id="dispMarginUsed">₹0</span>
                         </div>
                     </div>
 
                     <div class="portfolio-card">
                         <div class="portfolio-card__label">Unrealized P&L</div>
-                        <div class="portfolio-card__value positive" id="dispUnrealizedPnl">+₹18,480</div>
-                        <div class="portfolio-card__sub positive" id="dispUnrealizedPnlPct">+3.12% on holdings</div>
+                        <div class="portfolio-card__value positive" id="dispUnrealizedPnl">₹0</div>
+                        <div class="portfolio-card__sub positive" id="dispUnrealizedPnlPct">0.00% on holdings</div>
                     </div>
 
                     <div class="portfolio-card">
                         <div class="portfolio-card__label">Realized P&L (Booked)</div>
-                        <div class="portfolio-card__value positive" id="dispRealizedPnl">+₹6,200</div>
+                        <div class="portfolio-card__value positive" id="dispRealizedPnl">₹0</div>
                         <div class="portfolio-card__sub" style="color:var(--c-text-tertiary);">
-                            Trades: <span id="dispTotalTradesCount">4 Completed</span>
+                            Trades: <span id="dispTotalTradesCount">0 Placed</span>
                         </div>
                     </div>
                 </div>
@@ -592,12 +592,12 @@
                         <!-- LIVE QUOTE PREVIEW -->
                         <div class="live-quote-card" id="liveQuoteCard">
                             <div>
-                                <div class="live-quote-sym" id="quoteSymbol">RELIANCE</div>
-                                <div class="live-quote-name" id="quoteName">Reliance Industries Ltd.</div>
+                                <div class="live-quote-sym" id="quoteSymbol">—</div>
+                                <div class="live-quote-name" id="quoteName">Loading verified instruments…</div>
                             </div>
                             <div>
-                                <div class="live-quote-price positive" id="quoteLtp">₹2,890.40</div>
-                                <div class="live-quote-change positive" id="quoteChange">+₹34.80 (+1.22%)</div>
+                                <div class="live-quote-price positive" id="quoteLtp">—</div>
+                                <div class="live-quote-change positive" id="quoteChange">Awaiting verified feed</div>
                             </div>
                         </div>
 
@@ -605,14 +605,7 @@
                         <div class="trade-form-group">
                             <label class="trade-form-label" for="stockSelect">Select Instrument</label>
                             <select class="trade-select" id="stockSelect">
-                                <option value="RELIANCE" data-price="2890.40" data-name="Reliance Industries" selected>RELIANCE (₹2,890.40)</option>
-                                <option value="TCS" data-price="3940.15" data-name="Tata Consultancy Services">TCS (₹3,940.15)</option>
-                                <option value="HDFCBANK" data-price="1485.60" data-name="HDFC Bank Ltd.">HDFCBANK (₹1,485.60)</option>
-                                <option value="INFY" data-price="1520.30" data-name="Infosys Ltd.">INFY (₹1,520.30)</option>
-                                <option value="ICICIBANK" data-price="1090.25" data-name="ICICI Bank Ltd.">ICICIBANK (₹1,090.25)</option>
-                                <option value="TATAMOTORS" data-price="965.80" data-name="Tata Motors Ltd.">TATAMOTORS (₹965.80)</option>
-                                <option value="ITC" data-price="428.50" data-name="ITC Limited">ITC (₹428.50)</option>
-                                <option value="BTCINR" data-price="5560000.00" data-name="Bitcoin (Crypto)">BTC/INR (₹55,60,000)</option>
+                                <option value="">Loading verified instruments…</option>
                             </select>
                         </div>
 
@@ -648,7 +641,7 @@
                             </div>
                             <div class="trade-form-group">
                                 <label class="trade-form-label">Price (₹)</label>
-                                <input type="number" class="trade-input" id="tradePrice" value="2890.40" step="0.05" readonly>
+                                <input type="number" class="trade-input" id="tradePrice" value="" step="0.05" readonly>
                                 <span style="font-size:10px; color:var(--c-text-tertiary); margin-top:4px;" id="priceHint">Executing at Market LTP</span>
                             </div>
                         </div>
@@ -657,7 +650,7 @@
                         <div class="order-calc">
                             <div class="order-calc__row">
                                 <span>Order Value:</span>
-                                <span id="calcOrderValue" style="font-family:var(--ff-mono);">₹28,904.00</span>
+                                <span id="calcOrderValue" style="font-family:var(--ff-mono);">₹0.00</span>
                             </div>
                             <div class="order-calc__row">
                                 <span>Brokerage & Taxes (Simulated):</span>
@@ -665,7 +658,7 @@
                             </div>
                             <div class="order-calc__row order-calc__row--bold">
                                 <span>Margin Required:</span>
-                                <span id="calcMarginReq" style="font-family:var(--ff-mono); color:var(--c-accent);">₹28,904.00</span>
+                                <span id="calcMarginReq" style="font-family:var(--ff-mono); color:var(--c-accent);">₹0.00</span>
                             </div>
                         </div>
 
@@ -693,10 +686,10 @@
                             <canvas id="equityChartCanvas" style="width:100%; height:100%;"></canvas>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; padding-top:14px; border-top:1px solid var(--c-border); font-size:12px; color:var(--c-text-secondary); margin-top:10px;">
-                            <span>Initial Capital: <strong style="color:var(--c-text-primary);">₹10,00,000</strong></span>
-                            <span>Max Drawdown: <strong class="positive">-1.2%</strong></span>
-                            <span>Profit Factor: <strong class="positive">2.84</strong></span>
-                            <span>Win Rate: <strong class="positive">75%</strong></span>
+                            <span>Initial Capital: <strong style="color:var(--c-text-primary);" id="chartInitialCapital">₹10,00,000</strong></span>
+                            <span>Max Drawdown: <strong id="chartMaxDrawdown">—</strong></span>
+                            <span>Profit Factor: <strong id="chartProfitFactor">—</strong></span>
+                            <span>Win Rate: <strong id="chartWinRate">—</strong></span>
                         </div>
                     </div>
                 </div>
@@ -705,13 +698,13 @@
                 <div class="trading-tabs-wrap fade-in stagger-3">
                     <div class="trading-tabs-header">
                         <div class="tab-btn-group">
-                            <button class="t-tab active" data-tab="holdings">Holdings & Positions (<span id="countPositions">2</span>)</button>
-                            <button class="t-tab" data-tab="orders">Order Book (<span id="countOrders">4</span>)</button>
+                            <button class="t-tab active" data-tab="holdings">Holdings & Positions (<span id="countPositions">0</span>)</button>
+                            <button class="t-tab" data-tab="orders">Order Book (<span id="countOrders">0</span>)</button>
                             <button class="t-tab" data-tab="watchlist">Market Watchlist</button>
                             <button class="t-tab" data-tab="analytics">Performance Analytics</button>
                         </div>
                         <div>
-                            <button class="btn btn--outline btn--sm" id="btnRefreshPrices">⚡ Simulate Live Tick</button>
+                            <button class="btn btn--outline btn--sm" id="btnRefreshPrices">⟳ Refresh Live Prices</button>
                         </div>
                     </div>
 
@@ -782,23 +775,23 @@
                         <div class="analytics-grid">
                             <div class="stat-box">
                                 <div class="stat-box__title">Win / Loss Ratio</div>
-                                <div class="stat-box__num positive">3 : 1 (75%)</div>
-                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">3 profitable trades, 1 loss trade</p>
+                                <div class="stat-box__num" id="analyticsWinLoss">—</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;" id="analyticsWinLossSub">No closed trades yet</p>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-box__title">Best Trade</div>
-                                <div class="stat-box__num positive">+₹14,200</div>
-                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">RELIANCE (+4.91% return)</p>
+                                <div class="stat-box__num" id="analyticsBestTrade">—</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;" id="analyticsBestTradeSub">No closed trades yet</p>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-box__title">Max Single Loss</div>
-                                <div class="stat-box__num negative">-₹2,100</div>
-                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">ITC intraday stop-loss hit</p>
+                                <div class="stat-box__num" id="analyticsMaxLoss">—</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;" id="analyticsMaxLossSub">No closed trades yet</p>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-box__title">Average Return / Trade</div>
-                                <div class="stat-box__num" style="color:var(--c-accent);">+₹4,620</div>
-                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;">Consistent risk-to-reward ratio 1:2.5</p>
+                                <div class="stat-box__num" id="analyticsAvgTrade">—</div>
+                                <p style="font-size:12px; color:var(--c-text-secondary); margin-top:4px;" id="analyticsAvgTradeSub">Based on executed sell orders</p>
                             </div>
                         </div>
                     </div>
@@ -814,192 +807,374 @@
     <script src="dashboard.js"></script>
     <script>
         // =============================================
-        // MOCK TRADING ENGINE LOGIC
+        // MOCK TRADING ENGINE — backend-backed, verified data only
         // =============================================
+        const INITIAL_CAPITAL = 1000000;
+        const STORAGE_KEY = 'investors_eye_mock_portfolio_v2';
 
-        const STOCK_CATALOG = {
-            'RELIANCE': { name: 'Reliance Industries Ltd.', price: 2890.40, change: 1.22, high: 2910.00, low: 2860.10 },
-            'TCS': { name: 'Tata Consultancy Services', price: 3940.15, change: 0.85, high: 3965.00, low: 3910.00 },
-            'HDFCBANK': { name: 'HDFC Bank Ltd.', price: 1485.60, change: -0.45, high: 1498.00, low: 1475.20 },
-            'INFY': { name: 'Infosys Ltd.', price: 1520.30, change: 1.64, high: 1535.00, low: 1502.00 },
-            'ICICIBANK': { name: 'ICICI Bank Ltd.', price: 1090.25, change: 0.38, high: 1098.50, low: 1082.00 },
-            'TATAMOTORS': { name: 'Tata Motors Ltd.', price: 965.80, change: 2.15, high: 978.00, low: 950.00 },
-            'ITC': { name: 'ITC Limited', price: 428.50, change: -0.28, high: 432.00, low: 425.50 },
-            'BTCINR': { name: 'Bitcoin (Crypto)', price: 5560000.00, change: 3.42, high: 5620000.00, low: 5410000.00 }
-        };
+        let STOCK_CATALOG = {};
+        let portfolio = loadPortfolioCache();
+        let activeSide = 'BUY';
 
-        const STORAGE_KEY = 'investors_eye_mock_portfolio_v1';
+        const el = id => document.getElementById(id);
+        const stockSelect = el('stockSelect');
+        const quoteSymbol = el('quoteSymbol');
+        const quoteName = el('quoteName');
+        const quoteLtp = el('quoteLtp');
+        const quoteChange = el('quoteChange');
+        const tradePrice = el('tradePrice');
+        const tradeQty = el('tradeQty');
+        const productType = el('productType');
+        const orderType = el('orderType');
+        const calcOrderValue = el('calcOrderValue');
+        const calcMarginReq = el('calcMarginReq');
+        const btnSubmitOrder = el('btnSubmitOrder');
+        const btnSideBuy = el('btnSideBuy');
+        const btnSideSell = el('btnSideSell');
 
-        function getDefaultPortfolio() {
+        const api = () => window.apiClient;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
+
+        function fmtMoney(value, prefix = '₹', decimals = 2) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return '—';
+            return prefix + n.toLocaleString('en-IN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function fmtCompact(value, prefix = '₹') {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return '—';
+            return prefix + Math.round(n).toLocaleString('en-IN');
+        }
+
+        function itemPrefix(item) {
+            return item?.prefix ?? '₹';
+        }
+
+        function quotePrice(symbol) {
+            const p = Number(STOCK_CATALOG[symbol]?.price);
+            return Number.isFinite(p) ? p : null;
+        }
+
+        function emptyPortfolio() {
             return {
-                cash: 845200,
-                initialCapital: 1000000,
-                realizedPnl: 6200,
-                positions: [
-                    { symbol: 'RELIANCE', product: 'CNC', qty: 30, buyPrice: 2810.00 },
-                    { symbol: 'INFY', product: 'MIS', qty: 50, buyPrice: 1495.00 }
-                ],
-                orders: [
-                    { time: '10:15 AM', side: 'BUY', symbol: 'RELIANCE', product: 'CNC', qty: 30, price: 2810.00, status: 'EXECUTED' },
-                    { time: '11:42 AM', side: 'BUY', symbol: 'INFY', product: 'MIS', qty: 50, price: 1495.00, status: 'EXECUTED' },
-                    { time: '01:20 PM', side: 'BUY', symbol: 'ITC', product: 'MIS', qty: 200, price: 435.00, status: 'EXECUTED' },
-                    { time: '02:05 PM', side: 'SELL', symbol: 'ITC', product: 'MIS', qty: 200, price: 439.00, status: 'EXECUTED' }
-                ]
+                cash: INITIAL_CAPITAL,
+                initialCapital: INITIAL_CAPITAL,
+                realizedPnl: 0,
+                positions: [],
+                orders: [],
+                equityHistory: [{ t: Date.now(), value: INITIAL_CAPITAL }]
             };
         }
 
-        let portfolio = loadPortfolio();
-
-        function loadPortfolio() {
+        function loadPortfolioCache() {
             try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) return JSON.parse(saved);
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return emptyPortfolio();
+                const p = JSON.parse(raw);
+                if (!p || !Array.isArray(p.positions) || !Array.isArray(p.orders)) return emptyPortfolio();
+                return {
+                    cash: Number.isFinite(Number(p.cash)) ? Number(p.cash) : INITIAL_CAPITAL,
+                    initialCapital: INITIAL_CAPITAL,
+                    realizedPnl: Number.isFinite(Number(p.realizedPnl)) ? Number(p.realizedPnl) : 0,
+                    positions: p.positions.map(x => ({
+                        symbol: String(x.symbol || '').toUpperCase(),
+                        product: String(x.product || 'CNC').toUpperCase(),
+                        qty: Math.max(0, Number(x.qty) || 0),
+                        buyPrice: Math.max(0, Number(x.buyPrice) || 0)
+                    })).filter(x => x.symbol && x.qty > 0),
+                    orders: p.orders.map(x => ({
+                        time: String(x.time || ''),
+                        side: String(x.side || '').toUpperCase(),
+                        symbol: String(x.symbol || '').toUpperCase(),
+                        product: String(x.product || 'CNC').toUpperCase(),
+                        qty: Number(x.qty) || 0,
+                        price: Number(x.price) || 0,
+                        status: String(x.status || 'EXECUTED'),
+                        pnl: Number.isFinite(Number(x.pnl)) ? Number(x.pnl) : null
+                    })),
+                    equityHistory: (Array.isArray(p.equityHistory) ? p.equityHistory : [])
+                        .map(h => ({ t: Number(h.t) || Date.now(), value: Number(h.value) || INITIAL_CAPITAL }))
+                        .slice(-240)
+                };
             } catch (e) {
-                console.error(e);
+                console.warn('Paper portfolio cache could not be read:', e);
+                return emptyPortfolio();
             }
-            return getDefaultPortfolio();
         }
 
-        function savePortfolio() {
+        function savePortfolioCache() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio));
             } catch (e) {
-                console.error(e);
+                console.warn('Paper portfolio cache could not be saved:', e);
             }
         }
 
-        let activeSide = 'BUY';
+        function currentEquity() {
+            let unrealized = 0;
+            let marginUsed = 0;
+            (portfolio.positions || []).forEach(p => {
+                const ltp = quotePrice(p.symbol) ?? p.buyPrice;
+                const cost = p.buyPrice * p.qty;
+                unrealized += (ltp - p.buyPrice) * p.qty;
+                marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
+            });
+            return portfolio.cash + marginUsed + unrealized;
+        }
 
-        // DOM elements
-        const stockSelect = document.getElementById('stockSelect');
-        const quoteSymbol = document.getElementById('quoteSymbol');
-        const quoteName = document.getElementById('quoteName');
-        const quoteLtp = document.getElementById('quoteLtp');
-        const quoteChange = document.getElementById('quoteChange');
-        const tradePrice = document.getElementById('tradePrice');
-        const tradeQty = document.getElementById('tradeQty');
-        const productType = document.getElementById('productType');
-        const orderType = document.getElementById('orderType');
-        const calcOrderValue = document.getElementById('calcOrderValue');
-        const calcMarginReq = document.getElementById('calcMarginReq');
-        const btnSubmitOrder = document.getElementById('btnSubmitOrder');
+        function appendEquityPoint() {
+            const value = Math.round(currentEquity() * 100) / 100;
+            const history = Array.isArray(portfolio.equityHistory) ? portfolio.equityHistory : [];
+            const last = history[history.length - 1];
+            if (!last || Math.abs(last.value - value) > 0.01 || Date.now() - last.t > 60000) {
+                history.push({ t: Date.now(), value });
+                if (history.length > 240) history.splice(0, history.length - 240);
+            }
+            portfolio.equityHistory = history;
+        }
 
-        // Side toggle
-        const btnSideBuy = document.getElementById('btnSideBuy');
-        const btnSideSell = document.getElementById('btnSideSell');
+        function applyBackendPortfolio(data) {
+            const history = Array.isArray(portfolio.equityHistory) ? portfolio.equityHistory : [];
+            portfolio = {
+                cash: Number.isFinite(Number(data.cash_balance)) ? Number(data.cash_balance) : INITIAL_CAPITAL,
+                initialCapital: INITIAL_CAPITAL,
+                realizedPnl: Number.isFinite(Number(data.realized_pnl)) ? Number(data.realized_pnl) : 0,
+                positions: (Array.isArray(data.positions) ? data.positions : []).map(p => ({
+                    symbol: String(p.symbol || '').toUpperCase(),
+                    product: String(p.product || 'CNC').toUpperCase(),
+                    qty: Math.max(0, Number(p.qty) || 0),
+                    buyPrice: Math.max(0, Number(p.avg_price) || 0)
+                })).filter(p => p.symbol && p.qty > 0),
+                orders: (Array.isArray(data.orders) ? data.orders : []).map(o => ({
+                    time: String(o.time || ''),
+                    side: String(o.side || '').toUpperCase(),
+                    symbol: String(o.symbol || '').toUpperCase(),
+                    product: String(o.product || 'CNC').toUpperCase(),
+                    qty: Number(o.qty) || 0,
+                    price: Number(o.price) || 0,
+                    status: String(o.status || 'EXECUTED'),
+                    pnl: o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? Number(o.pnl) : null
+                })),
+                equityHistory: history
+            };
+            appendEquityPoint();
+            savePortfolioCache();
+        }
 
-        btnSideBuy.addEventListener('click', () => setTradeSide('BUY'));
-        btnSideSell.addEventListener('click', () => setTradeSide('SELL'));
-
-        function setTradeSide(side) {
-            activeSide = side;
-            if (side === 'BUY') {
-                btnSideBuy.className = 'trade-side-btn active-buy';
-                btnSideSell.className = 'trade-side-btn';
-                btnSubmitOrder.className = 'btn-order-submit btn-buy';
-                btnSubmitOrder.innerHTML = '<span>Execute BUY Order</span>';
-            } else {
-                btnSideBuy.className = 'trade-side-btn';
-                btnSideSell.className = 'trade-side-btn active-sell';
-                btnSubmitOrder.className = 'btn-order-submit btn-sell';
-                btnSubmitOrder.innerHTML = '<span>Execute SELL Order</span>';
+        async function syncPortfolioFromBackend() {
+            if (!api()) return false;
+            try {
+                const data = await api().getPaperPortfolioStrict();
+                if (!data) return false;
+                applyBackendPortfolio(data);
+                return true;
+            } catch (e) {
+                console.warn('Paper portfolio backend unavailable, using local cache:', e.message);
+                return false;
             }
         }
 
-        window.setQty = function(val) {
-            tradeQty.value = parseInt(tradeQty.value || 0) + val;
-            updateCalculations();
-        };
+        function stockItem(s) {
+            return {
+                name: s.name || s.symbol,
+                price: Number(s.price),
+                change: Number(s.change_pct),
+                high: Number(s.high_24h),
+                low: Number(s.low_24h),
+                source: s.api_source || 'Verified feed',
+                prefix: '₹',
+                kind: 'EQUITY'
+            };
+        }
 
-        function updateQuote() {
+        function cryptoItem(s) {
+            const isUsdt = String(s.symbol || '').endsWith('USDT');
+            return {
+                name: s.name || s.symbol,
+                price: Number(isUsdt ? s.price_usdt : s.price),
+                change: Number(s.change_pct),
+                high: Number(s.high_24h),
+                low: Number(s.low_24h),
+                source: s.api_source || 'Binance Spot API',
+                prefix: isUsdt ? '$' : '₹',
+                kind: 'CRYPTO'
+            };
+        }
+
+        function indexItem(s) {
+            return {
+                name: s.name,
+                price: Number(s.value),
+                change: Number(s.change_pct),
+                high: Number(s.value),
+                low: Number(s.value),
+                source: 'Verified index feed',
+                prefix: '',
+                kind: 'INDEX'
+            };
+        }
+
+        async function loadCatalog() {
+            if (!api()) return false;
+            try {
+                const [stocks, crypto, indices] = await Promise.all([
+                    api().getStocksCatalog(),
+                    api().getCryptoCatalog(),
+                    api().getIndices()
+                ]);
+                if (!Array.isArray(stocks) || !stocks.length) return false;
+
+                const previous = STOCK_CATALOG;
+                const next = {};
+                stocks.forEach(s => { if (s.symbol) next[String(s.symbol).toUpperCase()] = stockItem(s); });
+                (Array.isArray(crypto) ? crypto : []).forEach(s => {
+                    if (s.symbol) next[String(s.symbol).toUpperCase()] = cryptoItem(s);
+                });
+                (Array.isArray(indices) ? indices : []).forEach(s => {
+                    if (s.name) next[String(s.name).toUpperCase()] = indexItem(s);
+                });
+
+                const tracked = new Set();
+                portfolio.positions.forEach(p => tracked.add(p.symbol));
+                portfolio.orders.forEach(o => tracked.add(o.symbol));
+                tracked.forEach(sym => {
+                    if (!next[sym] && previous[sym]) next[sym] = previous[sym];
+                });
+
+                STOCK_CATALOG = next;
+                return true;
+            } catch (e) {
+                console.warn('Instrument catalogue load failed:', e.message);
+                return false;
+            }
+        }
+
+        async function ensureSymbol(symbol) {
+            const sym = String(symbol || '').toUpperCase().trim();
+            if (!sym) return null;
+            if (STOCK_CATALOG[sym]) return STOCK_CATALOG[sym];
+            if (!api()) return null;
+            try {
+                const q = await api().getQuote(sym);
+                if (!q || q.is_synthetic || !Number.isFinite(Number(q.price))) return null;
+                STOCK_CATALOG[sym] = {
+                    name: q.name || sym,
+                    price: Number(q.price),
+                    change: Number(q.change_pct),
+                    high: Number(q.high_24h),
+                    low: Number(q.low_24h),
+                    source: q.source || 'Verified feed',
+                    prefix: String(sym).endsWith('USDT') ? '$' : '₹',
+                    kind: 'EQUITY'
+                };
+                return STOCK_CATALOG[sym];
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function populateSelect(preferred) {
+            if (!stockSelect) return;
+            const keys = Object.keys(STOCK_CATALOG).sort((a, b) => a.localeCompare(b));
+            if (!keys.length) {
+                stockSelect.innerHTML = '<option value="">No verified instruments available</option>';
+                return;
+            }
+            let selected = preferred || stockSelect.value || 'RELIANCE';
+            if (!STOCK_CATALOG[selected]) selected = STOCK_CATALOG.RELIANCE ? 'RELIANCE' : keys[0];
+            stockSelect.innerHTML = keys.map(sym => {
+                const item = STOCK_CATALOG[sym];
+                const label = Number.isFinite(item.price)
+                    ? fmtMoney(item.price, itemPrefix(item))
+                    : '—';
+                return `<option value="${escapeHtml(sym)}">${escapeHtml(sym)} (${escapeHtml(label)})</option>`;
+            }).join('');
+            stockSelect.value = selected;
+        }
+
+        function renderQuote() {
+            if (!stockSelect) return;
             const sym = stockSelect.value;
             const item = STOCK_CATALOG[sym];
-            if (!item) return;
-
-            quoteSymbol.textContent = sym;
-            quoteName.textContent = item.name;
-            quoteLtp.textContent = '₹' + item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-            const isPos = item.change >= 0;
-            quoteChange.className = 'live-quote-change ' + (isPos ? 'positive' : 'negative');
-            quoteChange.textContent = `${isPos ? '+' : ''}${item.change.toFixed(2)}%`;
-
-            if (orderType.value === 'MARKET') {
-                tradePrice.value = item.price.toFixed(2);
-                tradePrice.readOnly = true;
+            quoteSymbol.textContent = sym || '—';
+            quoteName.textContent = item?.name || 'Select a verified instrument';
+            if (item && Number.isFinite(item.price)) {
+                quoteLtp.textContent = fmtMoney(item.price, itemPrefix(item));
+                const change = Number.isFinite(item.change) ? item.change : 0;
+                quoteChange.className = 'live-quote-change ' + (change >= 0 ? 'positive' : 'negative');
+                quoteChange.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+                if (orderType.value === 'MARKET') tradePrice.value = Number(item.price).toFixed(2);
             } else {
-                tradePrice.readOnly = false;
+                quoteLtp.textContent = '—';
+                quoteChange.className = 'live-quote-change';
+                quoteChange.textContent = 'Awaiting verified feed';
+                if (orderType.value === 'MARKET') tradePrice.value = '';
             }
             updateCalculations();
+        }
 
-            // Real live market price from Binance / NSE feed
-            if (window.apiClient) {
-                window.apiClient.getQuote(sym).then(liveQ => {
-                    if (liveQ && liveQ.price && stockSelect.value === sym) {
-                        item.price = liveQ.price;
-                        item.change = liveQ.change_pct;
-                        quoteLtp.textContent = '₹' + liveQ.price.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-                        const pos = liveQ.change >= 0;
-                        quoteChange.className = 'live-quote-change ' + (pos ? 'positive' : 'negative');
-                        quoteChange.textContent = `${pos ? '+' : ''}${liveQ.change_pct.toFixed(2)}%`;
-                        if (orderType.value === 'MARKET') {
-                            tradePrice.value = liveQ.price.toFixed(2);
-                        }
-                        updateCalculations();
-                    }
-                }).catch(() => {});
+        async function updateQuote() {
+            renderQuote();
+            const sym = stockSelect?.value;
+            if (!sym || !api()) return;
+            try {
+                const q = await api().getQuote(sym);
+                if (!q || q.is_synthetic || !Number.isFinite(Number(q.price)) || stockSelect.value !== sym) return;
+                const item = STOCK_CATALOG[sym] || { name: q.name || sym, prefix: sym.endsWith('USDT') ? '$' : '₹', kind: 'EQUITY' };
+                STOCK_CATALOG[sym] = {
+                    ...item,
+                    name: q.name || item.name,
+                    price: Number(q.price),
+                    change: Number(q.change_pct),
+                    high: Number(q.high_24h),
+                    low: Number(q.low_24h),
+                    source: q.source || item.source
+                };
+                renderQuote();
+                renderAll();
+            } catch (e) {
+                /* Strict quote failures are handled by the toast in refresh. */
             }
         }
 
         function updateCalculations() {
-            const qty = parseFloat(tradeQty.value) || 0;
-            const price = parseFloat(tradePrice.value) || 0;
+            const qty = Math.max(0, Number(tradeQty.value) || 0);
+            const price = Math.max(0, Number(tradePrice.value) || 0);
             const val = qty * price;
-            const isMis = productType.value === 'MIS';
-            const margin = isMis ? val / 5 : val;
-
-            calcOrderValue.textContent = '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            calcMarginReq.textContent = '₹' + margin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const margin = productType.value === 'MIS' ? val / 5 : val;
+            calcOrderValue.textContent = fmtMoney(val);
+            calcMarginReq.textContent = fmtMoney(margin);
         }
 
-        stockSelect.addEventListener('change', updateQuote);
-        tradeQty.addEventListener('input', updateCalculations);
-        tradePrice.addEventListener('input', updateCalculations);
-        productType.addEventListener('change', updateCalculations);
-        orderType.addEventListener('change', () => {
-            if (orderType.value === 'MARKET') {
-                const sym = stockSelect.value;
-                tradePrice.value = STOCK_CATALOG[sym].price.toFixed(2);
-                tradePrice.readOnly = true;
-                document.getElementById('priceHint').textContent = 'Executing at Market LTP';
-            } else {
-                tradePrice.readOnly = false;
-                document.getElementById('priceHint').textContent = 'Enter your custom limit price';
-            }
+        function setTradeSide(side) {
+            activeSide = side;
+            const buy = side === 'BUY';
+            btnSideBuy.className = 'trade-side-btn' + (buy ? ' active-buy' : '');
+            btnSideSell.className = 'trade-side-btn' + (!buy ? ' active-sell' : '');
+            btnSubmitOrder.className = 'btn-order-submit ' + (buy ? 'btn-buy' : 'btn-sell');
+            btnSubmitOrder.innerHTML = `<span>Execute ${side} Order</span>`;
+        }
+
+        window.setQty = function(val) {
+            tradeQty.value = Math.max(1, (Number(tradeQty.value) || 0) + val);
             updateCalculations();
-        });
+        };
 
-        // Submit Trade
-        btnSubmitOrder.addEventListener('click', () => {
-            const sym = stockSelect.value;
-            const stock = STOCK_CATALOG[sym];
-            const qty = parseInt(tradeQty.value) || 0;
-            const price = parseFloat(tradePrice.value) || stock.price;
-            const prod = productType.value;
+        function executeLocalOrder(sym, side, prod, qty, price) {
             const isMis = prod === 'MIS';
-            const orderVal = qty * price;
-            const marginRequired = isMis ? orderVal / 5 : orderVal;
+            const marginRequired = isMis ? (qty * price) / 5 : qty * price;
+            let pnl = null;
 
-            if (qty <= 0) {
-                showToast('Please enter a valid quantity', 'error');
-                return;
-            }
-
-            if (activeSide === 'BUY') {
-                if (portfolio.cash < marginRequired) {
-                    showToast(`Insufficient cash! Required: ₹${marginRequired.toLocaleString('en-IN')}, Available: ₹${portfolio.cash.toLocaleString('en-IN')}`, 'error');
-                    return;
-                }
-
+            if (side === 'BUY') {
                 portfolio.cash -= marginRequired;
                 const existing = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
                 if (existing) {
@@ -1009,278 +1184,524 @@
                 } else {
                     portfolio.positions.push({ symbol: sym, product: prod, qty, buyPrice: price });
                 }
-
-                showToast(`BUY Order Executed: ${qty}x ${sym} @ ₹${price.toFixed(2)}`, 'success');
             } else {
-                // SELL
-                const existingIdx = portfolio.positions.findIndex(p => p.symbol === sym && p.product === prod);
-                if (existingIdx === -1) {
-                    showToast(`No open ${prod} position in ${sym} to sell!`, 'error');
-                    return;
-                }
-                const pos = portfolio.positions[existingIdx];
-                if (pos.qty < qty) {
-                    showToast(`Cannot sell ${qty} units. You only hold ${pos.qty} units of ${sym}`, 'error');
-                    return;
-                }
-
-                const profit = (price - pos.buyPrice) * qty;
-                portfolio.realizedPnl += profit;
-                const marginToReturn = isMis ? (pos.buyPrice * qty) / 5 : (pos.buyPrice * qty);
-                portfolio.cash += marginToReturn + profit;
-
+                const pos = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
+                pnl = Math.round((price - pos.buyPrice) * qty * 100) / 100;
+                portfolio.realizedPnl += pnl;
+                const marginToReturn = isMis ? (pos.buyPrice * qty) / 5 : pos.buyPrice * qty;
+                portfolio.cash += marginToReturn + pnl;
                 pos.qty -= qty;
-                if (pos.qty === 0) {
-                    portfolio.positions.splice(existingIdx, 1);
+                if (pos.qty <= 0) {
+                    portfolio.positions = portfolio.positions.filter(p => p !== pos);
                 }
-
-                const profitStr = profit >= 0 ? `+₹${profit.toFixed(2)}` : `-₹${Math.abs(profit).toFixed(2)}`;
-                showToast(`SELL Order Executed: ${qty}x ${sym} @ ₹${price.toFixed(2)} (P&L: ${profitStr})`, profit >= 0 ? 'success' : 'error');
             }
 
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             portfolio.orders.unshift({
-                time: timeStr,
-                side: activeSide,
-                symbol: sym,
-                product: prod,
-                qty,
-                price,
-                status: 'EXECUTED'
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                side, symbol: sym, product: prod, qty, price, status: 'EXECUTED', pnl
             });
+            appendEquityPoint();
+            savePortfolioCache();
+            return pnl;
+        }
 
-            savePortfolio();
-            renderAll();
+        btnSideBuy.addEventListener('click', () => setTradeSide('BUY'));
+        btnSideSell.addEventListener('click', () => setTradeSide('SELL'));
+        stockSelect.addEventListener('change', () => { renderQuote(); updateQuote(); });
+        tradeQty.addEventListener('input', updateCalculations);
+        tradePrice.addEventListener('input', updateCalculations);
+        productType.addEventListener('change', updateCalculations);
+        orderType.addEventListener('change', () => {
+            const item = STOCK_CATALOG[stockSelect.value];
+            if (orderType.value === 'MARKET') {
+                tradePrice.value = item && Number.isFinite(item.price) ? Number(item.price).toFixed(2) : '';
+                tradePrice.readOnly = true;
+                el('priceHint').textContent = 'Executing at verified market LTP';
+            } else {
+                tradePrice.readOnly = false;
+                el('priceHint').textContent = 'Enter your custom limit price';
+            }
+            updateCalculations();
         });
 
-        // Square off position directly
-        window.squareOffPosition = function(index) {
+        btnSubmitOrder.addEventListener('click', async () => {
+            const sym = stockSelect.value;
+            const item = STOCK_CATALOG[sym];
+            if (!sym || !item || !Number.isFinite(Number(item.price))) {
+                showToast('Select a verified instrument first', 'error');
+                return;
+            }
+            const qty = parseInt(tradeQty.value, 10) || 0;
+            const price = Number(tradePrice.value) || 0;
+            const prod = productType.value;
+            if (qty <= 0 || price <= 0) {
+                showToast('Enter a valid quantity and price', 'error');
+                return;
+            }
+            const marginRequired = prod === 'MIS' ? (qty * price) / 5 : qty * price;
+            if (activeSide === 'BUY' && portfolio.cash < marginRequired) {
+                showToast(`Insufficient cash. Required ${fmtMoney(marginRequired)}, available ${fmtMoney(portfolio.cash)}`, 'error');
+                return;
+            }
+            if (activeSide === 'SELL') {
+                const pos = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
+                if (!pos || pos.qty < qty) {
+                    showToast(`No open ${prod} position in ${sym} for ${qty} units`, 'error');
+                    return;
+                }
+            }
+
+            const order = { symbol: sym, side: activeSide, product: prod, order_type: 'LIMIT', qty, price };
+            let usedBackend = false;
+            let pnl = null;
+            if (api()) {
+                try {
+                    await api().placePaperOrderStrict(order);
+                    await syncPortfolioFromBackend();
+                    usedBackend = true;
+                    const logged = portfolio.orders.find(o => o.symbol === sym && o.product === prod && o.qty === qty && Math.abs(o.price - price) < 0.01);
+                    pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
+                } catch (e) {
+                    const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
+                    if (!offline) {
+                        showToast(`Order rejected: ${e.message}`, 'error');
+                        return;
+                    }
+                }
+            }
+            if (!usedBackend) {
+                pnl = executeLocalOrder(sym, activeSide, prod, qty, price);
+            }
+
+            renderAll();
+            const pnlText = Number.isFinite(pnl) ? ` (P&L: ${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})` : '';
+            showToast(`${activeSide} executed: ${qty} × ${sym} @ ${fmtMoney(price, itemPrefix(item))}${pnlText}`, 'success');
+        });
+
+        window.squareOffPosition = async function(index) {
             const pos = portfolio.positions[index];
             if (!pos) return;
-            const stock = STOCK_CATALOG[pos.symbol] || { price: pos.buyPrice };
-            const ltp = stock.price;
-            const profit = (ltp - pos.buyPrice) * pos.qty;
-            const isMis = pos.product === 'MIS';
-            const marginToReturn = isMis ? (pos.buyPrice * pos.qty) / 5 : (pos.buyPrice * pos.qty);
+            const ltp = quotePrice(pos.symbol) ?? pos.buyPrice;
+            let usedBackend = false;
+            let pnl = null;
 
-            portfolio.cash += marginToReturn + profit;
-            portfolio.realizedPnl += profit;
+            if (api()) {
+                try {
+                    await api().squareOffPaperStrict(pos.symbol, pos.product);
+                    await syncPortfolioFromBackend();
+                    usedBackend = true;
+                    const logged = portfolio.orders.find(o => o.symbol === pos.symbol && o.product === pos.product && o.status === 'SQUARED OFF');
+                    pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
+                } catch (e) {
+                    const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
+                    if (!offline) {
+                        showToast(`Square-off rejected: ${e.message}`, 'error');
+                        return;
+                    }
+                }
+            }
 
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            portfolio.orders.unshift({
-                time: timeStr,
-                side: 'SELL',
-                symbol: pos.symbol,
-                product: pos.product,
-                qty: pos.qty,
-                price: ltp,
-                status: 'SQUARED OFF'
-            });
+            if (!usedBackend) {
+                pnl = Math.round((ltp - pos.buyPrice) * pos.qty * 100) / 100;
+                portfolio.realizedPnl += pnl;
+                const marginToReturn = pos.product === 'MIS' ? (pos.buyPrice * pos.qty) / 5 : pos.buyPrice * pos.qty;
+                portfolio.cash += marginToReturn + pnl;
+                portfolio.orders.unshift({
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    side: 'SELL', symbol: pos.symbol, product: pos.product, qty: pos.qty,
+                    price: ltp, status: 'SQUARED OFF', pnl
+                });
+                portfolio.positions.splice(index, 1);
+                appendEquityPoint();
+                savePortfolioCache();
+            }
 
-            portfolio.positions.splice(index, 1);
-            savePortfolio();
             renderAll();
-            showToast(`Squared off ${pos.symbol} (${profit >= 0 ? '+' : ''}₹${profit.toFixed(2)})`, profit >= 0 ? 'success' : 'error');
+            showToast(`Squared off ${pos.symbol} (${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})`, pnl >= 0 ? 'success' : 'error');
         };
 
-        // Render functions
+        function renderSummary() {
+            let unrealized = 0;
+            let marginUsed = 0;
+            let costBasis = 0;
+            portfolio.positions.forEach(p => {
+                const ltp = quotePrice(p.symbol) ?? p.buyPrice;
+                const cost = p.buyPrice * p.qty;
+                unrealized += (ltp - p.buyPrice) * p.qty;
+                marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
+                costBasis += cost;
+            });
+            const total = portfolio.cash + marginUsed + unrealized;
+            const change = total - portfolio.initialCapital;
+            const changePct = portfolio.initialCapital ? (change / portfolio.initialCapital) * 100 : 0;
+
+            el('dispTotalVal').textContent = fmtCompact(total);
+            const totalChg = el('dispTotalChange');
+            totalChg.className = 'portfolio-card__sub ' + (change >= 0 ? 'positive' : 'negative');
+            totalChg.innerHTML = `<span>${change >= 0 ? '▲ +' : '▼ -'}${fmtCompact(Math.abs(change))} (${changePct.toFixed(2)}%)</span>`;
+            el('dispCashVal').textContent = fmtCompact(portfolio.cash);
+            el('dispMarginUsed').textContent = fmtCompact(marginUsed);
+
+            const unpnl = el('dispUnrealizedPnl');
+            unpnl.className = 'portfolio-card__value ' + (unrealized >= 0 ? 'positive' : 'negative');
+            unpnl.textContent = `${unrealized >= 0 ? '+' : '-'}${fmtCompact(Math.abs(unrealized))}`;
+            const unpnlPct = el('dispUnrealizedPnlPct');
+            unpnlPct.className = 'portfolio-card__sub ' + (unrealized >= 0 ? 'positive' : 'negative');
+            unpnlPct.textContent = `${costBasis ? ((unrealized / costBasis) * 100).toFixed(2) : '0.00'}% on holdings`;
+
+            const realized = el('dispRealizedPnl');
+            realized.className = 'portfolio-card__value ' + (portfolio.realizedPnl >= 0 ? 'positive' : 'negative');
+            realized.textContent = `${portfolio.realizedPnl >= 0 ? '+' : '-'}${fmtCompact(Math.abs(portfolio.realizedPnl))}`;
+            el('dispTotalTradesCount').textContent = `${portfolio.orders.length} Placed`;
+            el('countPositions').textContent = portfolio.positions.length;
+            el('countOrders').textContent = portfolio.orders.length;
+        }
+
+        function renderHoldings() {
+            const tbody = el('holdingsTableBody');
+            if (!tbody) return;
+            if (!portfolio.positions.length) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--c-text-tertiary);">No active positions. Select a verified instrument to start trading.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = portfolio.positions.map((p, idx) => {
+                const item = STOCK_CATALOG[p.symbol];
+                const ltp = quotePrice(p.symbol) ?? p.buyPrice;
+                const curVal = ltp * p.qty;
+                const pnl = (ltp - p.buyPrice) * p.qty;
+                const pnlPct = p.buyPrice ? ((ltp - p.buyPrice) / p.buyPrice) * 100 : 0;
+                const pos = pnl >= 0;
+                const prefix = itemPrefix(item);
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(p.symbol)}</strong><div style="font-size:11px; color:var(--c-text-tertiary);">${escapeHtml(item?.name || '')}</div></td>
+                        <td><span class="badge-type">${escapeHtml(p.product)}</span></td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;">${p.qty}</td>
+                        <td style="font-family:var(--ff-mono);">${fmtMoney(p.buyPrice, prefix)}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;">${fmtMoney(ltp, prefix)}</td>
+                        <td style="font-family:var(--ff-mono);">${fmtMoney(curVal, prefix)}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${pos ? 'positive' : 'negative'}">${pos ? '+' : ''}${fmtMoney(pnl, prefix)}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${pos ? 'positive' : 'negative'}">${pos ? '+' : ''}${pnlPct.toFixed(2)}%</td>
+                        <td><button class="btn-action-sm" onclick="squareOffPosition(${idx})">Square Off</button></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function renderOrders() {
+            const tbody = el('ordersTableBody');
+            if (!tbody) return;
+            if (!portfolio.orders.length) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--c-text-tertiary);">No orders placed yet.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = portfolio.orders.slice(0, 20).map(o => {
+                const isBuy = o.side === 'BUY';
+                const item = STOCK_CATALOG[o.symbol];
+                return `
+                    <tr>
+                        <td style="color:var(--c-text-tertiary); font-size:12px;">${escapeHtml(o.time)}</td>
+                        <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${escapeHtml(o.side)}</span></td>
+                        <td><strong>${escapeHtml(o.symbol)}</strong></td>
+                        <td><span class="badge-type">${escapeHtml(o.product)}</span></td>
+                        <td style="font-family:var(--ff-mono);">${o.qty}</td>
+                        <td style="font-family:var(--ff-mono);">${fmtMoney(o.price, itemPrefix(item))}</td>
+                        <td style="font-family:var(--ff-mono);">${fmtMoney(o.qty * o.price, itemPrefix(item))}</td>
+                        <td><span style="font-size:11px; font-weight:700; color:var(--c-positive);">✓ ${escapeHtml(o.status)}</span>
+                            ${o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? `<div style="font-size:10px;" class="${Number(o.pnl) >= 0 ? 'positive' : 'negative'}">${Number(o.pnl) >= 0 ? '+' : ''}${fmtMoney(o.pnl, '₹')}</div>` : ''}
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function renderWatchlist() {
+            const tbody = el('watchlistTableBody');
+            if (!tbody) return;
+            const symbols = window.Watchlist ? window.Watchlist.get() : Object.keys(STOCK_CATALOG);
+            if (!symbols.length) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:var(--c-text-tertiary);">Your watchlist is empty. Add a verified symbol from the sidebar.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = symbols.map(sym => {
+                const q = window.Watchlist ? window.Watchlist.getQuote(sym) : null;
+                const local = STOCK_CATALOG[sym] || {};
+                const price = q && Number.isFinite(Number(q.price)) ? Number(q.price) : Number(local.price);
+                const change = q && Number.isFinite(Number(q.change_pct)) ? Number(q.change_pct) : Number(local.change);
+                const high = q && Number.isFinite(Number(q.high_24h)) ? Number(q.high_24h) : Number(local.high);
+                const low = q && Number.isFinite(Number(q.low_24h)) ? Number(q.low_24h) : Number(local.low);
+                const source = q?.source || local.source || 'awaiting feed';
+                const prefix = itemPrefix(local);
+                const pos = Number(change || 0) >= 0;
+                const fmt = v => fmtMoney(v, prefix);
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(sym)}</strong></td>
+                        <td style="color:var(--c-text-secondary);">${escapeHtml(local.name || q?.name || sym)}<div style="font-size:10px; color:var(--c-text-tertiary); margin-top:2px;">${escapeHtml(source)}</div></td>
+                        <td style="font-family:var(--ff-mono); font-weight:700;">${fmt(price)}</td>
+                        <td style="font-family:var(--ff-mono); font-weight:600;" class="${pos ? 'positive' : 'negative'}">${Number.isFinite(change) ? `${pos ? '+' : ''}${change.toFixed(2)}%` : '—'}</td>
+                        <td style="font-family:var(--ff-mono); font-size:11px; color:var(--c-text-tertiary);">H: ${fmt(high)} | L: ${fmt(low)}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                ${STOCK_CATALOG[sym]
+                                    ? `<button class="btn btn--outline btn--sm" style="padding:4px 8px; font-size:11px;" onclick="quickSelectStock('${escapeHtml(sym)}')">Trade</button>`
+                                    : `<a href="predictions.html?symbol=${encodeURIComponent(sym)}" class="btn btn--outline btn--sm" style="padding:4px 8px; font-size:11px; text-decoration:none;">Predict</a>`}
+                                <button class="btn btn--secondary btn--sm" data-watchlist-remove="${escapeHtml(sym)}" style="padding:4px 8px; font-size:11px; color:var(--c-negative);">✕</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function renderAnalytics() {
+            const closed = portfolio.orders.filter(o => o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)));
+            const wins = closed.filter(o => Number(o.pnl) > 0);
+            const losses = closed.filter(o => Number(o.pnl) < 0);
+            const set = (id, text, cls) => {
+                const node = el(id);
+                if (!node) return;
+                node.textContent = text;
+                node.className = 'stat-box__num' + (cls ? ' ' + cls : '');
+            };
+
+            if (!closed.length) {
+                set('analyticsWinLoss', '—', '');
+                set('analyticsBestTrade', '—', '');
+                set('analyticsMaxLoss', '—', '');
+                set('analyticsAvgTrade', '—', '');
+                ['analyticsWinLossSub', 'analyticsBestTradeSub', 'analyticsMaxLossSub', 'analyticsAvgTradeSub'].forEach(id => {
+                    const node = el(id);
+                    if (node) node.textContent = 'No closed trades yet';
+                });
+                const wr = el('chartWinRate');
+                if (wr) wr.textContent = '—';
+                const pf = el('chartProfitFactor');
+                if (pf) pf.textContent = '—';
+            } else {
+                const grossProfit = wins.reduce((a, o) => a + Number(o.pnl), 0);
+                const grossLoss = Math.abs(losses.reduce((a, o) => a + Number(o.pnl), 0));
+                const decided = wins.length + losses.length;
+                const winRate = decided ? (wins.length / decided) * 100 : null;
+                const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : null);
+                const best = Math.max(...closed.map(o => Number(o.pnl)));
+                const worst = Math.min(...closed.map(o => Number(o.pnl)));
+                const avg = closed.reduce((a, o) => a + Number(o.pnl), 0) / closed.length;
+
+                set('analyticsWinLoss', winRate === null ? '—' : `${wins.length} : ${losses.length} (${winRate.toFixed(0)}%)`, winRate === null ? '' : (winRate >= 50 ? 'positive' : 'negative'));
+                const wlSub = el('analyticsWinLossSub');
+                if (wlSub) wlSub.textContent = `${closed.length} trades with realised P&L`;
+                set('analyticsBestTrade', `${best >= 0 ? '+' : ''}${fmtMoney(best)}`, best >= 0 ? 'positive' : 'negative');
+                const bestSub = el('analyticsBestTradeSub');
+                if (bestSub) bestSub.textContent = 'Best realised trade';
+                set('analyticsMaxLoss', losses.length ? fmtMoney(worst) : '—', losses.length ? (worst < 0 ? 'negative' : 'positive') : '');
+                const worstSub = el('analyticsMaxLossSub');
+                if (worstSub) worstSub.textContent = 'Largest realised loss';
+                set('analyticsAvgTrade', `${avg >= 0 ? '+' : ''}${fmtMoney(avg)}`, avg >= 0 ? 'positive' : 'negative');
+                const avgSub = el('analyticsAvgTradeSub');
+                if (avgSub) avgSub.textContent = 'Average realised P&L per closed trade';
+
+                const wr = el('chartWinRate');
+                if (wr) {
+                    wr.textContent = winRate === null ? '—' : `${winRate.toFixed(0)}%`;
+                    wr.className = winRate === null ? '' : (winRate >= 50 ? 'positive' : 'negative');
+                }
+                const pf = el('chartProfitFactor');
+                if (pf) {
+                    pf.textContent = profitFactor === null ? '—' : (Number.isFinite(profitFactor) ? profitFactor.toFixed(2) : '∞');
+                    pf.className = profitFactor === null ? '' : (profitFactor >= 1 ? 'positive' : 'negative');
+                }
+            }
+
+            let peak = -Infinity;
+            let maxDd = 0;
+            (portfolio.equityHistory || []).forEach(h => {
+                const v = Number(h.value);
+                if (!Number.isFinite(v)) return;
+                peak = Math.max(peak, v);
+                if (peak > 0) maxDd = Math.min(maxDd, ((v - peak) / peak) * 100);
+            });
+            const dd = el('chartMaxDrawdown');
+            if (dd) {
+                dd.textContent = `${maxDd.toFixed(2)}%`;
+                dd.className = maxDd >= -1 ? 'positive' : 'negative';
+            }
+            const ic = el('chartInitialCapital');
+            if (ic) ic.textContent = fmtCompact(portfolio.initialCapital);
+        }
+
         function renderAll() {
             renderSummary();
             renderHoldings();
             renderOrders();
             renderWatchlist();
+            renderAnalytics();
+            drawEquityChart();
         }
 
-        function renderSummary() {
-            let holdingsVal = 0;
-            let unrealized = 0;
-            let marginUsed = 0;
+        function drawEquityLine(canvasId, values, labels, color) {
+            const canvas = el(canvasId);
+            if (!canvas || !canvas.getContext) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.clientWidth || canvas.offsetWidth || 600;
+            const h = canvas.clientHeight || canvas.offsetHeight || 280;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
 
-            portfolio.positions.forEach(p => {
-                const stock = STOCK_CATALOG[p.symbol] || { price: p.buyPrice };
-                const curVal = stock.price * p.qty;
-                const costVal = p.buyPrice * p.qty;
-                holdingsVal += curVal;
-                unrealized += (curVal - costVal);
-                marginUsed += (p.product === 'MIS' ? costVal / 5 : costVal);
+            const clean = values.map(Number).filter(Number.isFinite);
+            if (!clean.length) return;
+            const pad = { top: 22, right: 20, bottom: 38, left: 84 };
+            const cw = Math.max(10, w - pad.left - pad.right);
+            const ch = Math.max(10, h - pad.top - pad.bottom);
+            let min = Math.min(...clean);
+            let max = Math.max(...clean);
+            const cushion = Math.max((max - min) * 0.2, Math.max(1, max * 0.001));
+            min -= cushion;
+            max += cushion;
+            const range = max - min || 1;
+            const gx = i => pad.left + (clean.length === 1 ? cw / 2 : (i / (clean.length - 1)) * cw);
+            const gy = v => pad.top + ch - ((v - min) / range) * ch;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            for (let i = 0; i <= 3; i++) {
+                const y = pad.top + (i / 3) * ch;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(w - pad.right, y);
+                ctx.stroke();
+                ctx.fillStyle = '#64748b';
+                ctx.font = '10px JetBrains Mono';
+                ctx.textAlign = 'right';
+                ctx.fillText(Math.round(max - (i / 3) * range).toLocaleString('en-IN'), pad.left - 8, y + 4);
+            }
+
+            ctx.beginPath();
+            clean.forEach((v, i) => { if (i === 0) ctx.moveTo(gx(i), gy(v)); else ctx.lineTo(gx(i), gy(v)); });
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            clean.forEach((v, i) => {
+                ctx.beginPath();
+                ctx.arc(gx(i), gy(v), clean.length === 1 ? 5 : 3, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                if (clean.length <= 12 || i === 0 || i === clean.length - 1) {
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '10px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(labels[i] || '', gx(i), pad.top + ch + 18);
+                }
             });
-
-            const totalPortfolioVal = portfolio.cash + marginUsed + unrealized;
-            const totalChange = totalPortfolioVal - portfolio.initialCapital;
-            const totalChangePct = (totalChange / portfolio.initialCapital) * 100;
-
-            document.getElementById('dispTotalVal').textContent = '₹' + Math.round(totalPortfolioVal).toLocaleString('en-IN');
-            const totalChgEl = document.getElementById('dispTotalChange');
-            totalChgEl.className = 'portfolio-card__sub ' + (totalChange >= 0 ? 'positive' : 'negative');
-            totalChgEl.textContent = `${totalChange >= 0 ? '▲ +' : '▼ -'}₹${Math.abs(Math.round(totalChange)).toLocaleString('en-IN')} (${totalChangePct.toFixed(2)}%)`;
-
-            document.getElementById('dispCashVal').textContent = '₹' + Math.round(portfolio.cash).toLocaleString('en-IN');
-            document.getElementById('dispMarginUsed').textContent = '₹' + Math.round(marginUsed).toLocaleString('en-IN');
-
-            const unpnlEl = document.getElementById('dispUnrealizedPnl');
-            unpnlEl.className = 'portfolio-card__value ' + (unrealized >= 0 ? 'positive' : 'negative');
-            unpnlEl.textContent = `${unrealized >= 0 ? '+' : '-'}₹${Math.abs(Math.round(unrealized)).toLocaleString('en-IN')}`;
-
-            const realPnlEl = document.getElementById('dispRealizedPnl');
-            realPnlEl.className = 'portfolio-card__value ' + (portfolio.realizedPnl >= 0 ? 'positive' : 'negative');
-            realPnlEl.textContent = `${portfolio.realizedPnl >= 0 ? '+' : '-'}₹${Math.abs(Math.round(portfolio.realizedPnl)).toLocaleString('en-IN')}`;
-
-            document.getElementById('dispTotalTradesCount').textContent = `${portfolio.orders.length} Placed`;
-            document.getElementById('countPositions').textContent = portfolio.positions.length;
-            document.getElementById('countOrders').textContent = portfolio.orders.length;
         }
 
-        function renderHoldings() {
-            const tbody = document.getElementById('holdingsTableBody');
-            if (portfolio.positions.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--c-text-tertiary);">No active positions. Select an instrument on the left to start trading!</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = portfolio.positions.map((p, idx) => {
-                const stock = STOCK_CATALOG[p.symbol] || { price: p.buyPrice };
-                const ltp = stock.price;
-                const curVal = ltp * p.qty;
-                const pnl = (ltp - p.buyPrice) * p.qty;
-                const pnlPct = ((ltp - p.buyPrice) / p.buyPrice) * 100;
-                const isPos = pnl >= 0;
-
-                return `
-                    <tr>
-                        <td>
-                            <strong>${p.symbol}</strong>
-                            <div style="font-size:11px; color:var(--c-text-tertiary);">${STOCK_CATALOG[p.symbol]?.name || ''}</div>
-                        </td>
-                        <td><span class="badge-type">${p.product}</span></td>
-                        <td style="font-family:var(--ff-mono); font-weight:600;">${p.qty}</td>
-                        <td style="font-family:var(--ff-mono);">₹${p.buyPrice.toFixed(2)}</td>
-                        <td style="font-family:var(--ff-mono); font-weight:600;">₹${ltp.toFixed(2)}</td>
-                        <td style="font-family:var(--ff-mono);">₹${curVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${isPos ? 'positive' : 'negative'}">
-                            ${isPos ? '+' : ''}₹${pnl.toFixed(2)}
-                        </td>
-                        <td style="font-family:var(--ff-mono); font-weight:700;" class="${isPos ? 'positive' : 'negative'}">
-                            ${isPos ? '+' : ''}${pnlPct.toFixed(2)}%
-                        </td>
-                        <td>
-                            <button class="btn-action-sm" onclick="squareOffPosition(${idx})">Square Off</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+        function activeTimeframe() {
+            return document.querySelector('#chartTfBtns .tf-btn.active')?.dataset.tf || '1M';
         }
 
-        function renderOrders() {
-            const tbody = document.getElementById('ordersTableBody');
-            if (portfolio.orders.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--c-text-tertiary);">No orders placed yet.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = portfolio.orders.slice(0, 15).map(o => {
-                const isBuy = o.side === 'BUY';
-                const totalVal = o.qty * o.price;
-                return `
-                    <tr>
-                        <td style="color:var(--c-text-tertiary); font-size:12px;">${o.time}</td>
-                        <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${o.side}</span></td>
-                        <td><strong>${o.symbol}</strong></td>
-                        <td><span class="badge-type">${o.product}</span></td>
-                        <td style="font-family:var(--ff-mono);">${o.qty}</td>
-                        <td style="font-family:var(--ff-mono);">₹${o.price.toFixed(2)}</td>
-                        <td style="font-family:var(--ff-mono);">₹${totalVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        <td><span style="font-size:11px; font-weight:700; color:var(--c-positive);">✓ ${o.status}</span></td>
-                    </tr>
-                `;
-            }).join('');
+        function drawEquityChart() {
+            const tf = activeTimeframe();
+            const windows = { '1D': 864e5, '1W': 7 * 864e5, '1M': 30 * 864e5, 'ALL': Infinity };
+            const cutoff = Date.now() - (windows[tf] ?? windows['1M']);
+            const history = (portfolio.equityHistory || []).filter(h => Number(h.t) >= cutoff && Number.isFinite(Number(h.value)));
+            const points = history.length ? history : [{ t: Date.now(), value: currentEquity() }];
+            const values = points.map(p => Number(p.value));
+            const labels = points.map(p => new Date(p.t).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }));
+            const rising = values[values.length - 1] >= values[0];
+            drawEquityLine('equityChartCanvas', values, labels, rising ? '#00d09c' : '#ff5252');
         }
 
-        function renderWatchlist() {
-            const tbody = document.getElementById('watchlistTableBody');
-            tbody.innerHTML = Object.entries(STOCK_CATALOG).map(([sym, item]) => {
-                const isPos = item.change >= 0;
-                return `
-                    <tr>
-                        <td><strong>${sym}</strong></td>
-                        <td style="color:var(--c-text-secondary);">${item.name}</td>
-                        <td style="font-family:var(--ff-mono); font-weight:700;">₹${item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td style="font-family:var(--ff-mono); font-weight:600;" class="${isPos ? 'positive' : 'negative'}">
-                            ${isPos ? '+' : ''}${item.change.toFixed(2)}%
-                        </td>
-                        <td style="font-family:var(--ff-mono); font-size:11px; color:var(--c-text-tertiary);">
-                            H: ₹${item.high.toLocaleString('en-IN')} | L: ₹${item.low.toLocaleString('en-IN')}
-                        </td>
-                        <td>
-                            <button class="btn btn--outline btn--sm" style="padding:4px 8px; font-size:11px;" onclick="quickSelectStock('${sym}')">
-                                Trade
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+        function initEquityChart() {
+            const tfBtns = document.querySelectorAll('#chartTfBtns .tf-btn');
+            tfBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tfBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    drawEquityChart();
+                });
+            });
+            window.addEventListener('resize', drawEquityChart);
+            drawEquityChart();
         }
 
         window.quickSelectStock = function(sym) {
-            stockSelect.value = sym;
+            const target = String(sym || '').toUpperCase();
+            if (!STOCK_CATALOG[target]) {
+                showToast(`${target} is not in the verified catalogue`, 'error');
+                return;
+            }
+            stockSelect.value = target;
+            renderQuote();
             updateQuote();
             window.scrollTo({ top: 120, behavior: 'smooth' });
-            showToast(`Loaded ${sym} into order terminal`, 'success');
+            showToast(`Loaded ${target} into order terminal`, 'success');
         };
 
-        // Tabs navigation in lower section
         document.querySelectorAll('.t-tab').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.t-tab').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-
                 const target = btn.dataset.tab;
-                document.getElementById('tabContentHoldings').style.display = target === 'holdings' ? 'block' : 'none';
-                document.getElementById('tabContentOrders').style.display = target === 'orders' ? 'block' : 'none';
-                document.getElementById('tabContentWatchlist').style.display = target === 'watchlist' ? 'block' : 'none';
-                document.getElementById('tabContentAnalytics').style.display = target === 'analytics' ? 'block' : 'none';
+                ['holdings', 'orders', 'watchlist', 'analytics'].forEach(name => {
+                    const node = el('tabContent' + name.charAt(0).toUpperCase() + name.slice(1));
+                    if (node) node.style.display = target === name ? 'block' : 'none';
+                });
             });
         });
 
-        // Fast buy button
-        document.getElementById('btnFastBuyNifty').addEventListener('click', () => {
-            quickSelectStock('RELIANCE');
-        });
+        const fastBtn = el('btnFastBuyNifty');
+        if (fastBtn) fastBtn.addEventListener('click', () => quickSelectStock('RELIANCE'));
 
-        // Reset portfolio
-        document.getElementById('btnResetPortfolio').addEventListener('click', () => {
-            if (confirm('Are you sure you want to reset your paper portfolio to ₹10,00,000 virtual cash? All positions and orders will be cleared.')) {
-                portfolio = {
-                    cash: 1000000,
-                    initialCapital: 1000000,
-                    realizedPnl: 0,
-                    positions: [],
-                    orders: []
-                };
-                savePortfolio();
+        const resetBtn = el('btnResetPortfolio');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                if (!confirm('Reset the paper portfolio to ₹10,00,000? All positions and orders will be cleared.')) return;
+                if (api()) {
+                    try {
+                        await api().resetPaperPortfolioStrict();
+                        portfolio = emptyPortfolio();
+                        await syncPortfolioFromBackend();
+                    } catch (e) {
+                        portfolio = emptyPortfolio();
+                        savePortfolioCache();
+                    }
+                } else {
+                    portfolio = emptyPortfolio();
+                    savePortfolioCache();
+                }
                 renderAll();
-                showToast('Portfolio reset successfully to ₹10,00,000 cash!', 'success');
-            }
-        });
-
-        // Simulate live tick
-        document.getElementById('btnRefreshPrices').addEventListener('click', () => {
-            Object.keys(STOCK_CATALOG).forEach(sym => {
-                const delta = (Math.random() - 0.48) * 0.015;
-                STOCK_CATALOG[sym].price = Math.round(STOCK_CATALOG[sym].price * (1 + delta) * 100) / 100;
-                STOCK_CATALOG[sym].change += (delta * 100);
+                showToast('Paper portfolio reset to ₹10,00,000 cash', 'success');
             });
-            updateQuote();
+        }
+
+        async function refreshLivePrices() {
+            const ok = await loadCatalog();
+            if (!ok) {
+                showToast('Price refresh failed: verified feed unavailable', 'error');
+                return;
+            }
+            populateSelect(stockSelect.value);
+            renderQuote();
             renderAll();
-            showToast('Simulated real-time price tick updated', 'success');
-        });
+            showToast('Prices refreshed from verified feed', 'success');
+        }
+
+        const refreshBtn = el('btnRefreshPrices');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.disabled = true;
+                await refreshLivePrices();
+                refreshBtn.disabled = false;
+            });
+        }
 
         function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
+            const container = el('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             toast.className = `toast toast--${type}`;
-            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span> <span>${message}</span>`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span> <span>${escapeHtml(message)}</span>`;
             container.appendChild(toast);
             setTimeout(() => {
                 toast.style.opacity = '0';
@@ -1290,60 +1711,54 @@
             }, 3500);
         }
 
-        // Draw Equity Chart
-        function initEquityChart() {
-            const tfBtns = document.querySelectorAll('#chartTfBtns .tf-btn');
-            tfBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    tfBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    drawChart();
-                });
-            });
+        document.addEventListener('DOMContentLoaded', async () => {
+            await syncPortfolioFromBackend();
+            const loaded = await loadCatalog();
+            if (!loaded) showToast('Instrument catalogue is temporarily unavailable', 'error');
 
-            function drawChart() {
-                const totalPnl = (state.positions || []).reduce((acc, p) => acc + (p.pnl || 0), 0);
-                const currentEq = (state.walletBalance || 1000000) + totalPnl;
-                const startEq = 1000000;
-                const step = (currentEq - startEq) / 9;
-                const points = Array.from({length: 9}, (_, i) => Math.round(startEq + step * i)).concat([Math.round(currentEq)]);
-                const labels = ['D1', 'D3', 'D6', 'D9', 'D12', 'D15', 'D18', 'D21', 'D24', 'Live'];
-                const isPos = currentEq >= startEq;
-                drawAreaChart('equityChartCanvas', points, isPos ? '#00d09c' : '#ff5252', isPos ? 'rgba(0,208,156,0.18)' : 'rgba(255,82,82,0.18)', true, labels);
-            }
+            const tracked = new Set();
+            portfolio.positions.forEach(p => tracked.add(p.symbol));
+            portfolio.orders.forEach(o => tracked.add(o.symbol));
+            await Promise.all([...tracked].map(sym => ensureSymbol(sym)));
 
-            drawChart();
-            window.addEventListener('resize', drawChart);
-        }
+            const querySym = (new URLSearchParams(window.location.search).get('symbol') || '').toUpperCase().trim();
+            if (querySym) await ensureSymbol(querySym);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const querySym = urlParams.get('symbol');
-            if (querySym && stockSelect) {
-                const norm = querySym.toUpperCase();
-                const matched = Object.keys(STOCK_CATALOG).find(s => s === norm || norm.includes(s));
-                if (matched) {
-                    stockSelect.value = matched;
-                }
-            }
-
-            updateQuote();
+            populateSelect(querySym || stockSelect.value || 'RELIANCE');
+            setTradeSide('BUY');
+            renderQuote();
             renderAll();
             initEquityChart();
+            updateQuote();
 
-            // Connect to real-time backend stream
-            if (window.apiClient) {
-                window.apiClient.onTick((ticks) => {
-                    ticks.forEach(t => {
-                        if (STOCK_CATALOG[t.symbol]) {
-                            STOCK_CATALOG[t.symbol].price = t.price;
-                            STOCK_CATALOG[t.symbol].change = t.change_pct;
-                        }
+            if (window.Watchlist) {
+                window.Watchlist.onChange(renderWatchlist);
+                window.Watchlist.onQuotes(renderWatchlist);
+            }
+
+            if (api()) {
+                api().onTick(ticks => {
+                    let changed = false;
+                    (Array.isArray(ticks) ? ticks : []).forEach(t => {
+                        const item = STOCK_CATALOG[t.symbol];
+                        if (!item || !Number.isFinite(Number(t.price))) return;
+                        item.price = Number(t.price);
+                        item.change = Number(t.change_pct);
+                        if (Number.isFinite(Number(t.high_24h))) item.high = Number(t.high_24h);
+                        if (Number.isFinite(Number(t.low_24h))) item.low = Number(t.low_24h);
+                        item.source = t.source || item.source;
+                        changed = true;
                     });
-                    updateQuote();
+                    if (!changed) return;
+                    appendEquityPoint();
+                    savePortfolioCache();
+                    renderQuote();
                     renderSummary();
+                    renderHoldings();
+                    renderWatchlist();
+                    drawEquityChart();
                 });
-                window.apiClient.connectWebSocket();
+                api().connectWebSocket();
             }
         });
     </script>

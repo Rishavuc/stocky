@@ -1,14 +1,7 @@
-import hashlib
 import math
-import random
 from typing import Dict, List, Any, Tuple
 from app.services.market_ingest import market_ingest
 from app.schemas.schemas import TechnicalAnalysisResponse, IndicatorItem, OptionChainResponse, OptionChainItem
-
-
-def _seed_for(symbol: str) -> int:
-    """Deterministic per-symbol seed so derived fundamentals don't flap."""
-    return int(hashlib.sha256(symbol.encode("utf-8")).hexdigest()[:8], 16)
 
 
 # ========================================================
@@ -124,24 +117,21 @@ class AnalysisEngine:
     def get_technical_analysis(self, symbol: str) -> TechnicalAnalysisResponse:
         sym = symbol.upper().strip()
         quote = market_ingest.get_quote(sym)
-        price = quote.price if quote else 2500.0
-        change_pct = quote.change_pct if quote else 1.25
+        if not quote:
+            raise ValueError(f"No verified market data available for {sym}")
+        price = float(quote.price)
+        change_pct = float(quote.change_pct)
 
         # Pull ~1 year of daily candles: drives indicators AND the real 52W range.
-        candles = market_ingest.get_candles(sym, "1d", 252)
-        if not candles or len(candles) < 20:
-            candles = market_ingest.get_candles(sym, "1d", 60)
+        # Synthetic candles are never used for analysis.
+        candles = [c for c in market_ingest.get_candles(sym, "1d", 252) if not c.is_synthetic]
+        if len(candles) < 20:
+            raise ValueError(f"Not enough verified history to compute indicators for {sym}")
 
-        if candles and len(candles) >= 5:
-            closes = [float(c.close) for c in candles]
-            highs = [float(c.high) for c in candles]
-            lows = [float(c.low) for c in candles]
-            volumes = [float(c.volume) for c in candles]
-        else:
-            closes = [price * (1 + (i - 15) * 0.005) for i in range(30)]
-            highs = [c * 1.008 for c in closes]
-            lows = [c * 0.992 for c in closes]
-            volumes = [0.0 for _ in closes]
+        closes = [float(c.close) for c in candles]
+        highs = [float(c.high) for c in candles]
+        lows = [float(c.low) for c in candles]
+        volumes = [float(c.volume) for c in candles]
 
         is_crypto = ("USDT" in sym or sym.endswith("INR")
                      or sym.startswith("BTC") or sym.startswith("ETH") or sym.startswith("SOL"))
@@ -247,38 +237,23 @@ class AnalysisEngine:
         high_52w = max(highs) if highs else price
         low_52w = min(lows) if lows else price
 
-        # ---- Fundamental estimates, deterministic per symbol ----
-        rng = random.Random(_seed_for(sym))
-        if not is_crypto:
-            pe = round(12.0 + rng.random() * 38.0, 1)
-            pb = round(1.0 + rng.random() * 6.0, 2)
-            roe = round(8.0 + rng.random() * 20.0, 1)
-            roce = round(9.0 + rng.random() * 22.0, 1)
-            de = round(rng.random() * 1.4, 2)
-            promoter = round(30.0 + rng.random() * 45.0, 1)
-            ratios = {
-                "P/E Ratio": str(pe),
-                "P/B Ratio": str(pb),
-                "EPS (TTM)": f"{curr}{round(price / pe, 2)}",
-                "ROE": f"{roe}%",
-                "ROCE": f"{roce}%",
-                "Debt-to-Equity": str(de),
-                "Book Value": f"{curr}{round(price / pb, 2)}",
-                "52W High": f"{curr}{round(high_52w, 2)}",
-                "52W Low": f"{curr}{round(low_52w, 2)}",
-                "Promoter Holding": f"{promoter}%",
-                "Avg Volume (20D)": f"{int(sum(volumes[-20:]) / max(1, len(volumes[-20:]))):,}" if any(volumes) else "n/a",
-            }
-        else:
-            ratios = {
-                "Market Cap Rank": f"#{rng.randint(1, 25)}",
-                "24h Range": f"{curr}{round(low_52w, 2)} - {curr}{round(high_52w, 2)}",
-                "52W High": f"{curr}{round(high_52w, 2)}",
-                "52W Low": f"{curr}{round(low_52w, 2)}",
-                "Circulating Supply": f"{rng.randint(15, 120)}M {sym.replace('USDT', '').replace('INR', '')}",
-                "Volatility (ATR)": f"{curr}{atr_val:,.2f}",
-                "Avg Volume (20D)": f"{int(sum(volumes[-20:]) / max(1, len(volumes[-20:]))):,}" if any(volumes) else "n/a",
-            }
+        # ---- Ratios derived only from verified price/volume history ----
+        avg_vol = sum(volumes[-20:]) / max(1, len(volumes[-20:])) if any(volumes) else 0.0
+        day_low = float(quote.low_24h or 0.0)
+        day_high = float(quote.high_24h or 0.0)
+        range_position = ((price - low_52w) / (high_52w - low_52w) * 100.0) if high_52w > low_52w else 50.0
+        ratios = {
+            "Data Source": quote.source,
+            "Day Range": f"{curr}{day_high:,.2f} / {curr}{day_low:,.2f}" if day_high and day_low else "n/a",
+            "52W High": f"{curr}{high_52w:,.2f}",
+            "52W Low": f"{curr}{low_52w:,.2f}",
+            "Position in 52W Range": f"{range_position:.1f}%",
+            "Distance from 52W High": f"{((price / high_52w - 1) * 100):.2f}%" if high_52w else "n/a",
+            "Avg Volume (20D)": f"{int(avg_vol):,}" if avg_vol else "n/a",
+            "Volatility (ATR 14)": f"{curr}{atr_val:,.2f}",
+            "Price / SMA50": f"{(price / sma50_val):.2f}x" if sma50_val else "n/a",
+            "Quote Time": quote.as_of.strftime("%Y-%m-%d %H:%M UTC") if quote.as_of else "n/a",
+        }
 
         # ---- Composite summary signal ----
         score = 0
@@ -309,97 +284,53 @@ class AnalysisEngine:
         )
 
     def get_option_chain(self, underlying: str = "NIFTY") -> OptionChainResponse:
-        und = underlying.upper()
-        spot = 22456.80 if "NIFTY" in und else 47234.15
-        step = 50 if "NIFTY" in und else 100
-        center_strike = round(spot / step) * step
-
-        strikes_data: List[OptionChainItem] = []
-        # Generate 15 strikes centered on ATM
-        for i in range(-7, 8):
-            strike = center_strike + (i * step)
-            dist = (strike - spot) / spot
-
-            # Implied volatility curve (smile)
-            iv = 13.5 + abs(dist * 50) + random.uniform(0.1, 0.4)
-
-            # Realistic Call and Put OI simulation
-            ce_oi = round(max(200000, 1800000 * math.exp(-abs(strike - spot + 200) / 400)), 0)
-            pe_oi = round(max(250000, 2200000 * math.exp(-abs(strike - spot - 150) / 400)), 0)
-
-            # Option premiums (Black-Scholes approx)
-            intrinsic_ce = max(0.0, spot - strike)
-            time_val = max(10.0, spot * 0.015 * math.exp(-abs(dist) * 8))
-            ce_ltp = round(intrinsic_ce + time_val, 2)
-
-            intrinsic_pe = max(0.0, strike - spot)
-            pe_ltp = round(intrinsic_pe + time_val * 0.95, 2)
-
-            strikes_data.append(OptionChainItem(
-                strike=float(strike),
-                ce_oi=float(ce_oi),
-                ce_change_oi=round(ce_oi * random.uniform(-0.1, 0.25), 0),
-                ce_ltp=ce_ltp,
-                ce_iv=round(iv, 2),
-                pe_ltp=pe_ltp,
-                pe_iv=round(iv * 1.02, 2),
-                pe_change_oi=round(pe_oi * random.uniform(-0.05, 0.3), 0),
-                pe_oi=float(pe_oi)
-            ))
-
-        total_pe_oi = sum(s.pe_oi for s in strikes_data)
-        total_ce_oi = sum(s.ce_oi for s in strikes_data)
-        pcr = round(total_pe_oi / max(total_ce_oi, 1.0), 2)
-        max_pain = float(center_strike - step) # Strike with least total payout
-
+        """Return only verified spot data. No broker options feed is connected."""
+        und = underlying.upper().strip()
+        quote = market_ingest.get_quote(und)
+        if not quote:
+            raise ValueError(f"No verified spot quote available for {und}")
         return OptionChainResponse(
             underlying=und,
-            spot_price=spot,
-            pcr=pcr,
-            max_pain=max_pain,
-            atm_iv=13.8,
-            expiry_date="24-OCT-2026",
-            strikes=strikes_data
+            spot_price=float(quote.price),
+            pcr=0.0,
+            max_pain=0.0,
+            atm_iv=0.0,
+            expiry_date="Options feed not connected",
+            strikes=[]
         )
 
     def get_fund_analysis(self, code: str = "PPFCF") -> Dict[str, Any]:
         return {
-            "fund_code": code,
-            "fund_name": "Parag Parikh Flexi Cap Fund Direct Growth",
-            "nav": 84.62,
-            "category": "Flexi Cap Fund",
-            "rating": "5 Stars (Value Research)",
-            "aum_cr": 64280.0,
-            "expense_ratio_pct": 0.62,
-            "cagr_3y": 22.4,
-            "cagr_5y": 24.1,
-            "alpha": 6.42,
-            "beta": 0.78,
-            "sharpe_ratio": 1.82,
-            "sortino_ratio": 2.64,
-            "top_holdings": [
-                {"name": "HDFC Bank Ltd.", "pct": 8.4},
-                {"name": "Bajaj Holdings", "pct": 7.1},
-                {"name": "ITC Limited", "pct": 6.8},
-                {"name": "Alphabet Inc. (Google)", "pct": 5.4},
-                {"name": "ICICI Bank Ltd.", "pct": 4.9}
-            ]
+            "fund_code": code.upper(),
+            "status": "unavailable",
+            "message": "Mutual fund NAV data requires a connected AMFI data provider. No sample/fund values are generated.",
         }
 
     def get_crypto_analysis(self, symbol: str = "BTCINR") -> Dict[str, Any]:
+        sym = symbol.upper().strip()
+        quote = market_ingest.get_quote(sym)
+        if not quote:
+            raise ValueError(f"No verified market data available for {sym}")
+        candles = [c for c in market_ingest.get_candles(sym, "1d", 252) if not c.is_synthetic]
+        highs = [float(c.high) for c in candles] or [float(quote.high_24h or quote.price)]
+        lows = [float(c.low) for c in candles] or [float(quote.low_24h or quote.price)]
         return {
-            "symbol": symbol,
-            "name": "Bitcoin",
-            "price_inr": 5560000.0,
-            "price_usd": 67240.0,
-            "fear_and_greed_score": 74,
-            "fear_and_greed_sentiment": "Greed",
-            "market_dominance_pct": 54.8,
-            "onchain_mvrv_ratio": 2.14,
-            "exchange_netflow_24h_btc": -8420.0,
-            "hashrate_eh_s": 624.0,
-            "active_wallets_24h": 984000,
-            "liquidations_24h_usd": 124000000.0
+            "symbol": sym,
+            "name": quote.name,
+            "price": float(quote.price),
+            "change_pct": float(quote.change_pct),
+            "source": quote.source,
+            "high_24h": float(quote.high_24h or 0.0),
+            "low_24h": float(quote.low_24h or 0.0),
+            "high_52w": max(highs),
+            "low_52w": min(lows),
+            "volume_24h": float(quote.volume or 0.0),
+            "fear_and_greed_score": None,
+            "onchain_mvrv_ratio": None,
+            "exchange_netflow_24h": None,
+            "hashrate_eh_s": None,
+            "active_wallets_24h": None,
+            "message": "On-chain and sentiment metrics require a dedicated provider and are not generated.",
         }
 
 analysis_engine = AnalysisEngine()

@@ -161,17 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    function generateChartData(baseVal, volatility, points = 30, trend = 'up') {
-        const data = [];
-        let val = baseVal;
-        for (let i = 0; i < points; i++) {
-            const trendBias = trend === 'up' ? 0.6 : trend === 'down' ? -0.6 : 0;
-            val += (Math.random() - 0.5 + trendBias * 0.15) * volatility;
-            data.push(val);
-        }
-        return data;
-    }
-
     function initHeroCharts() {
         if (window.apiClient) {
             Promise.all([
@@ -214,10 +203,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // Draw Real Historical Candlestick Sparklines
-                const nData = niftyCandles && niftyCandles.length > 0 ? niftyCandles.map(c => c.close) : generateChartData(22300, 50, 30, 'up');
-                const sData = sensexCandles && sensexCandles.length > 0 ? sensexCandles.map(c => c.close) : generateChartData(73500, 150, 30, 'up');
-                const bData = bankCandles && bankCandles.length > 0 ? bankCandles.map(c => c.close) : generateChartData(47400, 80, 30, 'down');
+                // Draw sparklines from verified candle closes only. If history is
+                // unavailable, show a flat line at the last verified value.
+                const flat = (candles, fallback) => candles && candles.length
+                    ? candles.map(c => c.close)
+                    : [fallback, fallback];
+                const nData = flat(niftyCandles, 0);
+                const sData = flat(sensexCandles, 0);
+                const bData = flat(bankCandles, 0);
 
                 const nPos = nData[nData.length - 1] >= nData[0];
                 const sPos = sData[sData.length - 1] >= sData[0];
@@ -227,81 +220,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawSparkline('heroChartSensex', sData, sPos ? '#00d09c' : '#ff5252', sPos ? 'rgba(0, 208, 156, 0.1)' : 'rgba(255, 82, 82, 0.1)');
                 drawSparkline('heroChartBankNifty', bData, bPos ? '#00d09c' : '#ff5252', bPos ? 'rgba(0, 208, 156, 0.1)' : 'rgba(255, 82, 82, 0.1)');
             }).catch(() => {
-                drawSparkline('heroChartNifty', generateChartData(22300, 50, 40, 'up'), '#00d09c', 'rgba(0, 208, 156, 0.1)');
-                drawSparkline('heroChartSensex', generateChartData(73500, 150, 40, 'up'), '#00d09c', 'rgba(0, 208, 156, 0.1)');
-                drawSparkline('heroChartBankNifty', generateChartData(47400, 80, 40, 'down'), '#ff5252', 'rgba(255, 82, 82, 0.1)');
+                drawSparkline('heroChartNifty', [0, 0], '#00d09c', 'rgba(0, 208, 156, 0.1)');
+                drawSparkline('heroChartSensex', [0, 0], '#00d09c', 'rgba(0, 208, 156, 0.1)');
+                drawSparkline('heroChartBankNifty', [0, 0], '#ff5252', 'rgba(255, 82, 82, 0.1)');
             });
         }
     }
 
     // ===== MARKET INDICES =====
-    const indicesData = {
-        indian: [
-            { name: 'NIFTY 50', value: '22,456.80', change: '+278.45', pct: '+1.24%', positive: true, trend: 'up' },
-            { name: 'SENSEX', value: '73,890.45', change: '+718.32', pct: '+0.98%', positive: true, trend: 'up' },
-            { name: 'BANK NIFTY', value: '47,234.15', change: '-198.70', pct: '-0.42%', positive: false, trend: 'down' },
-            { name: 'NIFTY IT', value: '34,567.20', change: '+728.15', pct: '+2.15%', positive: true, trend: 'up' },
-            { name: 'NIFTY FIN SVC', value: '20,890.30', change: '+157.40', pct: '+0.76%', positive: true, trend: 'up' },
-            { name: 'NIFTY MIDCAP', value: '48,123.60', change: '-152.30', pct: '-0.31%', positive: false, trend: 'down' },
-            { name: 'NIFTY PHARMA', value: '17,892.45', change: '+274.80', pct: '+1.56%', positive: true, trend: 'up' },
-            { name: 'INDIA VIX', value: '12.45', change: '-0.89', pct: '-6.68%', positive: true, trend: 'down' },
-        ],
-        global: [
-            { name: 'S&P 500', value: '5,234.18', change: '+42.15', pct: '+0.81%', positive: true, trend: 'up' },
-            { name: 'NASDAQ', value: '16,456.20', change: '+198.30', pct: '+1.22%', positive: true, trend: 'up' },
-            { name: 'DOW JONES', value: '39,127.80', change: '-89.45', pct: '-0.23%', positive: false, trend: 'down' },
-            { name: 'FTSE 100', value: '8,124.90', change: '+34.20', pct: '+0.42%', positive: true, trend: 'up' },
-            { name: 'DAX', value: '18,456.70', change: '+156.30', pct: '+0.85%', positive: true, trend: 'up' },
-            { name: 'NIKKEI 225', value: '39,890.20', change: '-234.10', pct: '-0.58%', positive: false, trend: 'down' },
-            { name: 'HANG SENG', value: '17,234.80', change: '+187.40', pct: '+1.10%', positive: true, trend: 'up' },
-            { name: 'SHANGHAI', value: '3,089.45', change: '+12.30', pct: '+0.40%', positive: true, trend: 'up' },
-        ],
-        crypto: [
-            { name: 'BITCOIN', value: '$67,240.50', change: '+$2,089', pct: '+3.21%', positive: true, trend: 'up' },
-            { name: 'ETHEREUM', value: '$3,180.20', change: '-$27.40', pct: '-0.85%', positive: false, trend: 'down' },
-            { name: 'SOLANA', value: '$178.90', change: '+$12.30', pct: '+7.38%', positive: true, trend: 'up' },
-            { name: 'BNB', value: '$598.40', change: '+$8.90', pct: '+1.51%', positive: true, trend: 'up' },
-            { name: 'XRP', value: '$0.5824', change: '+$0.018', pct: '+3.19%', positive: true, trend: 'up' },
-            { name: 'CARDANO', value: '$0.4521', change: '-$0.012', pct: '-2.58%', positive: false, trend: 'down' },
-            { name: 'DOGECOIN', value: '$0.1234', change: '+$0.008', pct: '+6.93%', positive: true, trend: 'up' },
-            { name: 'POLYGON', value: '$0.7823', change: '+$0.032', pct: '+4.26%', positive: true, trend: 'up' },
-        ]
-    };
-
-    function renderIndices(tab) {
+    async function renderIndices(tab) {
         const grid = document.getElementById('indicesGrid');
         if (!grid) return;
-        const data = indicesData[tab] || indicesData.indian;
+        grid.innerHTML = `<div style="padding:28px; text-align:center; color:var(--c-text-tertiary); font-size:13px;">Loading verified market data…</div>`;
 
-        grid.innerHTML = data.map((item, i) => {
-            const canvasId = `indexChart_${tab}_${i}`;
+        let data = [];
+        if (window.apiClient) {
+            try {
+                if (tab === 'crypto') {
+                    const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+                    const quotes = await Promise.all(symbols.map(s => window.apiClient.getQuote(s)));
+                    data = quotes.filter(Boolean).map(q => ({
+                        name: q.symbol.replace('USDT', '/USDT'),
+                        value: q.price.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
+                        change: `${q.change >= 0 ? '+' : ''}${q.change.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+                        pct: `${q.change_pct >= 0 ? '+' : ''}${q.change_pct.toFixed(2)}%`,
+                        positive: q.change >= 0,
+                        sparkline: [q.price, q.price]
+                    }));
+                } else if (tab === 'indian') {
+                    const indices = await window.apiClient.getIndices();
+                    data = (indices || []).map(idx => ({
+                        name: idx.name,
+                        value: idx.value.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
+                        change: `${idx.change >= 0 ? '+' : ''}${idx.change.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+                        pct: `${idx.change_pct >= 0 ? '+' : ''}${idx.change_pct.toFixed(2)}%`,
+                        positive: idx.positive,
+                        sparkline: idx.sparkline && idx.sparkline.length > 1 ? idx.sparkline : [idx.value, idx.value]
+                    }));
+                } else {
+                    grid.innerHTML = `<div style="padding:28px; text-align:center; color:var(--c-text-tertiary); font-size:13px;">Global index feed is not connected. No sample values are shown.</div>`;
+                    return;
+                }
+            } catch (e) {
+                grid.innerHTML = `<div style="padding:28px; text-align:center; color:var(--c-text-tertiary); font-size:13px;">Live index data temporarily unavailable.</div>`;
+                return;
+            }
+        }
+
+        if (!data.length) {
+            grid.innerHTML = `<div style="padding:28px; text-align:center; color:var(--c-text-tertiary); font-size:13px;">No verified index data available.</div>`;
+            return;
+        }
+
+        grid.innerHTML = data.map(item => {
+            const safeName = String(item.name).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
             return `
-                <div class="index-card reveal" style="transition-delay: ${i * 50}ms">
+                <div class="index-card reveal">
                     <div class="index-card__header">
-                        <span class="index-card__name">${item.name}</span>
+                        <span class="index-card__name">${safeName}</span>
                         <span class="index-card__badge ${item.positive ? 'positive' : 'negative'}">${item.pct}</span>
                     </div>
                     <div class="index-card__value">${item.value}</div>
                     <div class="index-card__change ${item.positive ? 'positive' : 'negative'}">${item.change} (${item.pct})</div>
-                    <canvas class="index-card__chart" id="${canvasId}"></canvas>
+                    <canvas class="index-card__chart" id="indexChart_${tab}_${data.indexOf(item)}"></canvas>
                 </div>
             `;
         }).join('');
 
-        // Draw charts after DOM update
         requestAnimationFrame(() => {
             data.forEach((item, i) => {
-                const canvasId = `indexChart_${tab}_${i}`;
-                const chartData = generateChartData(1000, 20, 30, item.trend);
+                const spark = item.sparkline && item.sparkline.length > 1 ? item.sparkline : [item.value, item.value];
                 const color = item.positive ? '#00d09c' : '#ff5252';
-                const fill = item.positive ? 'rgba(0, 208, 156, 0.08)' : 'rgba(255, 82, 82, 0.08)';
-                drawSparkline(canvasId, chartData, color, fill);
+                drawSparkline(`indexChart_${tab}_${i}`, spark, color, 'transparent');
             });
-
-            // Trigger reveal
-            setTimeout(() => {
-                grid.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
-            }, 50);
+            setTimeout(() => grid.querySelectorAll('.reveal').forEach(el => el.classList.add('visible')), 50);
         });
     }
 
@@ -359,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.forEach((stock, i) => {
                     const canvasId = `sparkline_${tab}_${i}`;
                     const isPos = (stock.change >= 0) || (stock.change_pct >= 0);
-                    const chartData = generateChartData(100, 6, 20, isPos ? 'up' : 'down');
+                    const chartData = (stock.sparkline && stock.sparkline.length > 1)
+                        ? stock.sparkline
+                        : [Number(stock.price || stock.ltp || 0), Number(stock.price || stock.ltp || 0)];
                     const color = isPos ? '#00d09c' : '#ff5252';
                     drawSparkline(canvasId, chartData, color, 'transparent');
                 });
