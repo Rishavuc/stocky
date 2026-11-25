@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.services.analysis_engine import analysis_engine
+from app.services.market_ingest import market_ingest
 
 
 router = APIRouter(prefix="/v1/analysis", tags=["Analysis"])
@@ -22,9 +23,13 @@ def get_option_chain(underlying: str = "NIFTY"):
     return _verified_or_422(analysis_engine.get_option_chain, underlying)
 
 
+@router.get("/funds/growth")
+def get_growth_funds():
+    return market_ingest.get_growth_mutual_funds()
+
 @router.get("/funds/{code}")
 def get_fund_analysis(code: str = "PPFCF"):
-    return analysis_engine.get_fund_analysis(code)
+    return _verified_or_422(analysis_engine.get_fund_analysis, code)
 
 
 @router.get("/crypto/{symbol}")

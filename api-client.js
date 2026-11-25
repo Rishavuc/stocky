@@ -86,6 +86,14 @@ class ApiClient {
         return await this._fetchStrict(`/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`);
     }
 
+    async getFundGrowth() {
+        return await this._fetch('/analysis/funds/growth');
+    }
+
+    async getFundAnalysis(code) {
+        return await this._fetchStrict(`/analysis/funds/${encodeURIComponent(code)}`);
+    }
+
     async getBreadth() {
         return await this._fetch('/markets/breadth');
     }

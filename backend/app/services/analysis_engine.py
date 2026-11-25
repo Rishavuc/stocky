@@ -300,11 +300,23 @@ class AnalysisEngine:
         )
 
     def get_fund_analysis(self, code: str = "PPFCF") -> Dict[str, Any]:
-        return {
-            "fund_code": code.upper(),
-            "status": "unavailable",
-            "message": "Mutual fund NAV data requires a connected AMFI data provider. No sample/fund values are generated.",
-        }
+        key = str(code or "").strip()
+        fund = market_ingest.get_mutual_fund(key)
+        if not fund:
+            match = next(
+                (x for x in market_ingest.get_mutual_funds_catalog()
+                 if key.lower() in str(x.get("scheme_name", "")).lower()),
+                None
+            )
+            if match:
+                fund = market_ingest.get_mutual_fund(match["scheme_code"])
+        if not fund:
+            raise ValueError(f"No verified mutual fund found for '{key}'")
+        ranked = {x.get("scheme_code"): x for x in market_ingest.get_growth_mutual_funds()}
+        detail = dict(fund)
+        detail.update({k: ranked.get(fund.get("scheme_code"), {}).get(k) for k in ("rank", "growth_score", "growth_label", "momentum_30d", "drawdown_30d")})
+        detail["status"] = "verified"
+        return detail
 
     def get_crypto_analysis(self, symbol: str = "BTCINR") -> Dict[str, Any]:
         sym = symbol.upper().strip()

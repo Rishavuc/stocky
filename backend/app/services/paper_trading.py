@@ -1,61 +1,143 @@
+import json
+import math
+import os
+import threading
 from datetime import datetime
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+
 from app.services.market_ingest import market_ingest
 from app.schemas.schemas import PaperOrderRequest, PaperPortfolioResponse, PaperPositionResponse
 
+
+DEFAULT_STATE_PATH = Path(__file__).resolve().parents[2] / "data" / "paper_portfolio.json"
+
+
 class PaperTradingEngine:
+    """Persistent paper-trading ledger.
+
+    Positions stay open until they are sold or squared off, including across
+    page refreshes and server restarts. The JSON file is the source of truth;
+    localStorage in the browser is only a UI cache.
+    """
+
     def __init__(self):
         self.initial_capital: float = 1000000.0
         self.cash: float = self.initial_capital
         self.realized_pnl: float = 0.0
         self.positions: Dict[str, Dict] = {}
         self.orders: List[Dict] = []
+        self._lock = threading.RLock()
+        self._state_path = Path(os.getenv("PAPER_PORTFOLIO_FILE", str(DEFAULT_STATE_PATH)))
+        self._load_state()
 
+    # ------------------------------------------------------------
+    # PERSISTENCE
+    # ------------------------------------------------------------
+    def _load_state(self) -> None:
+        try:
+            if not self._state_path.exists():
+                return
+            data = json.loads(self._state_path.read_text(encoding="utf-8"))
+            cash = float(data.get("cash", self.initial_capital))
+            if math.isfinite(cash):
+                self.cash = cash
+            realized = float(data.get("realized_pnl", 0.0))
+            if math.isfinite(realized):
+                self.realized_pnl = realized
+
+            saved_positions = data.get("positions") or {}
+            if isinstance(saved_positions, dict):
+                for pos in saved_positions.values():
+                    try:
+                        sym = str(pos.get("symbol") or "").upper().strip()
+                        prod = str(pos.get("product") or "CNC").upper().strip()
+                        qty = float(pos.get("qty") or 0)
+                        buy_price = float(pos.get("buy_price") or 0)
+                        if sym and qty > 0 and buy_price > 0:
+                            self.positions[f"{sym}_{prod}"] = {
+                                "symbol": sym,
+                                "product": prod,
+                                "qty": qty,
+                                "buy_price": buy_price,
+                            }
+                    except (TypeError, ValueError):
+                        continue
+
+            saved_orders = data.get("orders") or []
+            if isinstance(saved_orders, list):
+                self.orders = [
+                    dict(order) for order in saved_orders
+                    if isinstance(order, dict) and order.get("symbol")
+                ][:200]
+        except Exception as e:
+            print(f"[Paper Trading] Could not load saved portfolio: {e}")
+
+    def _save_state(self) -> None:
+        try:
+            self._state_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "cash": self.cash,
+                "realized_pnl": self.realized_pnl,
+                "positions": self.positions,
+                "orders": self.orders,
+                "saved_at": datetime.utcnow().isoformat() + "Z",
+            }
+            tmp = self._state_path.with_name(self._state_path.name + ".tmp")
+            tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            os.replace(tmp, self._state_path)
+        except Exception as e:
+            print(f"[Paper Trading] Could not persist portfolio: {e}")
+
+    # ------------------------------------------------------------
+    # PORTFOLIO
+    # ------------------------------------------------------------
     def get_portfolio(self) -> PaperPortfolioResponse:
-        positions_res: List[PaperPositionResponse] = []
-        holdings_val = 0.0
-        unrealized_pnl = 0.0
-        margin_used = 0.0
+        with self._lock:
+            positions_res: List[PaperPositionResponse] = []
+            holdings_val = 0.0
+            unrealized_pnl = 0.0
+            margin_used = 0.0
 
-        for key, pos in self.positions.items():
-            sym = pos["symbol"]
-            qty = pos["qty"]
-            buy_price = pos["buy_price"]
-            quote = market_ingest.get_quote(sym)
-            ltp = quote.price if quote else buy_price
+            for key, pos in self.positions.items():
+                sym = pos["symbol"]
+                qty = pos["qty"]
+                buy_price = pos["buy_price"]
+                quote = market_ingest.get_quote(sym)
+                ltp = quote.price if quote else buy_price
 
-            cur_val = round(ltp * qty, 2)
-            cost_val = round(buy_price * qty, 2)
-            pnl = round(cur_val - cost_val, 2)
-            pnl_pct = round((pnl / cost_val) * 100, 2) if cost_val > 0 else 0.0
+                cur_val = round(ltp * qty, 2)
+                cost_val = round(buy_price * qty, 2)
+                pnl = round(cur_val - cost_val, 2)
+                pnl_pct = round((pnl / cost_val) * 100, 2) if cost_val > 0 else 0.0
 
-            holdings_val += cur_val
-            unrealized_pnl += pnl
-            margin_used += (cost_val / 5) if pos["product"] == "MIS" else cost_val
+                holdings_val += cur_val
+                unrealized_pnl += pnl
+                margin_used += (cost_val / 5) if pos["product"] == "MIS" else cost_val
 
-            positions_res.append(PaperPositionResponse(
-                symbol=sym,
-                product=pos["product"],
-                qty=qty,
-                avg_price=buy_price,
-                ltp=ltp,
-                current_value=cur_val,
-                pnl=pnl,
-                pnl_pct=pnl_pct
-            ))
+                positions_res.append(PaperPositionResponse(
+                    symbol=sym,
+                    product=pos["product"],
+                    qty=qty,
+                    avg_price=buy_price,
+                    ltp=ltp,
+                    current_value=cur_val,
+                    pnl=pnl,
+                    pnl_pct=pnl_pct
+                ))
 
-        total_value = round(self.cash + margin_used + unrealized_pnl, 2)
+            total_value = round(self.cash + margin_used + unrealized_pnl, 2)
 
-        return PaperPortfolioResponse(
-            total_portfolio_value=total_value,
-            cash_balance=round(self.cash, 2),
-            margin_used=round(margin_used, 2),
-            unrealized_pnl=round(unrealized_pnl, 2),
-            realized_pnl=round(self.realized_pnl, 2),
-            total_trades_count=len(self.orders),
-            positions=positions_res,
-            orders=[dict(order) for order in self.orders]
-        )
+            return PaperPortfolioResponse(
+                total_portfolio_value=total_value,
+                cash_balance=round(self.cash, 2),
+                margin_used=round(margin_used, 2),
+                unrealized_pnl=round(unrealized_pnl, 2),
+                realized_pnl=round(self.realized_pnl, 2),
+                total_trades_count=len(self.orders),
+                positions=positions_res,
+                orders=[dict(order) for order in self.orders]
+            )
 
     def execute_order(self, req: PaperOrderRequest) -> Dict:
         sym = req.symbol.upper()
@@ -64,93 +146,123 @@ class PaperTradingEngine:
         qty = req.qty
         profit: Optional[float] = None
 
-        quote = market_ingest.get_quote(sym)
-        ltp = quote.price if quote else (req.price or 1000.0)
-        exec_price = req.price if (req.order_type == "LIMIT" and req.price) else ltp
+        with self._lock:
+            quote = market_ingest.get_quote(sym)
+            ltp = quote.price if quote else (req.price or 1000.0)
+            exec_price = req.price if (req.order_type == "LIMIT" and req.price) else ltp
 
-        order_val = qty * exec_price
-        margin_req = (order_val / 5) if prod == "MIS" else order_val
+            order_val = qty * exec_price
+            margin_req = (order_val / 5) if prod == "MIS" else order_val
+            pos_key = f"{sym}_{prod}"
+
+            if side == "BUY":
+                if self.cash < margin_req:
+                    raise ValueError(
+                        f"Insufficient virtual cash! Required: ₹{round(margin_req, 2)}, Available: ₹{round(self.cash, 2)}"
+                    )
+
+                self.cash -= margin_req
+                if pos_key in self.positions:
+                    existing = self.positions[pos_key]
+                    new_qty = existing["qty"] + qty
+                    existing["buy_price"] = round(
+                        ((existing["buy_price"] * existing["qty"]) + (exec_price * qty)) / new_qty, 2
+                    )
+                    existing["qty"] = new_qty
+                else:
+                    self.positions[pos_key] = {
+                        "symbol": sym, "product": prod, "qty": qty, "buy_price": exec_price
+                    }
+
+            elif side == "SELL":
+                if pos_key not in self.positions or self.positions[pos_key]["qty"] < qty:
+                    raise ValueError(
+                        f"You do not hold sufficient {qty} units of {sym} ({prod}) to sell"
+                    )
+
+                existing = self.positions[pos_key]
+                profit = round((exec_price - existing["buy_price"]) * qty, 2)
+                margin_to_return = (
+                    (existing["buy_price"] * qty / 5) if prod == "MIS" else (existing["buy_price"] * qty)
+                )
+
+                self.cash += margin_to_return + profit
+                self.realized_pnl += profit
+
+                existing["qty"] -= qty
+                if existing["qty"] <= 0:
+                    del self.positions[pos_key]
+
+            else:
+                raise ValueError(f"Unsupported order side: {side}")
+
+            time_str = datetime.utcnow().strftime("%I:%M %p")
+            self.orders.insert(0, {
+                "time": time_str,
+                "side": side,
+                "symbol": sym,
+                "product": prod,
+                "qty": qty,
+                "price": exec_price,
+                "status": "EXECUTED",
+                "pnl": round(profit, 2) if profit is not None else None
+            })
+            self.orders = self.orders[:200]
+            self._save_state()
+
+            return {"success": True, "message": f"{side} {qty}x {sym} executed @ ₹{exec_price:.2f}"}
+
+    def square_off_position(self, symbol: str, product: str) -> Dict:
+        sym = symbol.upper().strip()
+        prod = product.upper().strip()
         pos_key = f"{sym}_{prod}"
 
-        if side == "BUY":
-            if self.cash < margin_req:
-                raise ValueError(f"Insufficient virtual cash! Required: ₹{round(margin_req, 2)}, Available: ₹{round(self.cash, 2)}")
+        with self._lock:
+            if pos_key not in self.positions:
+                raise ValueError(f"No active position found for {sym} ({prod})")
 
-            self.cash -= margin_req
-            if pos_key in self.positions:
-                existing = self.positions[pos_key]
-                new_qty = existing["qty"] + qty
-                existing["buy_price"] = round(((existing["buy_price"] * existing["qty"]) + (exec_price * qty)) / new_qty, 2)
-                existing["qty"] = new_qty
-            else:
-                self.positions[pos_key] = {"symbol": sym, "product": prod, "qty": qty, "buy_price": exec_price}
+            pos = self.positions[pos_key]
+            quote = market_ingest.get_quote(sym)
+            ltp = quote.price if quote else pos["buy_price"]
+            qty = pos["qty"]
 
-        elif side == "SELL":
-            if pos_key not in self.positions or self.positions[pos_key]["qty"] < qty:
-                raise ValueError(f"You do not hold sufficient {qty} units of {sym} ({prod}) to sell")
-
-            existing = self.positions[pos_key]
-            profit = round((exec_price - existing["buy_price"]) * qty, 2)
-            margin_to_return = (existing["buy_price"] * qty / 5) if prod == "MIS" else (existing["buy_price"] * qty)
+            profit = (ltp - pos["buy_price"]) * qty
+            margin_to_return = (
+                (pos["buy_price"] * qty / 5) if prod == "MIS" else (pos["buy_price"] * qty)
+            )
 
             self.cash += margin_to_return + profit
             self.realized_pnl += profit
+            del self.positions[pos_key]
 
-            existing["qty"] -= qty
-            if existing["qty"] <= 0:
-                del self.positions[pos_key]
+            time_str = datetime.utcnow().strftime("%I:%M %p")
+            self.orders.insert(0, {
+                "time": time_str,
+                "side": "SELL",
+                "symbol": sym,
+                "product": prod,
+                "qty": qty,
+                "price": ltp,
+                "status": "SQUARED OFF",
+                "pnl": round(profit, 2)
+            })
+            self.orders = self.orders[:200]
+            self._save_state()
 
-        # Log order
-        time_str = datetime.utcnow().strftime("%I:%M %p")
-        self.orders.insert(0, {
-            "time": time_str,
-            "side": side,
-            "symbol": sym,
-            "product": prod,
-            "qty": qty,
-            "price": exec_price,
-            "status": "EXECUTED",
-            "pnl": round(profit, 2) if profit is not None else None
-        })
-
-        return {"success": True, "message": f"{side} {qty}x {sym} executed @ ₹{exec_price:.2f}"}
-
-    def square_off_position(self, symbol: str, product: str) -> Dict:
-        pos_key = f"{symbol.upper()}_{product.upper()}"
-        if pos_key not in self.positions:
-            raise ValueError(f"No active position found for {symbol} ({product})")
-
-        pos = self.positions[pos_key]
-        quote = market_ingest.get_quote(symbol.upper())
-        ltp = quote.price if quote else pos["buy_price"]
-        qty = pos["qty"]
-
-        profit = (ltp - pos["buy_price"]) * qty
-        margin_to_return = (pos["buy_price"] * qty / 5) if product == "MIS" else (pos["buy_price"] * qty)
-
-        self.cash += margin_to_return + profit
-        self.realized_pnl += profit
-        del self.positions[pos_key]
-
-        time_str = datetime.utcnow().strftime("%I:%M %p")
-        self.orders.insert(0, {
-            "time": time_str,
-            "side": "SELL",
-            "symbol": symbol.upper(),
-            "product": product.upper(),
-            "qty": qty,
-            "price": ltp,
-            "status": "SQUARED OFF",
-            "pnl": round(profit, 2)
-        })
-
-        return {"success": True, "pnl": round(profit, 2), "message": f"Squared off {symbol} @ ₹{ltp:.2f} (P&L: ₹{profit:+.2f})"}
+            return {
+                "success": True,
+                "pnl": round(profit, 2),
+                "message": f"Squared off {sym} @ ₹{ltp:.2f} (P&L: ₹{profit:+.2f})"
+            }
 
     def reset_account(self) -> Dict:
-        self.cash = self.initial_capital
-        self.realized_pnl = 0.0
-        self.positions.clear()
-        self.orders.clear()
-        return {"success": True, "message": "Paper portfolio reset to ₹10,00,000 cash balance"}
+        with self._lock:
+            self.cash = self.initial_capital
+            self.realized_pnl = 0.0
+            self.positions.clear()
+            self.orders.clear()
+            self._save_state()
+            return {"success": True, "message": "Paper portfolio reset to ₹10,00,000 cash balance"}
+
 
 paper_trading = PaperTradingEngine()

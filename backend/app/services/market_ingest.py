@@ -1278,6 +1278,42 @@ class MarketIngestService:
             self._mf_cache_time = time.time()
         return [dict(x) for x in clean]
 
+    def get_mutual_fund(self, code: Any) -> Optional[Dict[str, Any]]:
+        try:
+            code_int = int(code)
+        except (TypeError, ValueError):
+            return None
+        for row in self.get_mutual_funds_catalog():
+            if row.get("scheme_code") == code_int:
+                return dict(row)
+        return self._fetch_mutual_fund(code_int)
+
+    def get_growth_mutual_funds(self) -> List[Dict[str, Any]]:
+        """Rank verified funds by historical growth momentum, never by forecasts."""
+        out: List[Dict[str, Any]] = []
+        for f in self.get_mutual_funds_catalog():
+            spark = [float(v) for v in (f.get("sparkline") or []) if v]
+            latest = spark[-1] if spark else float(f.get("nav") or 0)
+            first = spark[0] if spark else latest
+            peak = max(spark) if spark else latest
+            momentum = ((latest / first - 1.0) * 100.0) if first else 0.0
+            drawdown = ((peak - latest) / peak * 100.0) if peak else 0.0
+            r1y = float(f.get("return_1y") or 0)
+            r3m = float(f.get("return_3m") or 0)
+            r1m = float(f.get("return_1m") or 0)
+            score = (0.45 * r1y) + (0.30 * r3m) + (0.15 * r1m) + (0.10 * momentum) - (0.25 * drawdown)
+            out.append({
+                **f,
+                "momentum_30d": round(momentum, 2),
+                "drawdown_30d": round(drawdown, 2),
+                "growth_score": round(score, 2),
+            })
+        out.sort(key=lambda x: x["growth_score"], reverse=True)
+        for rank, row in enumerate(out, 1):
+            row["rank"] = rank
+            row["growth_label"] = "High momentum" if rank <= 3 else ("Steady growth" if rank <= 6 else "Tracked")
+        return out
+
     def search_mutual_funds(self, query: str) -> List[Dict[str, Any]]:
         q = (query or "").strip()
         if not q:

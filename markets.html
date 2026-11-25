@@ -2087,7 +2087,13 @@
                                 <div class="breadth-row"><span class="breadth-row__label">A/D Ratio</span><span class="breadth-row__value ${b.ad_ratio >= 1 ? 'positive' : 'negative'}">${b.ad_ratio} (${b.sentiment})</span></div>
                             `;
                         }
-                        drawAreaChart('breadthChart', [b.advances], '#00d09c', 'rgba(0,208,156,0.15)', true, ['Current advances']);
+                        drawBarChart(
+                            'breadthChart',
+                            ['Advances', 'Declines', 'Unchanged'],
+                            [b.advances, b.declines, b.unchanged],
+                            ['#00d09c', '#f6465d', '#64748b']
+                        );
+                        window.marketBreadth = b;
                     }
                 }).catch(() => {
                     const canvas = document.getElementById('breadthChart');

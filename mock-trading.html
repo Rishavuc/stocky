@@ -1759,6 +1759,16 @@
                     drawEquityChart();
                 });
                 api().connectWebSocket();
+
+                // Keep the ledger authoritative across tabs and refreshes.
+                setInterval(async () => {
+                    const ok = await syncPortfolioFromBackend();
+                    if (ok) renderAll();
+                }, 15000);
+                window.addEventListener('focus', async () => {
+                    const ok = await syncPortfolioFromBackend();
+                    if (ok) renderAll();
+                });
             }
         });
     </script>
