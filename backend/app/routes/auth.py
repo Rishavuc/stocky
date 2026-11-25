@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 from datetime import datetime
+import json
 import time
 import hashlib
 import secrets
@@ -9,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.database import get_db
-from app.models.entities import User, PaperAccount
+from app.models.entities import User, PaperAccount, UserActivity
+from app.services.activity_logger import record_activity, resolve_user_id_from_header
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication & User Management"])
 
@@ -140,8 +142,16 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
 
-    # 5. Generate secure session token
+    # 5. Generate secure session token and audit the signup
     session_token = f"ie_sec_{user_uid}_{int(time.time())}"
+    await record_activity(
+        user_id=user_uid,
+        event_type="register",
+        method="POST",
+        path="/v1/auth/register",
+        status_code=200,
+        details={"email": clean_email, "plan": new_user.plan},
+    )
 
     return {
         "success": True,
@@ -180,6 +190,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = res.scalars().first()
 
     if not user:
+        await record_activity(
+            user_id=None,
+            event_type="login_failed",
+            method="POST",
+            path="/v1/auth/login",
+            status_code=401,
+            details={"reason": "user_not_found"},
+        )
         raise HTTPException(
             status_code=401, 
             detail="User not found. Please verify your email or click Create Account to register."
@@ -188,6 +206,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     # 2. Verify password with database salt & hashed password
     is_valid = verify_password(req.password, user.hashed_password, user.salt)
     if not is_valid:
+        await record_activity(
+            user_id=user.user_id,
+            event_type="login_failed",
+            method="POST",
+            path="/v1/auth/login",
+            status_code=401,
+            details={"reason": "incorrect_password"},
+        )
         raise HTTPException(
             status_code=401, 
             detail="Incorrect password. Please verify your credentials and try again."
@@ -199,6 +225,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
 
     session_token = f"ie_sec_{user.user_id}_{int(time.time())}"
+    await record_activity(
+        user_id=user.user_id,
+        event_type="login_success",
+        method="POST",
+        path="/v1/auth/login",
+        status_code=200,
+        details={"last_login": user.last_login_at.isoformat()},
+    )
 
     return {
         "success": True,
@@ -250,3 +284,64 @@ async def get_current_user(authorization: Optional[str] = Header(None), db: Asyn
         pass
 
     return {"authenticated": False, "user": None}
+
+@router.post("/logout")
+async def logout(authorization: Optional[str] = Header(None)):
+    user_id = resolve_user_id_from_header(authorization)
+    if user_id:
+        await record_activity(
+            user_id=user_id,
+            event_type="logout",
+            method="POST",
+            path="/v1/auth/logout",
+            status_code=200,
+        )
+    return {"success": True}
+
+# ========================================================
+# USER ACTIVITY HISTORY
+# ========================================================
+@router.get("/activity")
+async def get_user_activity(
+    authorization: Optional[str] = Header(None),
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = resolve_user_id_from_header(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Sign in to view activity.")
+
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    stmt = (
+        select(UserActivity)
+        .where(UserActivity.user_id == user_id)
+        .order_by(UserActivity.created_at.desc(), UserActivity.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    activities = []
+
+    for item in result.scalars().all():
+        parsed_details = None
+        if item.details:
+            try:
+                parsed_details = json.loads(item.details)
+            except (TypeError, ValueError):
+                parsed_details = None
+        activities.append({
+            "id": item.activity_id,
+            "event_type": item.event_type,
+            "method": item.method,
+            "path": item.path,
+            "status_code": item.status_code,
+            "ip_address": item.ip_address,
+            "user_agent": item.user_agent,
+            "details": parsed_details,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+        })
+
+    return {"user_id": user_id, "count": len(activities), "activities": activities}

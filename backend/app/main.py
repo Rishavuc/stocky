@@ -1,12 +1,14 @@
 import os
+import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.database import init_db
+from app.services.activity_logger import record_activity, resolve_user_id_from_header
 from app.routes import (
     instruments_router,
     markets_router,
@@ -41,6 +43,36 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+MEANINGFUL_GET_PATHS = ("/v1/auth/me", "/v1/auth/activity", "/v1/paper/portfolio")
+
+
+@app.middleware("http")
+async def log_user_activity(request: Request, call_next):
+    started = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+    response.headers["X-Response-Time-ms"] = str(elapsed_ms)
+
+    path = request.url.path
+    method = request.method.upper()
+    meaningful_get = method == "GET" and (
+        path in MEANINGFUL_GET_PATHS or path.startswith("/v1/auth/")
+    )
+    if path.startswith("/v1/") and (method != "GET" or meaningful_get):
+        user_id = resolve_user_id_from_header(request.headers.get("authorization"))
+        if user_id:
+            await record_activity(
+                user_id=user_id,
+                event_type="api_request",
+                method=method,
+                path=path,
+                status_code=response.status_code,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"),
+                details={"duration_ms": elapsed_ms},
+            )
+    return response
 
 # CORS Middleware
 app.add_middleware(

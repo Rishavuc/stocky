@@ -29,6 +29,7 @@
 - **Secure Authentication & Database Storage:**
   - PBKDF2-HMAC-SHA256 password hashing with 100,000 iterations and per-user cryptographic salts.
   - Persistent SQLite/PostgreSQL storage with SQLAlchemy asynchronous engine (`aiosqlite`).
+  - User activity audit trail (`user_activities`) for signups, logins, logouts, and authenticated API actions, with secrets stripped from stored details.
   - Seamless Day/Night mode theme toggle across all dashboard terminals.
 
 ---

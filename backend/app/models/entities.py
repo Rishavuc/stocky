@@ -22,6 +22,31 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login_at = Column(DateTime, default=datetime.utcnow)
 
+
+class UserActivity(Base):
+    """Audit trail for authenticated user actions.
+
+    Credentials stay in `users` as salted PBKDF2 hashes. This table records
+    what a user did, never the password or request body.
+    """
+    __tablename__ = "user_activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    activity_id = Column(String(36), unique=True, index=True, nullable=False)
+    user_id = Column(String(50), index=True, nullable=True)
+    event_type = Column(String(50), index=True, nullable=False)
+    method = Column(String(10), nullable=True)
+    path = Column(String(500), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        Index("ix_user_activities_user_created", "user_id", "created_at"),
+    )
+
 # ========================================================
 # REFERENCE: INSTRUMENTS
 # ========================================================

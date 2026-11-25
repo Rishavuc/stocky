@@ -39,9 +39,16 @@ class ApiClient {
     }
 
     async _fetchStrict(endpoint, options = {}) {
+        let token = null;
+        try {
+            token = localStorage.getItem('ie_auth_token');
+        } catch (e) {
+            token = null;
+        }
         const res = await fetch(`${this.baseUrl}${endpoint}`, {
             headers: {
                 'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...(options.headers || {})
             },
             ...options
@@ -297,6 +304,10 @@ class ApiClient {
         return res;
     }
 
+    async getActivity(limit = 50, offset = 0) {
+        return await this._fetchStrict(`/auth/activity?limit=${limit}&offset=${offset}`);
+    }
+
     getAuthUser() {
         try {
             const raw = localStorage.getItem('ie_auth_user');
@@ -315,7 +326,14 @@ class ApiClient {
         }
     }
 
-    logout() {
+    async logout() {
+        try {
+            if (localStorage.getItem('ie_auth_token')) {
+                await this._fetch('/auth/logout', { method: 'POST' });
+            }
+        } catch (e) {
+            console.warn('Logout activity could not be recorded:', e.message);
+        }
         try {
             localStorage.removeItem('ie_auth_token');
             localStorage.removeItem('ie_auth_user');
