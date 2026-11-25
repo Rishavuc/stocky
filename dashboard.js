@@ -142,7 +142,7 @@ function drawBarChart(canvasId, labels, values, colors) {
 
         // Label
         ctx.fillStyle = '#5a6478';
-        ctx.font = '11px Inter, sans-serif';
+        ctx.font = '11px Manrope, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(labels[i], x + barWidth / 2, h - 8);
     });
@@ -222,7 +222,7 @@ function drawAreaChart(canvasId, data, color, fillColor, showDots = false, label
     // Labels
     if (labels.length) {
         ctx.fillStyle = '#5a6478';
-        ctx.font = '10px Inter, sans-serif';
+        ctx.font = '10px Manrope, sans-serif';
         ctx.textAlign = 'center';
         labels.forEach((lbl, i) => {
             ctx.fillText(lbl, getX(i), h - 6);
@@ -264,7 +264,7 @@ function drawDoughnut(canvasId, segments, centerText = '') {
     // Center text
     if (centerText) {
         ctx.fillStyle = '#e8ecf4';
-        ctx.font = 'bold 16px Inter, sans-serif';
+        ctx.font = 'bold 16px Manrope, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(centerText, cx, cy);

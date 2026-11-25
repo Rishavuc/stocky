@@ -416,3 +416,114 @@ body .auth-card::before { display: none; }
 body .market-status--closed, body .hero__badge.is-closed { background: var(--c-bg-card); color: var(--c-text-secondary); box-shadow: var(--shadow-card); }
 body .market-status--closed .market-status__dot,
 body .hero__badge.is-closed .hero__badge-dot { animation: none; background: var(--c-text-tertiary); }
+
+/* =============================================
+   14. UI REVIEW FIXES (Nov 2026)
+   Page <style> blocks and [data-theme] rules out-rank plain selectors,
+   so these use `body ` or `[data-theme]` prefixes to win.
+   ============================================= */
+
+/* readable small text: tertiary ink passes 4.5:1 on cards */
+:root, [data-theme="light"] { --c-text-tertiary: #69746d; }
+[data-theme="dark"] { --c-text-tertiary: #848f88; }
+
+/* mock trading equity chart had no card styles at all */
+body .chart-card { background: var(--c-bg-card); border-radius: var(--r-xl); padding: 26px; box-shadow: var(--shadow-card); }
+body .chart-card__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+body .chart-card__title { font-size: 16px; font-weight: 600; }
+body .chart-card__subtitle { font-size: 12.5px; color: var(--c-text-tertiary); }
+body .chart-timeframes { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--c-bg-primary); }
+body .tf-btn { padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--c-text-secondary); }
+body .tf-btn.active { background: var(--c-ink); color: var(--c-ink-text); }
+
+/* landing nav fits at 1440 */
+body .navbar__inner { gap: 16px; }
+body .navbar .search-box { min-width: 0; width: 200px; }
+@media (max-width: 1560px) { body .navbar .api-feed-badge { display: none; } }
+@media (max-width: 1360px) { body .navbar .search-box { display: none; } }
+@media (max-width: 1280px) { body .navbar__logo-name { display: none; } }
+
+/* light-theme slate leftovers from dashboard.css / styles.css */
+[data-theme] .topbar__search, [data-theme] .search-box, [data-theme] .topbar__icon-btn,
+[data-theme] .topbar__hamburger, [data-theme] .sidebar__user {
+    background: var(--c-chip); border-color: transparent; color: var(--c-text-primary);
+}
+[data-theme] .search-box { border-radius: 999px; box-shadow: var(--shadow-card); }
+[data-theme] .search-box__kbd { background: var(--c-bg-primary); border: none; color: var(--c-text-tertiary); }
+[data-theme] .fii-dii-card, [data-theme] .live-quote-card { background: var(--c-bg-primary); border: none; }
+
+/* theme toggle: icon-only round chip, no "DAY" next to a moon */
+body .theme-toggle-label { display: none; }
+body .theme-toggle-btn { width: 44px; padding: 0; justify-content: center; }
+[data-theme] .theme-toggle-moon, [data-theme] .theme-toggle-sun { color: var(--c-text-secondary); }
+
+/* estimates hero stacks on narrow screens */
+@media (max-width: 900px) {
+    body .prediction-hero { flex-direction: column; align-items: flex-start; padding: 24px; }
+    body .prediction-hero__right { flex-wrap: wrap; gap: 20px 28px; }
+}
+body .model-info-item__value { color: var(--c-text-primary) !important; }
+
+/* mock trading order ticket: ink BUY, red SELL stays distinct */
+body .trade-side-toggle { background: var(--c-bg-primary); border-radius: 999px; }
+body .trade-side-btn { text-transform: none; letter-spacing: 0; border-radius: 999px; }
+body .trade-side-btn.active-buy, body .btn-order-submit.btn-buy {
+    background: var(--c-ink); color: var(--c-ink-text); box-shadow: 0 6px 18px rgba(14, 21, 18, 0.16);
+}
+body .trade-side-btn.active-sell { box-shadow: none; }
+body .btn-order-submit { border-radius: 999px; }
+
+/* sentence-case labels instead of shouty uppercase */
+body .prediction-table th, body .custom-data-table th, body .fund-table th, body .catalog-table th,
+body .prediction-form__label, body .prediction-hero__stat-label, body .model-info-item__label,
+body .portfolio-card__label, body .trade-form-label, body .stat-box__title, body .fii-dii-card__label,
+body .index-big-card__name, body .track-card__level, body .auth-badge, body .auth-divider, body .platform-badge-lg {
+    text-transform: none; letter-spacing: 0; font-weight: 600;
+}
+
+/* hard 1px borders on forms and panels */
+body .auth-nav { border-bottom: none; }
+body .auth-tabs { border: none; background: var(--c-bg-primary); border-radius: 999px; }
+body .auth-tab-btn { border-radius: 999px; }
+body .auth-input, body .prediction-form__input, body .prediction-form__select, body .trade-input, body .trade-select {
+    border: 1px solid transparent; background: var(--c-bg-primary); border-radius: 12px;
+}
+body .auth-input:focus, body .prediction-form__input:focus, body .prediction-form__select:focus,
+body .trade-input:focus, body .trade-select:focus {
+    border-color: var(--c-border-hover); box-shadow: 0 0 0 4px var(--c-accent-dim);
+}
+body .auth-sso-btn { border: none; background: var(--c-bg-primary); border-radius: 999px; }
+body .auth-btn-demo { border: none; border-radius: 999px; }
+body .prediction-form, body .prediction-result__chart-wrap, body .order-panel, body .portfolio-card {
+    border: none; box-shadow: var(--shadow-card); border-radius: var(--r-xl);
+}
+body .model-info-item, body .confidence-meter { border: none; background: var(--c-bg-primary); }
+body .order-panel__header, body .course-card-premium__footer { border: none; }
+
+/* empty states span the full grid instead of squeezing into one column */
+body .heatmap-grid > :only-child, body .indicator-grid > :only-child, body .ratio-grid > :only-child {
+    grid-column: 1 / -1; text-align: center; padding: 32px 0;
+}
+body span.dash-card__action { cursor: default; opacity: 0.6; }
+
+/* learn: one neutral badge style, no rainbow, footer buttons line up */
+body .platform-badge-lg { background: var(--c-bg-primary) !important; color: var(--c-text-secondary) !important; border-radius: 999px; }
+body .course-rating-wrap { color: var(--c-text-primary); }
+body .course-card-premium__footer { flex-wrap: wrap; gap: 10px; }
+body .course-card-premium__footer .btn--sm { padding: 7px 12px; }
+
+/* keyboard focus ring */
+body :is(a, button, select, input, [tabindex]):focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+body :is(a, button):focus-visible { border-radius: 999px; }
+
+/* mobile: nothing stretches past the viewport; compact top bar */
+body .main-content { min-width: 0; }
+@media (max-width: 768px) {
+    body .topbar__breadcrumb > :not(.topbar__breadcrumb-current), body .topbar__search-kbd { display: none; }
+    body .topbar__right { gap: 8px; }
+    body .topbar__search { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%; justify-content: center; }
+    body .topbar__search-input { display: none; }
+}
+
+/* status badges never wrap */
+[data-market-status] { white-space: nowrap; }

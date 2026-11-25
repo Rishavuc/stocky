@@ -407,7 +407,7 @@
         const clean = values.filter(v => Number.isFinite(Number(v))).map(Number);
         if (clean.length < 2) {
             ctx.fillStyle = '#94a3b8';
-            ctx.font = '13px Inter';
+            ctx.font = '13px Manrope, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('Not enough verified history to draw this chart.', w / 2, h / 2);
             return;
@@ -431,7 +431,7 @@
             const y = pad.top + (i / 4) * ch;
             ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
             ctx.fillStyle = '#64748b';
-            ctx.font = '10px JetBrains Mono';
+            ctx.font = '10px Manrope, sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(money(hi - (i / 4) * span), pad.left - 8, y + 4);
         }
@@ -453,7 +453,7 @@
         ctx.fill();
 
         ctx.fillStyle = '#64748b';
-        ctx.font = '10px Inter';
+        ctx.font = '10px Manrope, sans-serif';
         ctx.textAlign = 'center';
         const ticks = Math.min(6, clean.length);
         for (let i = 0; i < ticks; i++) {
@@ -470,7 +470,7 @@
         const clean = values.filter(v => Number.isFinite(Number(v))).map(Number);
         if (!clean.length) {
             ctx.fillStyle = '#94a3b8';
-            ctx.font = '13px Inter';
+            ctx.font = '13px Manrope, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('No verified volume data available.', w / 2, h / 2);
             return;
@@ -486,7 +486,7 @@
             const y = pad.top + (i / 3) * ch;
             ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
             ctx.fillStyle = '#64748b';
-            ctx.font = '10px JetBrains Mono';
+            ctx.font = '10px Manrope, sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(Math.round(max - (i / 3) * max).toLocaleString('en-IN'), pad.left - 8, y + 4);
         }
@@ -502,7 +502,7 @@
         });
 
         ctx.fillStyle = '#64748b';
-        ctx.font = '10px Inter';
+        ctx.font = '10px Manrope, sans-serif';
         ctx.textAlign = 'center';
         const ticks = Math.min(5, clean.length);
         for (let i = 0; i < ticks; i++) {

@@ -1650,7 +1650,7 @@
                 ctx.lineTo(w - pad.right, y);
                 ctx.stroke();
                 ctx.fillStyle = '#64748b';
-                ctx.font = '10px JetBrains Mono';
+                ctx.font = '10px Manrope, sans-serif';
                 ctx.textAlign = 'right';
                 ctx.fillText(Math.round(max - (i / 3) * range).toLocaleString('en-IN'), pad.left - 8, y + 4);
             }
@@ -1669,7 +1669,7 @@
                 ctx.fill();
                 if (clean.length <= 12 || i === 0 || i === clean.length - 1) {
                     ctx.fillStyle = '#64748b';
-                    ctx.font = '10px Inter';
+                    ctx.font = '10px Manrope, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(labels[i] || '', gx(i), pad.top + ch + 18);
                 }
