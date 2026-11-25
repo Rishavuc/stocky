@@ -191,16 +191,20 @@ class ApiClient {
         });
     }
 
-    async squareOffPaper(symbol, product = 'CNC') {
-        return await this._fetch(`/paper/square-off?symbol=${encodeURIComponent(symbol)}&product=${encodeURIComponent(product)}`, {
-            method: 'POST'
-        });
+    async squareOffPaper(symbol, product = 'CNC', clientOrderId = null, createdAt = null, price = null) {
+        const params = new URLSearchParams({ symbol, product });
+        if (clientOrderId) params.set('client_order_id', clientOrderId);
+        if (createdAt) params.set('created_at', createdAt);
+        if (price !== null && price !== undefined) params.set('price', String(price));
+        return await this._fetch(`/paper/square-off?${params}`, { method: 'POST' });
     }
 
-    async squareOffPaperStrict(symbol, product = 'CNC') {
-        return await this._fetchStrict(`/paper/square-off?symbol=${encodeURIComponent(symbol)}&product=${encodeURIComponent(product)}`, {
-            method: 'POST'
-        });
+    async squareOffPaperStrict(symbol, product = 'CNC', clientOrderId = null, createdAt = null, price = null) {
+        const params = new URLSearchParams({ symbol, product });
+        if (clientOrderId) params.set('client_order_id', clientOrderId);
+        if (createdAt) params.set('created_at', createdAt);
+        if (price !== null && price !== undefined) params.set('price', String(price));
+        return await this._fetchStrict(`/paper/square-off?${params}`, { method: 'POST' });
     }
 
     async resetPaperPortfolio() {

@@ -2,6 +2,7 @@ import json
 import math
 import os
 import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -11,6 +12,7 @@ from app.schemas.schemas import PaperOrderRequest, PaperPortfolioResponse, Paper
 
 
 DEFAULT_STATE_PATH = Path(__file__).resolve().parents[2] / "data" / "paper_portfolio.json"
+DEFAULT_LEDGER_EPOCH = "initial"
 
 
 class PaperTradingEngine:
@@ -27,6 +29,7 @@ class PaperTradingEngine:
         self.realized_pnl: float = 0.0
         self.positions: Dict[str, Dict] = {}
         self.orders: List[Dict] = []
+        self.ledger_epoch: str = DEFAULT_LEDGER_EPOCH
         self._lock = threading.RLock()
         self._state_path = Path(os.getenv("PAPER_PORTFOLIO_FILE", str(DEFAULT_STATE_PATH)))
         self._load_state()
@@ -34,11 +37,64 @@ class PaperTradingEngine:
     # ------------------------------------------------------------
     # PERSISTENCE
     # ------------------------------------------------------------
+    @staticmethod
+    def _identity_value(order: Dict, key: str) -> str:
+        item = order.get(key, "")
+        if item is None:
+            return ""
+        text = str(item)
+        if key == "pnl" and text.strip() in ("0", "0.0", "0.00", "null", "None"):
+            return ""
+        return text
+
+    @classmethod
+    def _order_identity(cls, order: Dict) -> str:
+        """Stable id for orders saved before client_order_id existed."""
+        raw = "|".join(cls._identity_value(order, key) for key in (
+            "time", "side", "symbol", "product", "qty", "price", "status", "pnl"
+        ))
+        h = 2166136261
+        for ch in raw:
+            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
+        return f"legacy-{h:08x}"
+
+    @classmethod
+    def _request_identity(cls, order: Dict) -> str:
+        """Time-independent identity used to reject stale client replays."""
+        raw = "|".join(cls._identity_value(order, key) for key in (
+            "side", "symbol", "product", "qty", "price", "status", "pnl"
+        ))
+        h = 2166136261
+        for ch in raw:
+            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
+        return f"request-{h:08x}"
+
+    def _find_existing_order(
+        self,
+        client_order_id: Optional[str],
+        candidate: Optional[Dict] = None
+    ) -> Optional[Dict]:
+        """Idempotency lookup used when replaying offline/local orders."""
+        cid = str(client_order_id).strip() if client_order_id else ""
+        candidate_identity = (
+            self._request_identity(candidate)
+            if candidate and (not cid or cid.startswith("legacy-"))
+            else None
+        )
+        for order in self.orders:
+            if cid and order.get("client_order_id") == cid:
+                return order
+            if candidate_identity and self._request_identity(order) == candidate_identity:
+                return order
+        return None
+
     def _load_state(self) -> None:
         try:
             if not self._state_path.exists():
                 return
             data = json.loads(self._state_path.read_text(encoding="utf-8"))
+            epoch = data.get("epoch") or data.get("ledger_epoch") or DEFAULT_LEDGER_EPOCH
+            self.ledger_epoch = str(epoch)
             cash = float(data.get("cash", self.initial_capital))
             if math.isfinite(cash):
                 self.cash = cash
@@ -66,10 +122,17 @@ class PaperTradingEngine:
 
             saved_orders = data.get("orders") or []
             if isinstance(saved_orders, list):
-                self.orders = [
-                    dict(order) for order in saved_orders
-                    if isinstance(order, dict) and order.get("symbol")
-                ][:200]
+                restored_orders: List[Dict] = []
+                for order in saved_orders:
+                    if not isinstance(order, dict) or not order.get("symbol"):
+                        continue
+                    item = dict(order)
+                    if not item.get("client_order_id"):
+                        item["client_order_id"] = self._order_identity(item)
+                    if not item.get("created_at"):
+                        item["created_at"] = str(item.get("time") or "")
+                    restored_orders.append(item)
+                self.orders = restored_orders[:200]
         except Exception as e:
             print(f"[Paper Trading] Could not load saved portfolio: {e}")
 
@@ -77,6 +140,7 @@ class PaperTradingEngine:
         try:
             self._state_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
+                "epoch": self.ledger_epoch,
                 "cash": self.cash,
                 "realized_pnl": self.realized_pnl,
                 "positions": self.positions,
@@ -129,6 +193,7 @@ class PaperTradingEngine:
             total_value = round(self.cash + margin_used + unrealized_pnl, 2)
 
             return PaperPortfolioResponse(
+                ledger_epoch=self.ledger_epoch,
                 total_portfolio_value=total_value,
                 cash_balance=round(self.cash, 2),
                 margin_used=round(margin_used, 2),
@@ -145,8 +210,29 @@ class PaperTradingEngine:
         prod = req.product.upper()
         qty = req.qty
         profit: Optional[float] = None
+        client_order_id = str(req.client_order_id).strip() if req.client_order_id else ""
+        order_id = client_order_id or uuid.uuid4().hex
+        created_at = str(req.created_at) if req.created_at else datetime.utcnow().isoformat() + "Z"
+
+        candidate = {
+            "time": datetime.utcnow().strftime("%I:%M %p"),
+            "side": side,
+            "symbol": sym,
+            "product": prod,
+            "qty": qty,
+            "price": req.price,
+            "status": "EXECUTED",
+            "pnl": None,
+        }
 
         with self._lock:
+            existing = self._find_existing_order(order_id, candidate)
+            if existing:
+                return {
+                    "success": True,
+                    "duplicate": True,
+                    "message": f"{side} {qty}x {sym} was already executed",
+                }
             quote = market_ingest.get_quote(sym)
             ltp = quote.price if quote else (req.price or 1000.0)
             exec_price = req.price if (req.order_type == "LIMIT" and req.price) else ltp
@@ -196,8 +282,10 @@ class PaperTradingEngine:
             else:
                 raise ValueError(f"Unsupported order side: {side}")
 
-            time_str = datetime.utcnow().strftime("%I:%M %p")
+            time_str = candidate["time"]
             self.orders.insert(0, {
+                "client_order_id": order_id,
+                "created_at": created_at,
                 "time": time_str,
                 "side": side,
                 "symbol": sym,
@@ -212,18 +300,36 @@ class PaperTradingEngine:
 
             return {"success": True, "message": f"{side} {qty}x {sym} executed @ ₹{exec_price:.2f}"}
 
-    def square_off_position(self, symbol: str, product: str) -> Dict:
+    def square_off_position(
+        self,
+        symbol: str,
+        product: str,
+        client_order_id: Optional[str] = None,
+        created_at: Optional[str] = None,
+        price: Optional[float] = None,
+    ) -> Dict:
         sym = symbol.upper().strip()
         prod = product.upper().strip()
         pos_key = f"{sym}_{prod}"
+        order_id = str(client_order_id).strip() if client_order_id else uuid.uuid4().hex
+        order_time = datetime.utcnow().strftime("%I:%M %p")
+        order_created_at = str(created_at) if created_at else datetime.utcnow().isoformat() + "Z"
 
         with self._lock:
+            existing = self._find_existing_order(order_id)
+            if existing:
+                return {
+                    "success": True,
+                    "duplicate": True,
+                    "message": f"Square-off for {sym} was already executed",
+                }
             if pos_key not in self.positions:
                 raise ValueError(f"No active position found for {sym} ({prod})")
 
             pos = self.positions[pos_key]
             quote = market_ingest.get_quote(sym)
-            ltp = quote.price if quote else pos["buy_price"]
+            replay_price = float(price) if price is not None and math.isfinite(float(price)) and float(price) > 0 else None
+            ltp = replay_price or (quote.price if quote else pos["buy_price"])
             qty = pos["qty"]
 
             profit = (ltp - pos["buy_price"]) * qty
@@ -235,9 +341,10 @@ class PaperTradingEngine:
             self.realized_pnl += profit
             del self.positions[pos_key]
 
-            time_str = datetime.utcnow().strftime("%I:%M %p")
             self.orders.insert(0, {
-                "time": time_str,
+                "client_order_id": order_id,
+                "created_at": order_created_at,
+                "time": order_time,
                 "side": "SELL",
                 "symbol": sym,
                 "product": prod,
@@ -261,8 +368,13 @@ class PaperTradingEngine:
             self.realized_pnl = 0.0
             self.positions.clear()
             self.orders.clear()
+            self.ledger_epoch = uuid.uuid4().hex[:12]
             self._save_state()
-            return {"success": True, "message": "Paper portfolio reset to ₹10,00,000 cash balance"}
+            return {
+                "success": True,
+                "message": "Paper portfolio reset to ₹10,00,000 cash balance",
+                "ledger_epoch": self.ledger_epoch,
+            }
 
 
 paper_trading = PaperTradingEngine()

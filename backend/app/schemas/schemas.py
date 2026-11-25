@@ -122,6 +122,8 @@ class PaperOrderRequest(BaseModel):
     order_type: str = "MARKET" # MARKET, LIMIT
     qty: int
     price: Optional[float] = None
+    client_order_id: Optional[str] = None
+    created_at: Optional[str] = None
 
 class PaperPositionResponse(BaseModel):
     symbol: str
@@ -134,6 +136,7 @@ class PaperPositionResponse(BaseModel):
     pnl_pct: float
 
 class PaperPortfolioResponse(BaseModel):
+    ledger_epoch: str = "initial"
     total_portfolio_value: float
     cash_balance: float
     margin_used: float
