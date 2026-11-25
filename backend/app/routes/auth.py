@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 from datetime import datetime
+import json
 import time
 import hashlib
 import secrets
@@ -12,9 +13,10 @@ from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 
 from app.config import settings, is_configured
-from app.security import issue_session_token, optional_user_id
+from app.security import issue_session_token, optional_user_id, current_user_id
 from app.database import get_db
-from app.models.entities import User, PaperAccount
+from app.models.entities import User, PaperAccount, UserActivity
+from app.services.activity_logger import record_activity
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication & User Management"])
 
@@ -145,6 +147,14 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(new_user)
 
     session_token = issue_session_token(user_uid)
+    await record_activity(
+        user_id=user_uid,
+        event_type="register",
+        method="POST",
+        path="/v1/auth/register",
+        status_code=200,
+        details={"email": clean_email, "plan": new_user.plan},
+    )
 
     return {
         "success": True,
@@ -183,6 +193,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = res.scalars().first()
 
     if not user:
+        await record_activity(
+            user_id=None,
+            event_type="login_failed",
+            method="POST",
+            path="/v1/auth/login",
+            status_code=401,
+            details={"reason": "user_not_found"},
+        )
         raise HTTPException(
             status_code=401, 
             detail="User not found. Please verify your email or click Create Account to register."
@@ -191,6 +209,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     # 2. Verify password with database salt & hashed password
     is_valid = verify_password(req.password, user.hashed_password, user.salt)
     if not is_valid:
+        await record_activity(
+            user_id=user.user_id,
+            event_type="login_failed",
+            method="POST",
+            path="/v1/auth/login",
+            status_code=401,
+            details={"reason": "incorrect_password"},
+        )
         raise HTTPException(
             status_code=401, 
             detail="Incorrect password. Please verify your credentials and try again."
@@ -202,6 +228,14 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
 
     session_token = issue_session_token(user.user_id)
+    await record_activity(
+        user_id=user.user_id,
+        event_type="login_success",
+        method="POST",
+        path="/v1/auth/login",
+        status_code=200,
+        details={"last_login": user.last_login_at.isoformat()},
+    )
 
     return {
         "success": True,
@@ -285,6 +319,15 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
     await db.commit()
     await db.refresh(user)
 
+    await record_activity(
+        user_id=user.user_id,
+        event_type="login_success",
+        method="POST",
+        path="/v1/auth/google",
+        status_code=200,
+        details={"provider": "google"},
+    )
+
     return {
         "success": True,
         "access_token": issue_session_token(user.user_id),
@@ -326,3 +369,63 @@ async def get_current_user(user_uid: Optional[str] = Depends(optional_user_id), 
             "virtual_balance": user.virtual_balance
         }
     }
+
+@router.post("/logout")
+async def logout(user_id: Optional[str] = Depends(optional_user_id)):
+    # JWTs are stateless, so logout just records the event; the browser
+    # drops its token. Forged tokens resolve to None and log nothing.
+    if user_id:
+        await record_activity(
+            user_id=user_id,
+            event_type="logout",
+            method="POST",
+            path="/v1/auth/logout",
+            status_code=200,
+        )
+    return {"success": True}
+
+# ========================================================
+# USER ACTIVITY HISTORY
+# ========================================================
+@router.get("/activity")
+async def get_user_activity(
+    user_id: str = Depends(current_user_id),
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    # current_user_id verifies the signed token, so a user can only ever
+    # read their own trail (IPs and user agents included).
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    stmt = (
+        select(UserActivity)
+        .where(UserActivity.user_id == user_id)
+        .order_by(UserActivity.created_at.desc(), UserActivity.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    activities = []
+
+    for item in result.scalars().all():
+        parsed_details = None
+        if item.details:
+            try:
+                parsed_details = json.loads(item.details)
+            except (TypeError, ValueError):
+                parsed_details = None
+        activities.append({
+            "id": item.activity_id,
+            "event_type": item.event_type,
+            "method": item.method,
+            "path": item.path,
+            "status_code": item.status_code,
+            "ip_address": item.ip_address,
+            "user_agent": item.user_agent,
+            "details": parsed_details,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+        })
+
+    return {"user_id": user_id, "count": len(activities), "activities": activities}

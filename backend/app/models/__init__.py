@@ -1,5 +1,5 @@
 from app.models.entities import (
-    User,
+    User, UserActivity,
     Instrument, Candle, OptionChainSnapshot,
     PaperAccount, PaperPosition, PaperTrade,
     BrokerAccount, UnifiedTrade,
@@ -7,7 +7,7 @@ from app.models.entities import (
 )
 
 __all__ = [
-    "User",
+    "User", "UserActivity",
     "Instrument", "Candle", "OptionChainSnapshot",
     "PaperAccount", "PaperPosition", "PaperTrade",
     "BrokerAccount", "UnifiedTrade",

@@ -61,7 +61,7 @@ class ApiClient {
         if (!res.ok) {
             // A token the server rejects (expired, or from before signed
             // tokens) is useless: drop it so the UI shows "signed out".
-            if (res.status === 401 && token) this.logout();
+            if (res.status === 401 && token) this._clearSession();
             const err = await res.json().catch(() => ({ detail: res.statusText }));
             // FastAPI validation errors send detail as a list of {msg, loc}.
             const detail = Array.isArray(err.detail)
@@ -336,6 +336,10 @@ class ApiClient {
         return res;
     }
 
+    async getActivity(limit = 50, offset = 0) {
+        return await this._fetchStrict(`/auth/activity?limit=${limit}&offset=${offset}`);
+    }
+
     getAuthUser() {
         try {
             const raw = localStorage.getItem('ie_auth_user');
@@ -354,7 +358,19 @@ class ApiClient {
         }
     }
 
-    logout() {
+    async logout() {
+        try {
+            if (localStorage.getItem('ie_auth_token')) {
+                await this._fetch('/auth/logout', { method: 'POST' });
+            }
+        } catch (e) {
+            console.warn('Logout activity could not be recorded:', e.message);
+        }
+        this._clearSession();
+    }
+
+    // Local-only sign-out, used when the server already rejected the token.
+    _clearSession() {
         try {
             localStorage.removeItem('ie_auth_token');
             localStorage.removeItem('ie_auth_user');
