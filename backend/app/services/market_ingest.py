@@ -1,12 +1,15 @@
 import os
+import re
 import math
 import time
 import random
 import json
 import threading
 import urllib.request
+import urllib.parse
 import hmac
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from app.config import settings, ENV_FILE, is_configured
@@ -27,6 +30,14 @@ try:
 except ImportError:
     yf = None
     YFINANCE_AVAILABLE = False
+
+# Optional HTML parser for verified FII/DII tables.
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BeautifulSoup = None
+    BS4_AVAILABLE = False
 
 
 # ========================================================
@@ -55,7 +66,34 @@ CURRENCIES_MAP = {
     "JPYINR": {"symbol": "JPYINR", "name": "JPY / INR (100 Yen)", "pair": "100 JPY/INR", "price": 57.18, "change": -0.15, "change_pct": -0.26},
 }
 
-USD_INR_RATE = 86.85  # Real-time exchange rate baseline for crypto INR conversion
+# Legacy baseline retained only for symbol seeding. Live conversions use the
+# verified Frankfurter FX feed via ``get_usd_inr_rate``.
+USD_INR_RATE = 86.85
+
+# Verified INR crosses exposed by the Frankfurter ECB feed.
+FOREX_META = {
+    "USD": {"symbol": "USDINR", "pair": "USD/INR", "name": "US Dollar / Indian Rupee", "scale": 1.0},
+    "EUR": {"symbol": "EURINR", "pair": "EUR/INR", "name": "Euro / Indian Rupee", "scale": 1.0},
+    "GBP": {"symbol": "GBPINR", "pair": "GBP/INR", "name": "British Pound / Indian Rupee", "scale": 1.0},
+    "JPY": {"symbol": "JPYINR", "pair": "100 JPY/INR", "name": "100 Japanese Yen / Indian Rupee", "scale": 100.0},
+    "AUD": {"symbol": "AUDINR", "pair": "AUD/INR", "name": "Australian Dollar / Indian Rupee", "scale": 1.0},
+    "CAD": {"symbol": "CADINR", "pair": "CAD/INR", "name": "Canadian Dollar / Indian Rupee", "scale": 1.0},
+    "SGD": {"symbol": "SGDINR", "pair": "SGD/INR", "name": "Singapore Dollar / Indian Rupee", "scale": 1.0},
+}
+
+# Global benchmark indices verified through Yahoo Finance.
+GLOBAL_INDICES_MAP = {
+    "S&P 500": "^GSPC",
+    "NASDAQ 100": "^NDX",
+    "DOW JONES": "^DJI",
+    "FTSE 100": "^FTSE",
+}
+
+# Scheme codes verified against mfapi.in metadata before inclusion.
+MUTUAL_FUND_SCHEMES = [
+    120503, 120586, 118778, 122639, 118825,
+    119071, 147473, 125497, 118632, 120662,
+]
 
 # ========================================================
 # REALISTIC FALLBACK REFERENCE PRICES
@@ -187,6 +225,15 @@ class MarketIngestService:
         self._snapshot_lock = threading.RLock()
         self._snapshot_cache: Dict[str, QuoteResponse] = {}
         self._snapshot_time: float = 0.0
+
+        # Verified alternative-feed caches (institutional flows, FX, mutual funds).
+        self._fii_cache: Optional[Dict[str, Any]] = None
+        self._fii_cache_time: float = 0.0
+        self._fx_cache: List[Dict[str, Any]] = []
+        self._fx_cache_time: float = 0.0
+        self._mf_cache: List[Dict[str, Any]] = []
+        self._mf_cache_time: float = 0.0
+        self._feed_lock = threading.RLock()
 
     # ========================================================
     # DYNAMIC VERIFIED SYMBOL DISCOVERY
@@ -932,6 +979,25 @@ class MarketIngestService:
                 ))
         return out
 
+    def get_global_indices(self) -> List[IndexOverview]:
+        """Return verified global benchmark quotes; no hard-coded values."""
+        out: List[IndexOverview] = []
+        for name, ticker in GLOBAL_INDICES_MAP.items():
+            q = self.fetch_yfinance_quote(name, ticker, name, False)
+            if not q:
+                continue
+            candles = self.fetch_yfinance_candles(ticker, "1d", 10)
+            spark = [round(float(c.close), 2) for c in candles if not c.is_synthetic]
+            out.append(IndexOverview(
+                name=name,
+                value=q.price,
+                change=q.change,
+                change_pct=q.change_pct,
+                positive=q.change >= 0,
+                sparkline=spark,
+            ))
+        return out
+
     def get_all_quotes(self) -> List[QuoteResponse]:
         syms = list(INDIAN_STOCKS_MAP.keys()) + ["BTCINR", "ETHINR", "SOLINR"] + list(self._dynamic_symbols.keys())
         syms = list(dict.fromkeys(syms))
@@ -982,19 +1048,252 @@ class MarketIngestService:
         rows.sort(key=lambda r: r["change_pct"], reverse=True)
         return rows
 
+    @staticmethod
+    def _fetch_text(url: str, timeout: float = 20.0) -> str:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"),
+            "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+        })
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode("utf-8", "replace")
+
+    @classmethod
+    def _fetch_json(cls, url: str, timeout: float = 20.0) -> Any:
+        return json.loads(cls._fetch_text(url, timeout))
+
+    @staticmethod
+    def _parse_number(value: Any) -> Optional[float]:
+        txt = str(value or "").replace("₹", "").replace(",", "").strip()
+        if not txt:
+            return None
+        negative = txt.startswith("-") or (txt.startswith("(") and txt.endswith(")"))
+        txt = txt.strip("()+- ")
+        try:
+            num = float(txt)
+        except (TypeError, ValueError):
+            return None
+        return -num if negative else num
+
+    def _fetch_fii_dii(self) -> Optional[Dict[str, Any]]:
+        """Read the verified institutional-flow table published on Groww."""
+        if not BS4_AVAILABLE:
+            return None
+        try:
+            html = self._fetch_text("https://groww.in/fii-dii-data")
+            soup = BeautifulSoup(html, "html.parser")
+            rows: List[Dict[str, Any]] = []
+            for tr in soup.select("tbody tr"):
+                cells = [c.get_text(" ", strip=True) for c in tr.find_all("td")]
+                if len(cells) < 7 or not re.search(r"\d{1,2}\s+[A-Za-z]{3}\s+\d{4}", cells[0]):
+                    continue
+                nums = [self._parse_number(c) for c in cells[1:7]]
+                if any(n is None for n in nums):
+                    continue
+                rows.append({
+                    "day": cells[0],
+                    "fii_buy": nums[0],
+                    "fii_sell": nums[1],
+                    "fii": nums[2],
+                    "dii_buy": nums[3],
+                    "dii_sell": nums[4],
+                    "dii": nums[5],
+                })
+                if len(rows) == 5:
+                    break
+            if not rows:
+                return None
+            latest = rows[0]
+            return {
+                "available": True,
+                "source": "Groww (NSE/BSE provisional cash-market data)",
+                "as_of": latest["day"],
+                "fii_net": latest["fii"],
+                "fii_buy": latest["fii_buy"],
+                "fii_sell": latest["fii_sell"],
+                "dii_net": latest["dii"],
+                "dii_buy": latest["dii_buy"],
+                "dii_sell": latest["dii_sell"],
+                "historical_5d": rows,
+            }
+        except Exception as e:
+            print(f"[FII/DII Feed Warning]: {e}")
+            return None
+
     def get_fii_dii_flows(self) -> Dict[str, Any]:
-        """Institutional flows require a dedicated feed; never estimate them."""
+        """Return verified daily FII/DII cash-market flows."""
+        with self._feed_lock:
+            if self._fii_cache and (time.time() - self._fii_cache_time) < 900:
+                return dict(self._fii_cache)
+        data = self._fetch_fii_dii()
+        if data:
+            with self._feed_lock:
+                self._fii_cache = data
+                self._fii_cache_time = time.time()
+            return dict(data)
         return {
             "available": False,
-            "message": "FII / DII feed not connected",
+            "message": "FII / DII feed unavailable right now",
+            "source": "Groww (NSE/BSE provisional cash-market data)",
             "fii_net": 0,
             "fii_buy": 0,
             "fii_sell": 0,
             "dii_net": 0,
             "dii_buy": 0,
             "dii_sell": 0,
-            "historical_5d": []
+            "historical_5d": [],
         }
+
+    def _fetch_forex_rates(self) -> List[Dict[str, Any]]:
+        """Fetch verified INR crosses and 7-day history from Frankfurter/ECB."""
+        try:
+            end = datetime.utcnow().date()
+            start = end - timedelta(days=10)
+            latest = self._fetch_json(
+                "https://api.frankfurter.dev/v1/latest?base=INR&symbols=" +
+                ",".join(FOREX_META.keys())
+            )
+            history = self._fetch_json(
+                f"https://api.frankfurter.dev/v1/{start.isoformat()}..{end.isoformat()}"
+                "?base=INR&symbols=" + ",".join(FOREX_META.keys())
+            )
+            rates = latest.get("rates", {}) or {}
+            hist_rates = history.get("rates", {}) or {}
+            out: List[Dict[str, Any]] = []
+            for code, meta in FOREX_META.items():
+                rate = rates.get(code)
+                if not rate:
+                    continue
+                scale = float(meta["scale"])
+                price = scale / float(rate)
+                spark: List[float] = []
+                for day in sorted(hist_rates.keys()):
+                    point = hist_rates[day].get(code)
+                    if point:
+                        spark.append(round(scale / float(point), 4))
+                prev = spark[-2] if len(spark) >= 2 else price
+                change = price - prev
+                change_pct = (change / prev * 100.0) if prev else 0.0
+                out.append({
+                    "symbol": meta["symbol"],
+                    "name": meta["name"],
+                    "pair": meta["pair"],
+                    "currency": code,
+                    "price": round(price, 4),
+                    "change": round(change, 4),
+                    "change_pct": round(change_pct, 3),
+                    "positive": change >= 0,
+                    "sparkline": spark[-10:],
+                    "api_source": "Frankfurter (ECB reference rates)",
+                    "as_of": latest.get("date"),
+                })
+            return out
+        except Exception as e:
+            print(f"[FX Feed Warning]: {e}")
+            return []
+
+    def get_currencies_catalog(self) -> List[Dict[str, Any]]:
+        """Return live FX crosses; never show fabricated static rates."""
+        with self._feed_lock:
+            if self._fx_cache and (time.time() - self._fx_cache_time) < 1800:
+                return [dict(x) for x in self._fx_cache]
+        rows = self._fetch_forex_rates()
+        with self._feed_lock:
+            self._fx_cache = rows
+            self._fx_cache_time = time.time()
+        return [dict(x) for x in rows]
+
+    def get_usd_inr_rate(self) -> Optional[float]:
+        """Return a verified USD/INR rate from FX or Binance cross-rates."""
+        for row in self.get_currencies_catalog():
+            if row.get("symbol") == "USDINR" and row.get("price"):
+                return float(row["price"])
+        try:
+            inr = self.get_quote("BTCINR")
+            usdt = self.get_quote("BTCUSDT")
+            if inr and usdt and usdt.price and not inr.is_synthetic and not usdt.is_synthetic:
+                return float(inr.price) / float(usdt.price)
+        except Exception:
+            pass
+        return None
+
+    def _fetch_mutual_fund(self, code: int) -> Optional[Dict[str, Any]]:
+        try:
+            payload = self._fetch_json(f"https://api.mfapi.in/mf/{code}")
+        except Exception as e:
+            print(f"[Mutual Fund {code} Warning]: {e}")
+            return None
+        meta = payload.get("meta") or {}
+        series: List[tuple] = []
+        for item in payload.get("data") or []:
+            try:
+                day = datetime.strptime(item["date"], "%d-%m-%Y").date()
+                nav = float(item["nav"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            series.append((day, nav))
+        if not series:
+            return None
+        series.sort(key=lambda x: x[0])
+        latest_day, latest_nav = series[-1]
+        prev_nav = series[-2][1] if len(series) > 1 else latest_nav
+
+        def nav_on_or_before(days: int) -> float:
+            target = latest_day - timedelta(days=days)
+            older = [p for p in series if p[0] <= target]
+            return older[-1][1] if older else series[0][1]
+
+        def pct_return(days: int) -> float:
+            base = nav_on_or_before(days)
+            return round((latest_nav / base - 1.0) * 100.0, 2) if base else 0.0
+
+        return {
+            "scheme_code": code,
+            "scheme_name": meta.get("scheme_name") or f"Scheme {code}",
+            "fund_house": meta.get("fund_house") or "—",
+            "category": meta.get("scheme_category") or "Mutual Fund",
+            "scheme_type": meta.get("scheme_type") or "Open Ended",
+            "nav": round(latest_nav, 4),
+            "nav_date": latest_day.isoformat(),
+            "change": round(latest_nav - prev_nav, 4),
+            "change_pct": round(((latest_nav / prev_nav - 1.0) * 100.0) if prev_nav else 0.0, 2),
+            "return_1m": pct_return(30),
+            "return_3m": pct_return(91),
+            "return_1y": pct_return(365),
+            "sparkline": [round(nav, 4) for _, nav in series[-30:]],
+            "api_source": "mfapi.in (AMFI NAV history)",
+        }
+
+    def get_mutual_funds_catalog(self) -> List[Dict[str, Any]]:
+        """Return verified mutual-fund NAVs and returns for curated schemes."""
+        with self._feed_lock:
+            if self._mf_cache and (time.time() - self._mf_cache_time) < 1800:
+                return [dict(x) for x in self._mf_cache]
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            rows = list(pool.map(self._fetch_mutual_fund, MUTUAL_FUND_SCHEMES))
+        clean = [r for r in rows if r]
+        clean.sort(key=lambda r: r["return_1y"], reverse=True)
+        with self._feed_lock:
+            self._mf_cache = clean
+            self._mf_cache_time = time.time()
+        return [dict(x) for x in clean]
+
+    def search_mutual_funds(self, query: str) -> List[Dict[str, Any]]:
+        q = (query or "").strip()
+        if not q:
+            return []
+        try:
+            data = self._fetch_json(
+                "https://api.mfapi.in/mf/search?q=" + urllib.parse.quote(q)
+            )
+            return [
+                {"scheme_code": x.get("schemeCode"), "scheme_name": x.get("schemeName")}
+                for x in (data or [])[:25]
+                if x.get("schemeCode")
+            ]
+        except Exception as e:
+            print(f"[Mutual Fund Search Warning]: {e}")
+            return []
 
     def search_instruments(self, query: str) -> List[Dict]:
         q = query.upper().strip()
@@ -1132,16 +1431,16 @@ class MarketIngestService:
     def get_crypto_catalog(self) -> List[Dict[str, Any]]:
         """Return all crypto pairs available on Binance API key with live USDT & INR metrics"""
         results = []
+        usd_inr = self.get_usd_inr_rate()
         for sym, meta in CRYPTO_MAP.items():
             q = self.get_quote(sym)
             is_inr = sym.endswith("INR") or meta.get("quote") == "INR"
-            multiplier = USD_INR_RATE if is_inr else 1.0
             crypto_candles = self.fetch_binance_candles(meta["pair"], "1d", 12)
-            spark = [round(c.close * multiplier, 2) for c in crypto_candles]
-            if len(spark) < 2 and q:
-                spark = [round(q.price, 2)] * 8
-            price_usdt = round(q.price / USD_INR_RATE, 2) if is_inr and q else (q.price if q else 0.0)
-            price_inr = round(q.price * USD_INR_RATE, 2) if not is_inr and q else (q.price if q else 0.0)
+            spark = [round(c.close, 4) for c in crypto_candles]
+            if is_inr and usd_inr:
+                spark = [round(v * usd_inr, 2) for v in spark]
+            price_usdt = round(q.price / usd_inr, 2) if is_inr and q and usd_inr else (q.price if q and not is_inr else 0.0)
+            price_inr = round(q.price * usd_inr, 2) if not is_inr and q and usd_inr else (q.price if q and is_inr else 0.0)
 
             results.append({
                 "symbol": sym,
@@ -1165,23 +1464,6 @@ class MarketIngestService:
             })
         return results
 
-    def get_currencies_catalog(self) -> List[Dict[str, Any]]:
-        """Return major currency pairs and exchange rates"""
-        results = []
-        for sym, meta in CURRENCIES_MAP.items():
-            spark = [round(meta["price"], 2)] * 8
-            results.append({
-                "symbol": sym,
-                "name": meta["name"],
-                "pair": meta["pair"],
-                "price": meta["price"],
-                "change": meta["change"],
-                "change_pct": meta["change_pct"],
-                "positive": meta["change"] >= 0,
-                "sparkline": spark
-            })
-        return results
-
     def get_tick_snapshot(self) -> Dict[str, QuoteResponse]:
         """Return the authoritative provider snapshot — no simulated drift.
 
@@ -1199,6 +1481,19 @@ class MarketIngestService:
             syms = list(INDIAN_STOCKS_MAP.keys()) + list(CRYPTO_MAP.keys()) + list(self._dynamic_symbols.keys())
             syms = list(dict.fromkeys(syms))
             quotes = [self.get_quote(s) for s in syms]
+            for fx in self.get_currencies_catalog():
+                quotes.append(QuoteResponse(
+                    symbol=fx["symbol"],
+                    name=fx["name"],
+                    price=float(fx["price"]),
+                    change=float(fx["change"]),
+                    change_pct=float(fx["change_pct"]),
+                    high_24h=float(fx["price"]),
+                    low_24h=float(fx["price"]),
+                    volume=0,
+                    source=fx.get("api_source", "FX feed"),
+                    as_of=None,
+                ))
             self._snapshot_cache = {q.symbol: q for q in quotes if q}
             return dict(self._snapshot_cache)
 
