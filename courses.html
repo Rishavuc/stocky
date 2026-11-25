@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Free Stock Market Courses — Curated financial education from YouTube, Zerodha Varsity, NSE Academy, Coursera and top educators.">
-    <title>Learn & Free Courses — Investor's EYE</title>
+    <title>Learn & Free Courses — StockVista Analysis Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -400,8 +400,7 @@
                         <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#00d09c" stroke-width="2.5" fill="none"/><path d="M12 26L18 16L23 21L28 12" stroke="#00d09c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28" cy="12" r="2.5" fill="#00d09c"/></svg>
                     </div>
                     <div class="sidebar__logo-text">
-                        <span class="sidebar__logo-name">Investor's</span>
-                        <span class="sidebar__logo-accent">EYE</span>
+                        <span class="sidebar__logo-name">StockVista Analysis Platform</span>
                     </div>
                 </a>
                 <button class="sidebar__close" id="sidebarClose">✕</button>
@@ -416,9 +415,9 @@
                     <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="3" height="7" rx="1" fill="currentColor" opacity="0.5"/><rect x="8.5" y="6" width="3" height="11" rx="1" fill="currentColor" opacity="0.75"/><rect x="14" y="3" width="3" height="14" rx="1" fill="currentColor"/></svg></span>
                     Analysis
                 </a>
-                <a href="predictions.html" class="sidebar__link">
+                <a href="estimates.html" class="sidebar__link">
                     <span class="sidebar__link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15L8 8L12 12L15 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 7L17 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 2"/><circle cx="17" cy="5" r="1.5" fill="currentColor"/></svg></span>
-                    Predictions
+                    Estimates
                     <span class="sidebar__link-badge">AI</span>
                 </a>
                 <a href="mock-trading.html" class="sidebar__link">
@@ -506,7 +505,7 @@
                     </p>
                     <div class="learn-stats-strip">
                         <div class="learn-stat">
-                            <span class="learn-stat__num" id="learnStatCourses">0</span>
+                            <span class="learn-stat__num" id="learnStatCourses">25</span>
                             <span class="learn-stat__lbl">Verified Free Courses</span>
                         </div>
                         <div class="learn-stat">
@@ -514,7 +513,7 @@
                             <span class="learn-stat__lbl">Guided Roadmaps</span>
                         </div>
                         <div class="learn-stat">
-                            <span class="learn-stat__num" id="learnStatLessons">0</span>
+                            <span class="learn-stat__num" id="learnStatLessons">553</span>
                             <span class="learn-stat__lbl">Video & Text Lessons</span>
                         </div>
                         <div class="learn-stat">
@@ -1615,10 +1614,11 @@
         function updateLearnStats() {
             const coursesEl = document.getElementById('learnStatCourses');
             const lessonsEl = document.getElementById('learnStatLessons');
-            if (coursesEl) coursesEl.textContent = COURSES_DATA.length + '+';
+            if (coursesEl) coursesEl.textContent = String(COURSES_DATA.length);
             if (lessonsEl) {
-                const total = COURSES_DATA.reduce((n, c) => n + (c.lessons || 0), 0);
-                lessonsEl.textContent = total + '+';
+                const textLessons = COURSES_DATA.reduce((n, c) => n + (c.lessons || 0), 0);
+                const videoLessons = COURSES_DATA.filter(c => c.videoUrl).length;
+                lessonsEl.textContent = String(textLessons + videoLessons);
             }
         }
 

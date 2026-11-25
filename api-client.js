@@ -1,6 +1,6 @@
 /**
  * ========================================================
- * INVESTOR'S EYE — Unified Frontend API & WebSocket Client
+ * StockVista Analysis Platform — Unified Frontend API & WebSocket Client
  * ========================================================
  */
 
@@ -180,13 +180,22 @@ class ApiClient {
         });
     }
 
-    // --- LSTM Predictions ---
+    // --- LSTM Estimates ---
+    async getEstimate(symbol, horizon = 7, model = 'lstm') {
+        return await this._fetchStrict(`/estimates/${symbol}?horizon=${horizon}&model=${model}`);
+    }
+
+    async getEstimateBacktest(symbol, model = 'lstm') {
+        return await this._fetch(`/estimates/${symbol}/backtest?model=${model}`);
+    }
+
+    // Backward-compatible aliases for older inline scripts.
     async getPrediction(symbol, horizon = 7, model = 'lstm') {
-        return await this._fetchStrict(`/predictions/${symbol}?horizon=${horizon}&model=${model}`);
+        return await this.getEstimate(symbol, horizon, model);
     }
 
     async getBacktest(symbol, model = 'lstm') {
-        return await this._fetch(`/predictions/${symbol}/backtest?model=${model}`);
+        return await this.getEstimateBacktest(symbol, model);
     }
 
     // --- Mock / Paper Trading ---

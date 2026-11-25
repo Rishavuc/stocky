@@ -1,5 +1,5 @@
 /* =============================================
-   INVESTOR'S EYE — Interactive JavaScript
+   StockVista Analysis Platform — Interactive JavaScript
    ============================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const curr = sym.includes('USDT') ? '$' : '₹';
 
                 return `
-                    <tr onclick="location.href='predictions.html?symbol=${sym}'" style="cursor:pointer;" title="Click to view AI Forecast for ${sym}">
+                    <tr onclick="location.href='estimates.html?symbol=${sym}'" style="cursor:pointer;" title="Click to view AI Forecast for ${sym}">
                         <td>
                             <div class="stock-name">
                                 <span class="stock-name__symbol">${sym}</span>
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStocksTable('gainers');
     }
 
-    // ===== LSTM PREDICTION DEMO CHART (Real Candle Data) =====
+    // ===== LSTM ESTIMATE DEMO CHART (Real Candle Data) =====
     function initPredictionChart() {
         const canvas = document.getElementById('predictionCanvas');
         if (!canvas) return;
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.apiClient) {
             Promise.all([
                 window.apiClient.getCandles(sym, '1d', 20),
-                window.apiClient.getPrediction(sym, 7)
+                window.apiClient.getEstimate(sym, 7)
             ]).then(([candles, pred]) => {
                 if (candles && candles.length > 0) {
                     const actualData = candles.map(c => c.close);

@@ -14,7 +14,7 @@ if backend_dir not in sys.path:
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  Starting INVESTOR'S EYE Unified Backend & Frontend Server")
+    print("  Starting StockVista Analysis Platform Unified Backend & Frontend Server")
     print("  API Docs:      http://localhost:8000/docs")
     print("  Web Platform:  http://localhost:8000/")
     print("  WebSocket:     ws://localhost:8000/ws/stream")

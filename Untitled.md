@@ -2,7 +2,7 @@
 
 Oct 13, 2026 · @Ak
 
-A phased build of an India-focused investing assistant: five market views, analysis, LSTM prediction and learning dashboards, a browser extension, a unified cross-broker trade book and alert bots.
+A phased build of an India-focused investing assistant: five market views, analysis, LSTM estimates and learning dashboards, a browser extension, a unified cross-broker trade book and alert bots.
 
 ## Scope
 
@@ -12,7 +12,7 @@ The seven features ship over about 24 weeks in five phases (0–4). Market view 
 | --- | --- | --- | --- |
 | 1 | Market view | Quotes, watchlists, heatmaps and charts for Indian stocks, F&O chains, intraday, mutual funds and crypto | 1 |
 | 2 | Analysis dashboard | Technical and fundamental indicators, option-chain analytics, fund comparison, crypto metrics | 2 |
-| 3 | Prediction dashboard | LSTM forecasts per instrument with a confidence band and a backtest | 3 |
+| 3 | Estimates dashboard | LSTM forecasts per instrument with a confidence band and a backtest | 3 |
 | 4 | Learning dashboard | Lessons, glossary, quizzes and paper trading per segment | 3 |
 | 5 | Browser extension | Side panel and overlays on broker and news sites | 4 |
 | 6 | Unified trade view | Read-only import of trades and holdings from several brokers and exchanges | 2 |
@@ -67,7 +67,7 @@ Build a provider adapter interface (`get_quote`, `stream_ticks`, `get_history`, 
 
 ## Database design
 
-PostgreSQL holds relational data; TimescaleDB hypertables hold prices. One `instruments` table covers all five segments, so watchlists, alerts, trades and predictions reference a single key.
+PostgreSQL holds relational data; TimescaleDB hypertables hold prices. One `instruments` table covers all five segments, so watchlists, alerts, trades and estimates reference a single key.
 
 | Domain | Table | Key columns |
 | --- | --- | --- |
@@ -85,7 +85,7 @@ PostgreSQL holds relational data; TimescaleDB hypertables hold prices. One `inst
 | Alerts | `alert_events` | id, rule\_id, fired\_at, payload\_json, channel, status, delivered\_at |
 | Alerts | `notification_channels` | user\_id, type (telegram, whatsapp, email), address, verified\_at |
 | ML | `model_versions` | id, scope (instrument or segment), artifact\_uri, params\_json, metrics\_json, trained\_at, status |
-| ML | `predictions` | id, model\_version\_id, instrument\_id, made\_at, horizon, predicted, lower, upper, actual, abs\_error |
+| ML | `estimates` | id, model\_version\_id, instrument\_id, made\_at, horizon, predicted, lower, upper, actual, abs\_error |
 | Learning | `lessons`, `quiz_questions`, `user_progress` | segment, level, body; lesson\_id, answer, score; user\_id, lesson\_id, status |
 | Learning | `paper_accounts`, `paper_trades` | user\_id, cash; account\_id, instrument\_id, side, qty, price, ts |
 
@@ -118,7 +118,7 @@ Core REST endpoints, all under `/v1` and all returning typed JSON:
 | --- | --- |
 | Market view | `GET /instruments/search`, `/quotes`, `/candles`, `/fno/chain`, `/mf/{code}/nav`, `/crypto/markets` |
 | Analysis | `GET /analysis/technical`, `/analysis/option-chain`, `/analysis/funds`, `/analysis/crypto` |
-| Prediction | `GET /predictions/{instrument}`, `/predictions/{instrument}/backtest` |
+| Estimates | `GET /estimates/{instrument}`, `/estimates/{instrument}/backtest` |
 | Learning | `GET /learn/lessons`, `POST /learn/quiz/{id}/answer`, `POST /paper/orders` |
 | Trades | `POST /brokers/{broker}/connect`, `POST /trades/sync`, `GET /trades`, `GET /portfolio` |
 | Alerts | `GET/POST/PATCH/DELETE /alerts`, `POST /channels/telegram/link` |
@@ -131,7 +131,7 @@ Cross-cutting rules:
 - Generate the TypeScript API client from the OpenAPI schema so frontend and backend cannot drift.
 - Schedule jobs in IST: AMFI NAV after publication in the evening, end-of-day loads after market close, retraining on weekends.
 
-## LSTM prediction pipeline
+## LSTM estimates pipeline
 
 Train one global LSTM per segment and timeframe to forecast the next return with a 10th-to-90th percentile band, and show a forecast only when it beats a naive baseline in walk-forward tests. Price series are noisy, so the band and the backtest matter more than the point estimate.
 
@@ -150,7 +150,7 @@ Pipeline steps:
 3. **Model.** Two LSTM layers of 64 to 128 units, dropout 0.2, and an instrument embedding so one model serves many symbols.
 4. **Validation.** Walk-forward splits with an expanding window and a purge gap between train and test; never shuffle across time.
 5. **Baselines.** Compare with last-value, moving-average and gradient-boosted models; ship an LSTM only where it wins on pinball loss and directional accuracy after costs.
-6. **Serving.** Run batch inference after each candle close, write results to `predictions`, and let the API read from that table instead of running the model per request.
+6. **Serving.** Run batch inference after each candle close, write results to `estimates`, and let the API read from that table instead of running the model per request.
 7. **Monitoring.** Fill in `actual` and `abs_error` when the horizon passes; compare rolling error with the baseline weekly and hide any forecast whose model has fallen behind it.
 8. **Registry.** Track every run in MLflow, promote a challenger to champion only after it beats the current model on the latest walk-forward fold.
 
@@ -287,7 +287,7 @@ The 24-week estimate assumes a team of three to four engineers and one part-time
 | Risk | Effect | Mitigation |
 | --- | --- | --- |
 | Data licensing or provider terms change | Live prices disappear or become costly | Provider adapters, user-own-broker feeds, delayed and end-of-day fallbacks |
-| LSTM does not beat naive baselines | Prediction dashboard has little value | Gate every forecast on walk-forward results; ship as an "experimental" label and show baselines |
+| LSTM does not beat naive baselines | Estimates dashboard has little value | Gate every forecast on walk-forward results; ship as an "experimental" label and show baselines |
 | Users read forecasts as advice | Regulatory and reputational exposure | Bands, hit rates and disclaimers on screen; legal review before public launch |
 | Broker API changes or daily token expiry | Trade sync silently stops | Per-broker contract tests, "last synced" badge, expiry alerts to the user |
 | Feed outage or lag during market hours | Wrong prices and missed alerts | Heartbeat monitoring, "delayed" badge, failover provider where licensed |

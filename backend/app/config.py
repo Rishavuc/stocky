@@ -14,7 +14,7 @@ def is_configured(value: Optional[str]) -> bool:
     return not (lowered.startswith("your_") or "placeholder" in lowered or lowered == "none")
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Investor's EYE"
+    APP_NAME: str = "StockVista Analysis Platform"
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
     DEBUG: bool = True

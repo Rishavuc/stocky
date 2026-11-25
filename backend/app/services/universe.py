@@ -1,4 +1,4 @@
-"""NSE equity & index universe for Investor's EYE.
+"""NSE equity & index universe for StockVista Analysis Platform.
 
 Real NSE symbols (NIFTY 100 + midcaps) with a reference/fallback
 price per instrument. Prices were seeded from live Yahoo Finance data

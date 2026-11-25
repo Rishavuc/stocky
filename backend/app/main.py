@@ -14,7 +14,7 @@ from app.routes import (
     instruments_router,
     markets_router,
     analysis_router,
-    predictions_router,
+    predictions_router, estimates_router,
     paper_trading_router,
     trades_router,
     alerts_router,
@@ -36,10 +36,10 @@ async def lifespan(app: FastAPI):
         print(f"Database init warning (running in lightweight mode): {e}")
     yield
     # Shutdown
-    print("Shutting down Investor's EYE API...")
+    print("Shutting down StockVista Analysis Platform API...")
 
 app = FastAPI(
-    title="Investor's EYE — Market Analysis & Trading API",
+    title="StockVista Analysis Platform — Market Analysis & Trading API",
     description="Real-time Indian Stocks, F&O, Mutual Funds & Crypto Analysis, LSTM Predictions, Mock Trading & Unified Trade Book API.",
     version=settings.APP_VERSION,
     lifespan=lifespan,
@@ -91,6 +91,7 @@ app.include_router(instruments_router)
 app.include_router(markets_router)
 app.include_router(analysis_router)
 app.include_router(predictions_router)
+app.include_router(estimates_router)
 app.include_router(paper_trading_router)
 app.include_router(trades_router)
 app.include_router(alerts_router)
@@ -117,7 +118,7 @@ async def serve_index():
     index_file = os.path.join(project_root, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "Investor's EYE API is running. Visit /docs for OpenAPI specs."}
+    return {"message": "StockVista Analysis Platform API is running. Visit /docs for OpenAPI specs."}
 
 @app.get("/login", include_in_schema=False)
 @app.get("/login.html", include_in_schema=False)
@@ -134,6 +135,10 @@ async def serve_analysis():
 
 @app.get("/predictions.html", include_in_schema=False)
 async def serve_predictions():
+    return FileResponse(os.path.join(project_root, "predictions.html"))
+
+@app.get("/estimates.html", include_in_schema=False)
+async def serve_estimates():
     return FileResponse(os.path.join(project_root, "predictions.html"))
 
 @app.get("/mock-trading.html", include_in_schema=False)
@@ -165,7 +170,7 @@ async def kite_callback(request_token: str = None, action: str = None, status: s
     html = f"""<!DOCTYPE html>
     <html>
     <head>
-        <title>{status_title} — Investor's EYE</title>
+        <title>{status_title} — StockVista Analysis Platform</title>
         <meta http-equiv="refresh" content="3;url=/markets.html" />
         <style>
             body {{ font-family: 'Inter', system-ui, sans-serif; background: #0b0e14; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}

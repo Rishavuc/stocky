@@ -1,5 +1,5 @@
 /* =============================================
-   INVESTOR'S EYE — Shared Dashboard JavaScript
+   StockVista Analysis Platform — Shared Dashboard JavaScript
    ============================================= */
 
 // ===== SIDEBAR TOGGLE (Mobile) =====
@@ -937,7 +937,7 @@ function initQuickTools() {
                     </div>
                     <div style="display:flex; gap:6px; flex-shrink:0;">
                         <a href="analysis.html?cat=${sym.includes('USDT') ? 'crypto' : 'stocks'}&symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px; text-decoration:none;">Analyze</a>
-                        <a href="predictions.html?symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px; text-decoration:none;">Predict</a>
+                        <a href="estimates.html?symbol=${sym}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px; text-decoration:none;">Estimate</a>
                         <button class="btn btn--secondary" data-watchlist-remove="${sym}" style="font-size:11px; padding:4px 8px; color:var(--c-negative);">✕</button>
                     </div>
                 </div>

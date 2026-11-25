@@ -1,6 +1,6 @@
-# Investor's EYE 👁️📈
+# StockVista Analysis Platform 👁️📈
 
-> **Intelligent Market Analysis, Deep Learning Predictions & Mock Trading Platform**  
+> **Intelligent Market Analysis, Deep Learning Estimates & Mock Trading Platform**  
 > An institutional-grade web terminal for Indian Equities, F&O Derivatives, Mutual Funds, and Crypto markets featuring multi-layer LSTM price forecasting, paper trading execution, and real-time exchange integrations (Zerodha Kite Connect & Binance).
 
 ---
@@ -11,7 +11,7 @@
   - **Binance API:** Sub-50ms live crypto ticker streams (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `BNBUSDT`) and real 30-day OHLCV candlestick data.
   - **Zerodha Kite Connect:** Daily session token generation, OAuth authentication, and live quote ingestion.
   - **NSE/BSE Fallback Engine:** Automatic real-time quote streaming for `NIFTY 50`, `SENSEX`, `BANK NIFTY`, and Indian equities (`RELIANCE`, `TCS`, `INFY`).
-- **AI Price Prediction Engine (LSTM Neural Network):**
+- **AI Price Estimates Engine (LSTM Neural Network):**
   - Multi-layer LSTM architecture with Pinball Quantile Loss ($q=0.1, 0.5, 0.9$) forecasting 3, 7, 14, and 30-day price trajectories.
   - Interactive Model Backtest Scorecard with Walk-Forward validation, Sharpe ratio, win/loss ratio, and maximum drawdown metrics.
   - One-click CSV forecast export and direct execution to Mock Trading.
@@ -92,7 +92,8 @@ python backend/run.py
 Visit:
 - **Web Terminal:** `http://localhost:8000/`
 - **Sign In / Register:** `http://localhost:8000/login.html`
-- **LSTM Predictions:** `http://localhost:8000/predictions.html`
+- **LSTM Estimates:** `http://localhost:8000/estimates.html`  
+  API: `/v1/estimates/{symbol}` and `/v1/estimates/{symbol}/backtest` (legacy `/v1/predictions` still works).
 - **Mock Trading:** `http://localhost:8000/mock-trading.html`
 - **Interactive OpenAPI Docs:** `http://localhost:8000/docs`
 - **Read-only SQLite Viewer:** `http://127.0.0.1:8011/`  

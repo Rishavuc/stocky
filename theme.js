@@ -1,6 +1,6 @@
 /**
  * ========================================================
- * INVESTOR'S EYE — Global Theme Switcher (Default: Day White / Dark #181a20)
+ * StockVista Analysis Platform — Global Theme Switcher (Default: Day White / Dark #181a20)
  * ========================================================
  */
 

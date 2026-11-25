@@ -1,4 +1,4 @@
-"""Read-only web viewer for Stocky's SQLite database.
+"""Read-only web viewer for StockVista Analysis Platform's SQLite database.
 
 Security guarantees:
   * Opens investors_eye.db with SQLite `mode=ro` and `PRAGMA query_only=ON`.
@@ -38,7 +38,7 @@ SENSITIVE_COLUMNS = {
     "authorization",
 }
 
-app = FastAPI(title="Stocky SQLite Viewer", docs_url=None, redoc_url=None)
+app = FastAPI(title="StockVista Analysis Platform SQLite Viewer", docs_url=None, redoc_url=None)
 
 
 def connect() -> sqlite3.Connection:
@@ -103,7 +103,7 @@ def render_layout(*, active_table: str, sidebar: str, content: str, summary: dic
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Stocky DB Viewer</title>
+<title>StockVista Analysis Platform DB Viewer</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%2359c2ff%22/><text x=%2210%22 y=%2244%22 font-size=%2232%22 font-family=%22Arial%22 font-weight=%22bold%22 fill=%22%2308101d%22>IE</text></svg>">
 <style>
   :root {{
@@ -162,7 +162,7 @@ def render_layout(*, active_table: str, sidebar: str, content: str, summary: dic
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand"><span class="mark">IE</span><span>Investor's EYE<br><small style="color:var(--muted);font-weight:500">SQLite Viewer</small></span></div>
+    <div class="brand"><span class="mark">IE</span><span>StockVista Analysis Platform<br><small style="color:var(--muted);font-weight:500">SQLite Viewer</small></span></div>
     <div class="badge">Read-only · Localhost</div>
     <div class="section-title">Database</div>
     <div class="path">{esc(str(DB_PATH))}</div>
@@ -174,7 +174,7 @@ def render_layout(*, active_table: str, sidebar: str, content: str, summary: dic
     <div class="head">
       <div>
         <h1>{esc(active_table)}</h1>
-        <div class="sub">Browse schema and rows from the live Stocky SQLite file. {sub_note}</div>
+        <div class="sub">Browse schema and rows from the live StockVista Analysis Platform SQLite file. {sub_note}</div>
       </div>
       <a class="pill green" href="/?table=user_activities">View activity logs →</a>
     </div>
