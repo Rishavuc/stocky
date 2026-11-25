@@ -7,6 +7,7 @@ from sqlalchemy import delete, func, select
 
 from app.database import AsyncSessionLocal
 from app.models.entities import UserActivity
+from app.security import decode_session_token
 
 
 MAX_ACTIVITIES_PER_USER = 5000
@@ -16,14 +17,17 @@ SENSITIVE_KEY_PARTS = (
 
 
 def resolve_user_id_from_header(authorization: Optional[str]) -> Optional[str]:
-    """Resolve the user id from the lightweight session token used by the app."""
+    """User id from a verified, signed session token, else None.
+
+    Must verify the signature: an unverified id would let anyone write
+    audit entries in another user's name.
+    """
     if not authorization:
         return None
-    token = authorization.replace("Bearer ", "").strip()
-    prefix = "ie_sec_"
-    if token.startswith(prefix) and "_" in token[len(prefix):]:
-        return token[len(prefix):].rsplit("_", 1)[0]
-    return None
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+    return decode_session_token(token.strip())
 
 
 def sanitize_details(value: Any) -> Any:

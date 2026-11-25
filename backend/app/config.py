@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "investors_eye_super_secret_jwt_key_2026"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
-    
+
+    # Google Sign-In (OAuth 2.0 Web client ID from Google Cloud Console).
+    # Public value: it is sent to the browser to render the Google button.
+    GOOGLE_CLIENT_ID: Optional[str] = None
+
     # External Broker & Feed Credentials
     ZERODHA_API_KEY: Optional[str] = None
     ZERODHA_API_SECRET: Optional[str] = None

@@ -8,10 +8,15 @@ import hashlib
 import secrets
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from fastapi.concurrency import run_in_threadpool
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
+from app.config import settings, is_configured
+from app.security import issue_session_token, optional_user_id, current_user_id
 from app.database import get_db
 from app.models.entities import User, PaperAccount, UserActivity
-from app.services.activity_logger import record_activity, resolve_user_id_from_header
+from app.services.activity_logger import record_activity
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication & User Management"])
 
@@ -32,6 +37,11 @@ def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
 def verify_password(password: str, hashed_password: str, salt: str) -> bool:
     hashed, _ = hash_password(password, salt)
     return secrets.compare_digest(hashed, hashed_password)
+
+def avatar_initials(name: str) -> str:
+    parts = name.split()
+    initials = "".join(p[0] for p in parts[:2]).upper()
+    return initials or "IE"
 
 # ========================================================
 # SCHEMAS
@@ -107,12 +117,6 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     # 2. Hash password securely
     hashed_pwd, salt = hash_password(req.password)
 
-    # 3. Generate initials for avatar
-    parts = clean_name.split()
-    avatar_initials = (parts[0][0] + (parts[1][0] if len(parts) > 1 else "")).upper()
-    if not avatar_initials:
-        avatar_initials = "IE"
-
     user_uid = f"usr_{secrets.token_hex(6)}"
 
     # 4. Insert User Profile and Virtual Trading Wallet into Database
@@ -123,7 +127,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
         hashed_password=hashed_pwd,
         salt=salt,
         plan="Pro Trader",
-        avatar=avatar_initials,
+        avatar=avatar_initials(clean_name),
         trading_interest=req.trading_interest or "stocks",
         virtual_balance=1000000.0,
         created_at=datetime.utcnow(),
@@ -142,8 +146,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
 
-    # 5. Generate secure session token and audit the signup
-    session_token = f"ie_sec_{user_uid}_{int(time.time())}"
+    session_token = issue_session_token(user_uid)
     await record_activity(
         user_id=user_uid,
         event_type="register",
@@ -224,7 +227,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
-    session_token = f"ie_sec_{user.user_id}_{int(time.time())}"
+    session_token = issue_session_token(user.user_id)
     await record_activity(
         user_id=user.user_id,
         event_type="login_success",
@@ -250,44 +253,127 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     }
 
 # ========================================================
+# GOOGLE SIGN-IN (Google Identity Services ID token)
+# ========================================================
+class GoogleLoginRequest(BaseModel):
+    credential: str  # the ID token (JWT) Google's button hands the browser
+
+def google_enabled() -> bool:
+    return is_configured(settings.GOOGLE_CLIENT_ID)
+
+@router.get("/google/config")
+async def google_config():
+    """Public: tells login.html whether to render the Google button."""
+    enabled = google_enabled()
+    return {"enabled": enabled, "client_id": settings.GOOGLE_CLIENT_ID if enabled else None}
+
+@router.post("/google", response_model=AuthResponse)
+async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    if not google_enabled():
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured on this server.")
+
+    # 1. Verify the token really came from Google, for OUR client ID, and
+    #    hasn't expired. verify_oauth2_token checks signature, aud, iss, exp.
+    #    It does blocking HTTP (fetches Google's certs), so run it off the loop.
+    try:
+        info = await run_in_threadpool(
+            google_id_token.verify_oauth2_token,
+            req.credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Google sign-in could not be verified. Please try again.")
+
+    # 2. Only trust emails Google has verified, or anyone could claim any address.
+    email = (info.get("email") or "").lower().strip()
+    if not email or not info.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Your Google account email is not verified.")
+
+    # 3. Find or create the user. An existing password account with the same
+    #    verified email is the same person, so they get logged in to it.
+    res = await db.execute(select(User).where(func.lower(User.email) == email))
+    user = res.scalars().first()
+
+    if not user:
+        name = (info.get("name") or email.split("@")[0]).strip()[:100]
+        # Google users have no password: store a random one nobody knows,
+        # so password login can never succeed for this account.
+        unusable_hash, salt = hash_password(secrets.token_urlsafe(32))
+        user = User(
+            user_id=f"usr_{secrets.token_hex(6)}",
+            name=name,
+            email=email,
+            hashed_password=unusable_hash,
+            salt=salt,
+            plan="Pro Trader",
+            avatar=avatar_initials(name),
+            trading_interest="stocks",
+            virtual_balance=1000000.0,
+            created_at=datetime.utcnow(),
+        )
+        db.add(user)
+        db.add(PaperAccount(user_id=user.user_id, initial_cash=1000000.0, cash=1000000.0))
+
+    user.last_login_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+
+    await record_activity(
+        user_id=user.user_id,
+        event_type="login_success",
+        method="POST",
+        path="/v1/auth/google",
+        status_code=200,
+        details={"provider": "google"},
+    )
+
+    return {
+        "success": True,
+        "access_token": issue_session_token(user.user_id),
+        "token_type": "Bearer",
+        "user": {
+            "id": user.user_id,
+            "name": user.name,
+            "email": user.email,
+            "plan": user.plan,
+            "avatar": user.avatar,
+            "virtual_balance": user.virtual_balance,
+            "auth_provider": "google",
+        },
+    }
+
+# ========================================================
 # CURRENT USER ME ENDPOINT
 # ========================================================
 @router.get("/me")
-async def get_current_user(authorization: Optional[str] = Header(None), db: AsyncSession = Depends(get_db)):
-    if not authorization:
+async def get_current_user(user_uid: Optional[str] = Depends(optional_user_id), db: AsyncSession = Depends(get_db)):
+    # optional_user_id has already checked the JWT signature and expiry;
+    # a forged or expired token arrives here as None.
+    if not user_uid:
         return {"authenticated": False, "user": None}
 
-    # Extract the user ID from `ie_sec_<user_id>_<issued_at>`.
-    # User IDs themselves contain underscores (e.g. usr_demo_1001), so split
-    # only the trailing timestamp instead of assuming a fixed number of parts.
-    try:
-        token = authorization.replace("Bearer ", "").strip()
-        prefix = "ie_sec_"
-        if token.startswith(prefix) and "_" in token[len(prefix):]:
-            user_uid = token[len(prefix):].rsplit("_", 1)[0]
-            stmt = select(User).where(User.user_id == user_uid)
-            res = await db.execute(stmt)
-            user = res.scalars().first()
-            if user:
-                return {
-                    "authenticated": True,
-                    "user": {
-                        "id": user.user_id,
-                        "name": user.name,
-                        "email": user.email,
-                        "plan": user.plan,
-                        "avatar": user.avatar,
-                        "virtual_balance": user.virtual_balance
-                    }
-                }
-    except Exception:
-        pass
+    res = await db.execute(select(User).where(User.user_id == user_uid))
+    user = res.scalars().first()
+    if not user:
+        return {"authenticated": False, "user": None}
 
-    return {"authenticated": False, "user": None}
+    return {
+        "authenticated": True,
+        "user": {
+            "id": user.user_id,
+            "name": user.name,
+            "email": user.email,
+            "plan": user.plan,
+            "avatar": user.avatar,
+            "virtual_balance": user.virtual_balance
+        }
+    }
 
 @router.post("/logout")
-async def logout(authorization: Optional[str] = Header(None)):
-    user_id = resolve_user_id_from_header(authorization)
+async def logout(user_id: Optional[str] = Depends(optional_user_id)):
+    # JWTs are stateless, so logout just records the event; the browser
+    # drops its token. Forged tokens resolve to None and log nothing.
     if user_id:
         await record_activity(
             user_id=user_id,
@@ -303,15 +389,13 @@ async def logout(authorization: Optional[str] = Header(None)):
 # ========================================================
 @router.get("/activity")
 async def get_user_activity(
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(current_user_id),
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
-    user_id = resolve_user_id_from_header(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Sign in to view activity.")
-
+    # current_user_id verifies the signed token, so a user can only ever
+    # read their own trail (IPs and user agents included).
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
 

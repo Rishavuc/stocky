@@ -314,6 +314,18 @@
             flex-shrink: 0;
         }
 
+        /* Google Sign-In */
+        .auth-google {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        #googleSignInBtn:empty { display: none; }
+        .auth-google__fallback { width: 100%; font-size: 13px; padding: 11px; }
+        .auth-google__fallback:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .auth-google__note { font-size: 11px; color: var(--c-text-tertiary); }
+
         /* Alert Box */
         .auth-alert {
             padding: 12px 16px;
@@ -507,6 +519,22 @@
                     </button>
                 </form>
 
+                <!-- Google Sign-In -->
+                <div class="auth-divider">
+                    <span>Or</span>
+                </div>
+                <div class="auth-google" id="googleSignInWrap">
+                    <!-- Google's official button renders here when the server has a client ID -->
+                    <div id="googleSignInBtn"></div>
+                    <!-- Shown until then, so the option is always visible -->
+                    <button type="button" class="auth-sso-btn auth-google__fallback" id="googleFallbackBtn" disabled
+                            title="Google sign-in is not configured on this server yet">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.94l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.96 10.96 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
+                        <span>Continue with Google</span>
+                    </button>
+                    <div class="auth-google__note" id="googleNote">Google sign-in is coming soon.</div>
+                </div>
+
                 <!-- Divider & SSO -->
                 <div class="auth-divider">
                     <span>Or Connect With Broker</span>
@@ -580,8 +608,21 @@
     }
 
     function getRedirectTarget() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('redirect') || 'markets.html';
+        // Only ever send users to a page on THIS site after login. Without
+        // this, login.html?redirect=https://evil.example (or javascript:...)
+        // turns our login page into a phishing launchpad.
+        const fallback = 'markets.html';
+        const raw = new URLSearchParams(window.location.search).get('redirect');
+        if (!raw) return fallback;
+        try {
+            const url = new URL(raw, window.location.href);
+            const sameSite = url.origin === window.location.origin
+                && (url.protocol === 'http:' || url.protocol === 'https:');
+            if (!sameSite || url.pathname.endsWith('/login.html')) return fallback;
+            return url.pathname + url.search + url.hash;
+        } catch (e) {
+            return fallback;
+        }
     }
 
     async function handleSignIn(e) {
@@ -705,12 +746,65 @@
         }
     }
 
+    // ---------- Google Sign-In ----------
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Could not load Google sign-in'));
+            document.head.appendChild(s);
+        });
+    }
+
+    async function handleGoogleCredential(response) {
+        clearAlert();
+        try {
+            const res = await window.apiClient.loginWithGoogle(response.credential);
+            showAlert(`✓ Welcome, ${res.user.name}! Loading terminal...`, true);
+            setTimeout(() => { window.location.href = getRedirectTarget(); }, 700);
+        } catch (err) {
+            showAlert(err.message || 'Google sign-in failed. Please try again.');
+        }
+    }
+
+    async function initGoogleSignIn() {
+        const note = document.getElementById('googleNote');
+        const cfg = await window.apiClient?.getGoogleConfig();
+        if (!cfg || !cfg.enabled || !cfg.client_id) return; // keep the visible "coming soon" button
+
+        try {
+            await loadScript('https://accounts.google.com/gsi/client');
+            google.accounts.id.initialize({
+                client_id: cfg.client_id,
+                callback: handleGoogleCredential,
+                ux_mode: 'popup'
+            });
+            const wrap = document.getElementById('googleSignInWrap');
+            const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+            google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), {
+                type: 'standard',
+                theme: dark ? 'filled_black' : 'outline',
+                size: 'large',
+                text: 'continue_with',
+                shape: 'rectangular',
+                width: Math.min(400, Math.max(200, wrap.offsetWidth || 320))
+            });
+            document.getElementById('googleFallbackBtn').style.display = 'none';
+            note.style.display = 'none';
+        } catch (err) {
+            note.textContent = 'Google sign-in is unavailable right now.';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         // Check if already authenticated
         const currentUser = window.apiClient?.getAuthUser();
         if (currentUser) {
             showAlert(`Currently signed in as ${currentUser.name} (${currentUser.plan}).`, true);
         }
+        initGoogleSignIn();
     });
     </script>
     <script src="shell.js"></script>

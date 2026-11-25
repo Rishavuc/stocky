@@ -733,9 +733,6 @@
 
                     <!-- TAB 2: ORDER BOOK -->
                     <div class="data-table-container" id="tabContentOrders" style="display:none;">
-                        <div style="padding:10px 14px; font-size:12px; color:var(--c-text-tertiary); border-bottom:1px solid rgba(255,255,255,0.08);">
-                            Orders are saved to the paper ledger and restored after refresh. Offline orders sync automatically when the server is reachable.
-                        </div>
                         <table class="custom-data-table">
                             <thead>
                                 <tr>
@@ -814,12 +811,25 @@
         // MOCK TRADING ENGINE — backend-backed, verified data only
         // =============================================
         const INITIAL_CAPITAL = 1000000;
-        const STORAGE_KEY = 'investors_eye_mock_portfolio_v2';
-        const DEFAULT_LEDGER_EPOCH = 'initial';
+        // Books live on the server per user now; this cache is per user too, so
+        // two accounts on one browser never see each other's trades.
+        const signedInUser = () => window.apiClient?.getAuthUser() || null;
+        const STORAGE_KEY = `investors_eye_mock_portfolio_v3_${signedInUser()?.id || 'guest'}`;
+
+        function goSignIn(message = 'Sign in to place trades. Your portfolio is saved to your account.') {
+            showToast(message, 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html?redirect=' + encodeURIComponent('mock-trading.html');
+            }, 1200);
+        }
 
         let STOCK_CATALOG = {};
         let portfolio = loadPortfolioCache();
         let activeSide = 'BUY';
+        // Cash is INR; USDT-priced crypto converts with the backend's rate.
+        let usdInr = 86.85;
+        const fxOf = sym => String(sym || '').endsWith('USDT') ? usdInr : 1;
+        const isCrypto = sym => STOCK_CATALOG[sym]?.kind === 'CRYPTO';
 
         const el = id => document.getElementById(id);
         const stockSelect = el('stockSelect');
@@ -843,28 +853,6 @@
             return String(value ?? '').replace(/[&<>"']/g, ch => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             })[ch]);
-        }
-
-        function orderIdentity(order) {
-            const value = key => {
-                const item = order?.[key];
-                if (item === null || item === undefined) return '';
-                const text = String(item);
-                if (key === 'pnl' && ['0', '0.0', '0.00', 'null', 'None'].includes(text.trim())) return '';
-                return text;
-            };
-            const raw = ['time', 'side', 'symbol', 'product', 'qty', 'price', 'status', 'pnl']
-                .map(value).join('|');
-            let h = 2166136261;
-            for (let i = 0; i < raw.length; i++) {
-                h ^= raw.charCodeAt(i);
-                h = Math.imul(h, 16777619) >>> 0;
-            }
-            return 'legacy-' + h.toString(16).padStart(8, '0');
-        }
-
-        function newClientOrderId() {
-            return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         }
 
         function fmtMoney(value, prefix = '₹', decimals = 2) {
@@ -893,8 +881,6 @@
 
         function emptyPortfolio() {
             return {
-                ledgerEpoch: DEFAULT_LEDGER_EPOCH,
-                pendingResetEpoch: '',
                 cash: INITIAL_CAPITAL,
                 initialCapital: INITIAL_CAPITAL,
                 realizedPnl: 0,
@@ -911,8 +897,6 @@
                 const p = JSON.parse(raw);
                 if (!p || !Array.isArray(p.positions) || !Array.isArray(p.orders)) return emptyPortfolio();
                 return {
-                    ledgerEpoch: String(p.ledgerEpoch || DEFAULT_LEDGER_EPOCH),
-                    pendingResetEpoch: String(p.pendingResetEpoch || ''),
                     cash: Number.isFinite(Number(p.cash)) ? Number(p.cash) : INITIAL_CAPITAL,
                     initialCapital: INITIAL_CAPITAL,
                     realizedPnl: Number.isFinite(Number(p.realizedPnl)) ? Number(p.realizedPnl) : 0,
@@ -922,26 +906,16 @@
                         qty: Math.max(0, Number(x.qty) || 0),
                         buyPrice: Math.max(0, Number(x.buyPrice) || 0)
                     })).filter(x => x.symbol && x.qty > 0),
-                    orders: p.orders.map(x => {
-                        const order = {
-                            time: String(x.time || ''),
-                            side: String(x.side || '').toUpperCase(),
-                            symbol: String(x.symbol || '').toUpperCase(),
-                            product: String(x.product || 'CNC').toUpperCase(),
-                            qty: Number(x.qty) || 0,
-                            price: Number(x.price) || 0,
-                            status: String(x.status || 'EXECUTED'),
-                            pnl: x.pnl !== null && x.pnl !== undefined && Number.isFinite(Number(x.pnl))
-                                ? Number(x.pnl)
-                                : null
-                        };
-                        return {
-                            ...order,
-                            clientOrderId: String(x.clientOrderId || x.client_order_id || orderIdentity(order)),
-                            createdAt: String(x.createdAt || x.created_at || x.time || ''),
-                            epoch: String(x.epoch || DEFAULT_LEDGER_EPOCH)
-                        };
-                    }),
+                    orders: p.orders.map(x => ({
+                        time: String(x.time || ''),
+                        side: String(x.side || '').toUpperCase(),
+                        symbol: String(x.symbol || '').toUpperCase(),
+                        product: String(x.product || 'CNC').toUpperCase(),
+                        qty: Number(x.qty) || 0,
+                        price: Number(x.price) || 0,
+                        status: String(x.status || 'EXECUTED'),
+                        pnl: Number.isFinite(Number(x.pnl)) ? Number(x.pnl) : null
+                    })),
                     equityHistory: (Array.isArray(p.equityHistory) ? p.equityHistory : [])
                         .map(h => ({ t: Number(h.t) || Date.now(), value: Number(h.value) || INITIAL_CAPITAL }))
                         .slice(-240)
@@ -965,8 +939,9 @@
             let marginUsed = 0;
             (portfolio.positions || []).forEach(p => {
                 const ltp = quotePrice(p.symbol) ?? p.buyPrice;
-                const cost = p.buyPrice * p.qty;
-                unrealized += (ltp - p.buyPrice) * p.qty;
+                const fx = fxOf(p.symbol);
+                const cost = p.buyPrice * p.qty * fx;
+                unrealized += (ltp - p.buyPrice) * p.qty * fx;
                 marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
             });
             return portfolio.cash + marginUsed + unrealized;
@@ -985,8 +960,19 @@
 
         function applyBackendPortfolio(data) {
             const history = Array.isArray(portfolio.equityHistory) ? portfolio.equityHistory : [];
+            if (Number(data.usd_inr_rate) > 0) usdInr = Number(data.usd_inr_rate);
             portfolio = {
-                ledgerEpoch: String(data.ledger_epoch || DEFAULT_LEDGER_EPOCH),
+                pending: (Array.isArray(data.pending_orders) ? data.pending_orders : []).map(o => ({
+                    id: Number(o.id),
+                    time: String(o.time || ''),
+                    side: String(o.side || '').toUpperCase(),
+                    symbol: String(o.symbol || '').toUpperCase(),
+                    product: String(o.product || 'CNC').toUpperCase(),
+                    qty: Number(o.qty) || 0,
+                    price: Number(o.price) || 0,
+                    status: 'PENDING',
+                    pnl: null
+                })),
                 cash: Number.isFinite(Number(data.cash_balance)) ? Number(data.cash_balance) : INITIAL_CAPITAL,
                 initialCapital: INITIAL_CAPITAL,
                 realizedPnl: Number.isFinite(Number(data.realized_pnl)) ? Number(data.realized_pnl) : 0,
@@ -996,98 +982,29 @@
                     qty: Math.max(0, Number(p.qty) || 0),
                     buyPrice: Math.max(0, Number(p.avg_price) || 0)
                 })).filter(p => p.symbol && p.qty > 0),
-                orders: (Array.isArray(data.orders) ? data.orders : []).map(o => {
-                    const order = {
-                        time: String(o.time || ''),
-                        side: String(o.side || '').toUpperCase(),
-                        symbol: String(o.symbol || '').toUpperCase(),
-                        product: String(o.product || 'CNC').toUpperCase(),
-                        qty: Number(o.qty) || 0,
-                        price: Number(o.price) || 0,
-                        status: String(o.status || 'EXECUTED'),
-                        pnl: o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? Number(o.pnl) : null
-                    };
-                    return {
-                        ...order,
-                        clientOrderId: String(o.client_order_id || o.clientOrderId || orderIdentity(order)),
-                        createdAt: String(o.created_at || o.createdAt || o.time || ''),
-                        epoch: String(data.ledger_epoch || DEFAULT_LEDGER_EPOCH)
-                    };
-                }),
+                orders: (Array.isArray(data.orders) ? data.orders : []).map(o => ({
+                    time: String(o.time || ''),
+                    side: String(o.side || '').toUpperCase(),
+                    symbol: String(o.symbol || '').toUpperCase(),
+                    product: String(o.product || 'CNC').toUpperCase(),
+                    qty: Number(o.qty) || 0,
+                    price: Number(o.price) || 0,
+                    status: String(o.status || 'EXECUTED'),
+                    reason: o.reason ? String(o.reason) : '',
+                    pnl: o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? Number(o.pnl) : null
+                })),
                 equityHistory: history
             };
             appendEquityPoint();
             savePortfolioCache();
         }
 
-        async function replayLocalOrders(backendData) {
-            const backendEpoch = String(backendData.ledger_epoch || DEFAULT_LEDGER_EPOCH);
-            const backendIds = new Set(
-                (Array.isArray(backendData.orders) ? backendData.orders : []).map(o =>
-                    String(o.client_order_id || o.clientOrderId || orderIdentity(o))
-                )
-            );
-            const missing = (portfolio.orders || []).filter(o =>
-                String(o.epoch || DEFAULT_LEDGER_EPOCH) === backendEpoch &&
-                !backendIds.has(String(o.clientOrderId || orderIdentity(o)))
-            );
-            if (!missing.length) return true;
-
-            const ordered = missing
-                .map((o, index) => ({ order: o, index }))
-                .sort((a, b) => {
-                    const ta = String(a.order.createdAt || '');
-                    const tb = String(b.order.createdAt || '');
-                    if (ta !== tb) return ta.localeCompare(tb);
-                    return b.index - a.index;
-                })
-                .map(entry => entry.order);
-
-            for (const order of ordered) {
-                try {
-                    if (order.status === 'SQUARED OFF') {
-                        await api().squareOffPaperStrict(
-                            order.symbol, order.product,
-                            order.clientOrderId, order.createdAt, order.price
-                        );
-                    } else {
-                        await api().placePaperOrderStrict({
-                            symbol: order.symbol,
-                            side: order.side,
-                            product: order.product,
-                            order_type: 'LIMIT',
-                            qty: order.qty,
-                            price: order.price,
-                            client_order_id: order.clientOrderId,
-                            created_at: order.createdAt
-                        });
-                    }
-                } catch (e) {
-                    console.warn(
-                        'Saved order could not sync to the paper ledger yet:',
-                        order.clientOrderId, e.message
-                    );
-                    return false;
-                }
-            }
-            return true;
-        }
-
         async function syncPortfolioFromBackend() {
             if (!api()) return false;
             try {
-                if (portfolio.pendingResetEpoch) {
-                    await api().resetPaperPortfolioStrict();
-                    portfolio.pendingResetEpoch = '';
-                    savePortfolioCache();
-                }
                 const data = await api().getPaperPortfolioStrict();
                 if (!data) return false;
-                const reconciled = await replayLocalOrders(data);
-                if (!reconciled) return false;
-                const fresh = await api().getPaperPortfolioStrict();
-                if (!fresh) return false;
-                applyBackendPortfolio(fresh);
+                applyBackendPortfolio(data);
                 return true;
             } catch (e) {
                 console.warn('Paper portfolio backend unavailable, using local cache:', e.message);
@@ -1231,7 +1148,7 @@
                 quoteChange.textContent = 'Awaiting verified feed';
                 if (orderType.value === 'MARKET') tradePrice.value = '';
             }
-            updateCalculations();
+            syncQtyInput();
         }
 
         async function updateQuote() {
@@ -1281,9 +1198,19 @@
             updateCalculations();
         };
 
+        function syncQtyInput() {
+            // Crypto trades in fractions (0.01 BTC); stocks in whole shares.
+            const crypto = isCrypto(stockSelect.value);
+            tradeQty.step = crypto ? '0.0001' : '1';
+            tradeQty.min = crypto ? '0.0001' : '1';
+            if (!crypto) tradeQty.value = Math.max(1, Math.round(Number(tradeQty.value) || 1));
+            updateCalculations();
+        }
+
         function executeLocalOrder(sym, side, prod, qty, price) {
             const isMis = prod === 'MIS';
-            const marginRequired = isMis ? (qty * price) / 5 : qty * price;
+            const fx = fxOf(sym);
+            const marginRequired = (isMis ? (qty * price) / 5 : qty * price) * fx;
             let pnl = null;
 
             if (side === 'BUY') {
@@ -1298,9 +1225,9 @@
                 }
             } else {
                 const pos = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
-                pnl = Math.round((price - pos.buyPrice) * qty * 100) / 100;
+                pnl = Math.round((price - pos.buyPrice) * qty * fx * 100) / 100;
                 portfolio.realizedPnl += pnl;
-                const marginToReturn = isMis ? (pos.buyPrice * qty) / 5 : pos.buyPrice * qty;
+                const marginToReturn = (isMis ? (pos.buyPrice * qty) / 5 : pos.buyPrice * qty) * fx;
                 portfolio.cash += marginToReturn + pnl;
                 pos.qty -= qty;
                 if (pos.qty <= 0) {
@@ -1309,9 +1236,6 @@
             }
 
             portfolio.orders.unshift({
-                clientOrderId: newClientOrderId(),
-                createdAt: new Date().toISOString(),
-                epoch: portfolio.ledgerEpoch || DEFAULT_LEDGER_EPOCH,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 side, symbol: sym, product: prod, qty, price, status: 'EXECUTED', pnl
             });
@@ -1346,14 +1270,20 @@
                 showToast('Select a verified instrument first', 'error');
                 return;
             }
-            const qty = parseInt(tradeQty.value, 10) || 0;
+            if (!signedInUser()) return goSignIn();
+            const qty = Number(tradeQty.value) || 0;
             const price = Number(tradePrice.value) || 0;
             const prod = productType.value;
+            const type = orderType.value;
             if (qty <= 0 || price <= 0) {
                 showToast('Enter a valid quantity and price', 'error');
                 return;
             }
-            const marginRequired = prod === 'MIS' ? (qty * price) / 5 : qty * price;
+            if (!isCrypto(sym) && !Number.isInteger(qty)) {
+                showToast('Stock quantity must be a whole number of shares', 'error');
+                return;
+            }
+            const marginRequired = (prod === 'MIS' ? (qty * price) / 5 : qty * price) * fxOf(sym);
             if (activeSide === 'BUY' && portfolio.cash < marginRequired) {
                 showToast(`Insufficient cash. Required ${fmtMoney(marginRequired)}, available ${fmtMoney(portfolio.cash)}`, 'error');
                 return;
@@ -1366,26 +1296,25 @@
                 }
             }
 
-            const clientOrderId = newClientOrderId();
-            const createdAt = new Date().toISOString();
-            const order = {
-                symbol: sym, side: activeSide, product: prod,
-                order_type: 'LIMIT', qty, price,
-                client_order_id: clientOrderId, created_at: createdAt
-            };
-            let usedBackend = false;
-            let pnl = null;
+            // MARKET orders fill at the server's live price; only LIMIT sends a price.
+            const order = { symbol: sym, side: activeSide, product: prod, order_type: type, qty };
+            if (type === 'LIMIT') order.price = price;
+
             if (api()) {
                 try {
-                    await api().placePaperOrderStrict(order);
+                    const res = await api().placePaperOrderStrict(order);
                     await syncPortfolioFromBackend();
-                    usedBackend = true;
-                    const logged = portfolio.orders.find(o =>
-                        o.clientOrderId === clientOrderId ||
-                        (o.symbol === sym && o.product === prod && o.qty === qty && Math.abs(o.price - price) < 0.01)
-                    );
-                    pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
+                    renderAll();
+                    if (res?.status === 'PENDING') {
+                        showToast(res.message || `Limit order placed for ${sym}`, 'success');
+                        return;
+                    }
+                    const pnl = Number(res?.pnl);
+                    const pnlText = res?.pnl != null && Number.isFinite(pnl) ? ` (P&L: ${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})` : '';
+                    showToast(`${res?.message || `${activeSide} executed: ${qty} × ${sym}`}${pnlText}`, 'success');
+                    return;
                 } catch (e) {
+                    if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                     const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
                     if (!offline) {
                         showToast(`Order rejected: ${e.message}`, 'error');
@@ -1393,14 +1322,29 @@
                     }
                 }
             }
-            if (!usedBackend) {
-                pnl = executeLocalOrder(sym, activeSide, prod, qty, price);
-            }
 
+            // Offline fallback: market orders only, executed locally at the shown price.
+            if (type === 'LIMIT') {
+                showToast('Limit orders need the server. Please try again when it is back online.', 'error');
+                return;
+            }
+            const pnl = executeLocalOrder(sym, activeSide, prod, qty, price);
             renderAll();
             const pnlText = Number.isFinite(pnl) ? ` (P&L: ${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})` : '';
-            showToast(`${activeSide} executed: ${qty} × ${sym} @ ${fmtMoney(price, itemPrefix(item))}${pnlText}`, 'success');
+            showToast(`${activeSide} executed offline: ${qty} × ${sym} @ ${fmtMoney(price, itemPrefix(item))}${pnlText}`, 'success');
         });
+
+        window.cancelPendingOrder = async function(orderId) {
+            try {
+                const res = await api().cancelPaperOrderStrict(orderId);
+                await syncPortfolioFromBackend();
+                renderAll();
+                showToast(res?.message || 'Order cancelled', 'success');
+            } catch (e) {
+                if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
+                showToast(`Cancel failed: ${e.message}`, 'error');
+            }
+        };
 
         window.squareOffPosition = async function(index) {
             const pos = portfolio.positions[index];
@@ -1408,20 +1352,16 @@
             const ltp = quotePrice(pos.symbol) ?? pos.buyPrice;
             let usedBackend = false;
             let pnl = null;
-            const clientOrderId = newClientOrderId();
-            const createdAt = new Date().toISOString();
 
             if (api()) {
                 try {
-                    await api().squareOffPaperStrict(pos.symbol, pos.product, clientOrderId, createdAt, ltp);
+                    await api().squareOffPaperStrict(pos.symbol, pos.product);
                     await syncPortfolioFromBackend();
                     usedBackend = true;
-                    const logged = portfolio.orders.find(o =>
-                        o.clientOrderId === clientOrderId ||
-                        (o.symbol === pos.symbol && o.product === pos.product && o.status === 'SQUARED OFF')
-                    );
+                    const logged = portfolio.orders.find(o => o.symbol === pos.symbol && o.product === pos.product && o.status === 'SQUARED OFF');
                     pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
                 } catch (e) {
+                    if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                     const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
                     if (!offline) {
                         showToast(`Square-off rejected: ${e.message}`, 'error');
@@ -1431,14 +1371,12 @@
             }
 
             if (!usedBackend) {
-                pnl = Math.round((ltp - pos.buyPrice) * pos.qty * 100) / 100;
+                const fx = fxOf(pos.symbol);
+                pnl = Math.round((ltp - pos.buyPrice) * pos.qty * fx * 100) / 100;
                 portfolio.realizedPnl += pnl;
-                const marginToReturn = pos.product === 'MIS' ? (pos.buyPrice * pos.qty) / 5 : pos.buyPrice * pos.qty;
+                const marginToReturn = (pos.product === 'MIS' ? (pos.buyPrice * pos.qty) / 5 : pos.buyPrice * pos.qty) * fx;
                 portfolio.cash += marginToReturn + pnl;
                 portfolio.orders.unshift({
-                    clientOrderId,
-                    createdAt,
-                    epoch: portfolio.ledgerEpoch || DEFAULT_LEDGER_EPOCH,
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     side: 'SELL', symbol: pos.symbol, product: pos.product, qty: pos.qty,
                     price: ltp, status: 'SQUARED OFF', pnl
@@ -1458,8 +1396,9 @@
             let costBasis = 0;
             portfolio.positions.forEach(p => {
                 const ltp = quotePrice(p.symbol) ?? p.buyPrice;
-                const cost = p.buyPrice * p.qty;
-                unrealized += (ltp - p.buyPrice) * p.qty;
+                const fx = fxOf(p.symbol);
+                const cost = p.buyPrice * p.qty * fx;
+                unrealized += (ltp - p.buyPrice) * p.qty * fx;
                 marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
                 costBasis += cost;
             });
@@ -1522,13 +1461,23 @@
         function renderOrders() {
             const tbody = el('ordersTableBody');
             if (!tbody) return;
-            if (!portfolio.orders.length) {
+            const rows = [...(portfolio.pending || []), ...portfolio.orders];
+            if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--c-text-tertiary);">No orders placed yet.</td></tr>`;
                 return;
             }
-            tbody.innerHTML = portfolio.orders.slice(0, 20).map(o => {
+            const STATUS_STYLE = {
+                PENDING: ['⏳', 'var(--c-text-secondary)'],
+                REJECTED: ['✕', 'var(--c-negative)'],
+                CANCELLED: ['–', 'var(--c-text-tertiary)']
+            };
+            tbody.innerHTML = rows.slice(0, 20).map(o => {
                 const isBuy = o.side === 'BUY';
                 const item = STOCK_CATALOG[o.symbol];
+                const [icon, color] = STATUS_STYLE[o.status] || ['✓', 'var(--c-positive)'];
+                const action = o.status === 'PENDING'
+                    ? `<div><button class="btn-action-sm" onclick="cancelPendingOrder(${Number(o.id)})">Cancel</button></div>`
+                    : (o.reason ? `<div style="font-size:10px; color:var(--c-text-tertiary);">${escapeHtml(o.reason)}</div>` : '');
                 return `
                     <tr>
                         <td style="color:var(--c-text-tertiary); font-size:12px;">${escapeHtml(o.time)}</td>
@@ -1538,7 +1487,7 @@
                         <td style="font-family:var(--ff-mono);">${o.qty}</td>
                         <td style="font-family:var(--ff-mono);">${fmtMoney(o.price, itemPrefix(item))}</td>
                         <td style="font-family:var(--ff-mono);">${fmtMoney(o.qty * o.price, itemPrefix(item))}</td>
-                        <td><span style="font-size:11px; font-weight:700; color:var(--c-positive);">✓ ${escapeHtml(o.status)}</span>
+                        <td><span style="font-size:11px; font-weight:700; color:${color};">${icon} ${escapeHtml(o.status)}</span>${action}
                             ${o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? `<div style="font-size:10px;" class="${Number(o.pnl) >= 0 ? 'positive' : 'negative'}">${Number(o.pnl) >= 0 ? '+' : ''}${fmtMoney(o.pnl, '₹')}</div>` : ''}
                         </td>
                     </tr>`;
@@ -1788,24 +1737,20 @@
         const resetBtn = el('btnResetPortfolio');
         if (resetBtn) {
             resetBtn.addEventListener('click', async () => {
+                if (!signedInUser()) return goSignIn();
                 if (!confirm('Reset the paper portfolio to ₹10,00,000? All positions and orders will be cleared.')) return;
                 if (api()) {
                     try {
-                        const result = await api().resetPaperPortfolioStrict();
+                        await api().resetPaperPortfolioStrict();
                         portfolio = emptyPortfolio();
-                        if (result?.ledger_epoch) portfolio.ledgerEpoch = String(result.ledger_epoch);
                         await syncPortfolioFromBackend();
-                        savePortfolioCache();
                     } catch (e) {
+                        if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                         portfolio = emptyPortfolio();
-                        portfolio.ledgerEpoch = newClientOrderId();
-                        portfolio.pendingResetEpoch = portfolio.ledgerEpoch;
                         savePortfolioCache();
                     }
                 } else {
                     portfolio = emptyPortfolio();
-                    portfolio.ledgerEpoch = newClientOrderId();
-                    portfolio.pendingResetEpoch = portfolio.ledgerEpoch;
                     savePortfolioCache();
                 }
                 renderAll();
@@ -1850,7 +1795,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await syncPortfolioFromBackend();
+            if (signedInUser()) {
+                await syncPortfolioFromBackend();
+            } else {
+                showToast('You are browsing as a guest. Sign in to place trades.', 'error');
+            }
             const loaded = await loadCatalog();
             if (!loaded) showToast('Instrument catalogue is temporarily unavailable', 'error');
 
@@ -1899,14 +1848,14 @@
                 api().connectWebSocket();
 
                 // Keep the ledger authoritative across tabs and refreshes.
-                setInterval(async () => {
+                // Guests have no server book, so skip the sync for them.
+                const resync = async () => {
+                    if (!signedInUser()) return;
                     const ok = await syncPortfolioFromBackend();
                     if (ok) renderAll();
-                }, 15000);
-                window.addEventListener('focus', async () => {
-                    const ok = await syncPortfolioFromBackend();
-                    if (ok) renderAll();
-                });
+                };
+                setInterval(resync, 15000);
+                window.addEventListener('focus', resync);
             }
         });
     </script>
