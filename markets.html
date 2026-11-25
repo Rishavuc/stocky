@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="ui.css">
     <script src="theme.js"></script>
     <style>
         .market-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: var(--r-pill); }
@@ -613,9 +614,9 @@
                         <p class="page-header__subtitle">Real-time market data & performance tracking</p>
                     </div>
                     <div class="page-header__actions">
-                        <div class="market-status market-status--open">
+                        <div class="market-status market-status--open" data-market-status>
                             <span class="market-status__dot"></span>
-                            Markets Open
+                            <span data-market-status-text>NSE status</span>
                         </div>
                         <div class="dash-tabs" id="marketRegionTabs">
                             <button class="dash-tab active" data-tab="indian">India</button>
@@ -724,7 +725,7 @@
                     <!-- Kite API Banner -->
                     <div class="api-banner">
                         <div class="api-banner__left">
-                            <div class="api-banner__icon">📊</div>
+                            <div class="api-banner__icon">EQ</div>
                             <div>
                                 <div class="api-banner__title">
                                     Zerodha Kite Connect v3 Integration
@@ -741,7 +742,7 @@
                         </div>
                         <div class="api-banner__actions">
                             <a href="/kite/login" target="_blank" class="api-banner__btn">
-                                🔑 Authorize Kite Session
+                                Authorize Kite Session
                             </a>
                             <a href="https://kite.trade/docs/connect/v3/" target="_blank" class="api-banner__btn">
                                 ↗ API Docs
@@ -831,7 +832,7 @@
                     <!-- Binance API Banner -->
                     <div class="api-banner api-banner--crypto">
                         <div class="api-banner__left">
-                            <div class="api-banner__icon">🪙</div>
+                            <div class="api-banner__icon">CR</div>
                             <div>
                                 <div class="api-banner__title">
                                     Binance Official Spot API Integration
@@ -933,7 +934,7 @@
                     <!-- Forex Banner -->
                     <div class="api-banner api-banner--fx">
                         <div class="api-banner__left">
-                            <div class="api-banner__icon">💱</div>
+                            <div class="api-banner__icon">FX</div>
                             <div>
                                 <div class="api-banner__title">
                                     Global Currency Rates &amp; Forex Feeds
@@ -1385,13 +1386,13 @@
                     <td>
                         <div class="action-btn-group">
                             <a href="predictions.html?symbol=${s.symbol}" class="action-btn-sm action-btn-sm--primary" title="Run AI Prediction">
-                                🔮 Predict
+                                Predict
                             </a>
                             <a href="analysis.html?cat=${s.symbol}" class="action-btn-sm" title="Technical Analysis">
-                                📊 Analyze
+                                Analyze
                             </a>
                             <a href="mock-trading.html?symbol=${s.symbol}" class="action-btn-sm" title="Paper Trade">
-                                ⚡ Trade
+                                Trade
                             </a>
                             <button class="action-btn-sm" data-watchlist-toggle="${s.symbol}" title="${window.Watchlist?.has(s.symbol) ? 'Remove from' : 'Add to'} watchlist">
                                 ${window.Watchlist?.has(s.symbol) ? '★' : '☆'}
@@ -1610,13 +1611,13 @@
                     <td>
                         <div class="action-btn-group">
                             <a href="predictions.html?symbol=${c.symbol}" class="action-btn-sm action-btn-sm--primary" title="Run AI Prediction">
-                                🔮 Predict
+                                Predict
                             </a>
                             <a href="analysis.html?cat=${c.symbol}" class="action-btn-sm" title="Technical Analysis">
-                                📊 Analyze
+                                Analyze
                             </a>
                             <a href="mock-trading.html?symbol=${c.symbol}" class="action-btn-sm" title="Paper Trade">
-                                ⚡ Trade
+                                Trade
                             </a>
                             <button class="action-btn-sm" data-watchlist-toggle="${c.symbol}" title="${window.Watchlist?.has(c.symbol) ? 'Remove from' : 'Add to'} watchlist">
                                 ${window.Watchlist?.has(c.symbol) ? '★' : '☆'}
@@ -2446,5 +2447,6 @@
         }
     });
     </script>
+    <script src="shell.js"></script>
 </body>
 </html>

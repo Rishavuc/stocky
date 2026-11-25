@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="ui.css">
     <script src="theme.js"></script>
 </head>
 <body>
@@ -100,9 +101,9 @@
     <section class="hero" id="hero">
         <div class="container hero__inner">
             <div class="hero__content">
-                <div class="hero__badge">
+                <div class="hero__badge" data-market-status>
                     <span class="hero__badge-dot"></span>
-                    Markets are Open
+                    <span data-market-status-text>NSE status</span>
                 </div>
                 <h1 class="hero__title">
                     Smarter Analysis.<br>
@@ -125,22 +126,6 @@
                         </svg>
                         <span>Try Mock Trading</span>
                     </a>
-                </div>
-                <div class="hero__stats">
-                    <div class="hero__stat">
-                        <span class="hero__stat-number" data-target="50000">0</span>+
-                        <span class="hero__stat-label">Active Users</span>
-                    </div>
-                    <div class="hero__stat-divider"></div>
-                    <div class="hero__stat">
-                        <span class="hero__stat-number" data-target="5000">0</span>+
-                        <span class="hero__stat-label">Stocks Tracked</span>
-                    </div>
-                    <div class="hero__stat-divider"></div>
-                    <div class="hero__stat">
-                        <span class="hero__stat-number" data-target="92">0</span>%
-                        <span class="hero__stat-label">Prediction Accuracy</span>
-                    </div>
                 </div>
             </div>
 
@@ -601,5 +586,6 @@
     <script src="api-client.js"></script>
     <script src="dashboard.js"></script>
     <script src="script.js"></script>
+    <script src="shell.js"></script>
 </body>
 </html>
