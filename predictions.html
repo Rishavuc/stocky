@@ -120,7 +120,7 @@
                 <!-- Hero Banner -->
                 <div class="prediction-hero fade-in">
                     <div class="prediction-hero__left">
-                        <div class="prediction-hero__badge">🧠 LSTM Estimates</div>
+                        <div class="prediction-hero__badge">LSTM estimates</div>
                         <h1 class="prediction-hero__title">LSTM Price Estimates</h1>
                         <p class="prediction-hero__desc">Our multi-layer LSTM neural network analyzes years of historical price data, volume patterns, and technical indicators to forecast future stock movements. Historical validation accuracy typically falls in the 55–65% band; per-symbol results are shown in the scorecard.</p>
                     </div>
@@ -326,14 +326,14 @@
         ctx.fillStyle = gradient;
         ctx.fillRect(65, y, barW * (pct / 100), 32);
         ctx.fillStyle = '#64748b';
-        ctx.font = '11px Inter';
+        ctx.font = '11px Manrope, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText('0%', 58, y + 21);
         ctx.textAlign = 'left';
         ctx.fillText('100%', 72 + barW, y + 21);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#c4b5fd';
-        ctx.font = '700 13px JetBrains Mono';
+        ctx.font = '700 13px Manrope, sans-serif';
         ctx.fillText(`${pct.toFixed(0)}% model confidence`, w / 2, y + 22);
     }
 
@@ -438,7 +438,7 @@
             actual = latestCandlesData.map(c => c.close);
         } else {
             ctx.fillStyle = '#94a3b8';
-            ctx.font = '13px Inter';
+            ctx.font = '13px Manrope, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('No verified historical data available for this instrument.', w / 2, h / 2);
             return;
@@ -468,7 +468,7 @@
         for (let i = 0; i <= 5; i++) {
             const y = pad.top + (i / 5) * cH;
             ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
-            ctx.fillStyle = '#64748b'; ctx.font = '11px JetBrains Mono'; ctx.textAlign = 'right';
+            ctx.fillStyle = '#64748b'; ctx.font = '11px Manrope, sans-serif'; ctx.textAlign = 'right';
             const priceLabel = Math.round(max - (i / 5) * range);
             ctx.fillText(prefix + priceLabel.toLocaleString(), pad.left - 8, y + 4);
         }
@@ -511,7 +511,7 @@
             const lastCandleDate = new Date(latestCandlesData[latestCandlesData.length - 1].time);
             const totalPts = all.length;
             const tickCount = Math.min(6, totalPts);
-            ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#64748b'; ctx.font = '10px Manrope, sans-serif'; ctx.textAlign = 'center';
             for (let t = 0; t < tickCount; t++) {
                 const idx = Math.round(t * (totalPts - 1) / Math.max(1, tickCount - 1));
                 let label;
@@ -530,7 +530,7 @@
             }
         }
 
-        ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#64748b'; ctx.font = '10px Manrope, sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('← Historical Data', dx - 55, pad.top + cH + 34);
         ctx.fillStyle = '#00d09c';
         ctx.fillText('Quantile Forecast →', dx + 65, pad.top + cH + 34);
