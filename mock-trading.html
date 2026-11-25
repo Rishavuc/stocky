@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="ui.css">
     <script src="theme.js"></script>
     <style>
         /* Mock Trading Specific Styles */
@@ -516,7 +517,7 @@
                         <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
                     </button>
                     <button class="btn btn--outline btn--sm" id="btnResetPortfolio" title="Reset virtual capital to ₹10,00,000">
-                        🔄 Reset Capital
+                        Reset capital
                     </button>
                 </div>
             </div>
@@ -525,14 +526,14 @@
                 <!-- HERO BANNER -->
                 <div class="mock-hero fade-in">
                     <div class="mock-hero__left">
-                        <div class="mock-hero__badge">⚡ Zero Risk Simulation</div>
+                        <div class="mock-hero__badge">Paper trading, no real money</div>
                         <h1 class="mock-hero__title">Real-time Mock Trading Terminal</h1>
                         <p class="mock-hero__desc">
                             Test your trading strategies with ₹10,00,000 in virtual funds. Real-time market execution, live P&L tracking, intraday leverage (5x), and comprehensive trade analytics.
                         </p>
                     </div>
                     <div class="mock-hero__actions">
-                        <button class="btn btn--primary" id="btnFastBuyNifty">⚡ Quick Trade RELIANCE</button>
+                        <button class="btn btn--primary" id="btnFastBuyNifty">Quick trade RELIANCE</button>
                     </div>
                 </div>
 
@@ -578,7 +579,7 @@
                     <div class="order-panel">
                         <div class="order-panel__header">
                             <h2 class="order-panel__title">
-                                <span>🛒 Place Order</span>
+                                <span>Place order</span>
                             </h2>
                             <span class="badge-type" id="dispMarketStatus">MARKET OPEN</span>
                         </div>
@@ -810,11 +811,25 @@
         // MOCK TRADING ENGINE — backend-backed, verified data only
         // =============================================
         const INITIAL_CAPITAL = 1000000;
-        const STORAGE_KEY = 'investors_eye_mock_portfolio_v2';
+        // Books live on the server per user now; this cache is per user too, so
+        // two accounts on one browser never see each other's trades.
+        const signedInUser = () => window.apiClient?.getAuthUser() || null;
+        const STORAGE_KEY = `investors_eye_mock_portfolio_v3_${signedInUser()?.id || 'guest'}`;
+
+        function goSignIn(message = 'Sign in to place trades. Your portfolio is saved to your account.') {
+            showToast(message, 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html?redirect=' + encodeURIComponent('mock-trading.html');
+            }, 1200);
+        }
 
         let STOCK_CATALOG = {};
         let portfolio = loadPortfolioCache();
         let activeSide = 'BUY';
+        // Cash is INR; USDT-priced crypto converts with the backend's rate.
+        let usdInr = 86.85;
+        const fxOf = sym => String(sym || '').endsWith('USDT') ? usdInr : 1;
+        const isCrypto = sym => STOCK_CATALOG[sym]?.kind === 'CRYPTO';
 
         const el = id => document.getElementById(id);
         const stockSelect = el('stockSelect');
@@ -924,8 +939,9 @@
             let marginUsed = 0;
             (portfolio.positions || []).forEach(p => {
                 const ltp = quotePrice(p.symbol) ?? p.buyPrice;
-                const cost = p.buyPrice * p.qty;
-                unrealized += (ltp - p.buyPrice) * p.qty;
+                const fx = fxOf(p.symbol);
+                const cost = p.buyPrice * p.qty * fx;
+                unrealized += (ltp - p.buyPrice) * p.qty * fx;
                 marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
             });
             return portfolio.cash + marginUsed + unrealized;
@@ -944,7 +960,19 @@
 
         function applyBackendPortfolio(data) {
             const history = Array.isArray(portfolio.equityHistory) ? portfolio.equityHistory : [];
+            if (Number(data.usd_inr_rate) > 0) usdInr = Number(data.usd_inr_rate);
             portfolio = {
+                pending: (Array.isArray(data.pending_orders) ? data.pending_orders : []).map(o => ({
+                    id: Number(o.id),
+                    time: String(o.time || ''),
+                    side: String(o.side || '').toUpperCase(),
+                    symbol: String(o.symbol || '').toUpperCase(),
+                    product: String(o.product || 'CNC').toUpperCase(),
+                    qty: Number(o.qty) || 0,
+                    price: Number(o.price) || 0,
+                    status: 'PENDING',
+                    pnl: null
+                })),
                 cash: Number.isFinite(Number(data.cash_balance)) ? Number(data.cash_balance) : INITIAL_CAPITAL,
                 initialCapital: INITIAL_CAPITAL,
                 realizedPnl: Number.isFinite(Number(data.realized_pnl)) ? Number(data.realized_pnl) : 0,
@@ -962,6 +990,7 @@
                     qty: Number(o.qty) || 0,
                     price: Number(o.price) || 0,
                     status: String(o.status || 'EXECUTED'),
+                    reason: o.reason ? String(o.reason) : '',
                     pnl: o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? Number(o.pnl) : null
                 })),
                 equityHistory: history
@@ -1119,7 +1148,7 @@
                 quoteChange.textContent = 'Awaiting verified feed';
                 if (orderType.value === 'MARKET') tradePrice.value = '';
             }
-            updateCalculations();
+            syncQtyInput();
         }
 
         async function updateQuote() {
@@ -1169,9 +1198,19 @@
             updateCalculations();
         };
 
+        function syncQtyInput() {
+            // Crypto trades in fractions (0.01 BTC); stocks in whole shares.
+            const crypto = isCrypto(stockSelect.value);
+            tradeQty.step = crypto ? '0.0001' : '1';
+            tradeQty.min = crypto ? '0.0001' : '1';
+            if (!crypto) tradeQty.value = Math.max(1, Math.round(Number(tradeQty.value) || 1));
+            updateCalculations();
+        }
+
         function executeLocalOrder(sym, side, prod, qty, price) {
             const isMis = prod === 'MIS';
-            const marginRequired = isMis ? (qty * price) / 5 : qty * price;
+            const fx = fxOf(sym);
+            const marginRequired = (isMis ? (qty * price) / 5 : qty * price) * fx;
             let pnl = null;
 
             if (side === 'BUY') {
@@ -1186,9 +1225,9 @@
                 }
             } else {
                 const pos = portfolio.positions.find(p => p.symbol === sym && p.product === prod);
-                pnl = Math.round((price - pos.buyPrice) * qty * 100) / 100;
+                pnl = Math.round((price - pos.buyPrice) * qty * fx * 100) / 100;
                 portfolio.realizedPnl += pnl;
-                const marginToReturn = isMis ? (pos.buyPrice * qty) / 5 : pos.buyPrice * qty;
+                const marginToReturn = (isMis ? (pos.buyPrice * qty) / 5 : pos.buyPrice * qty) * fx;
                 portfolio.cash += marginToReturn + pnl;
                 pos.qty -= qty;
                 if (pos.qty <= 0) {
@@ -1231,14 +1270,20 @@
                 showToast('Select a verified instrument first', 'error');
                 return;
             }
-            const qty = parseInt(tradeQty.value, 10) || 0;
+            if (!signedInUser()) return goSignIn();
+            const qty = Number(tradeQty.value) || 0;
             const price = Number(tradePrice.value) || 0;
             const prod = productType.value;
+            const type = orderType.value;
             if (qty <= 0 || price <= 0) {
                 showToast('Enter a valid quantity and price', 'error');
                 return;
             }
-            const marginRequired = prod === 'MIS' ? (qty * price) / 5 : qty * price;
+            if (!isCrypto(sym) && !Number.isInteger(qty)) {
+                showToast('Stock quantity must be a whole number of shares', 'error');
+                return;
+            }
+            const marginRequired = (prod === 'MIS' ? (qty * price) / 5 : qty * price) * fxOf(sym);
             if (activeSide === 'BUY' && portfolio.cash < marginRequired) {
                 showToast(`Insufficient cash. Required ${fmtMoney(marginRequired)}, available ${fmtMoney(portfolio.cash)}`, 'error');
                 return;
@@ -1251,17 +1296,25 @@
                 }
             }
 
-            const order = { symbol: sym, side: activeSide, product: prod, order_type: 'LIMIT', qty, price };
-            let usedBackend = false;
-            let pnl = null;
+            // MARKET orders fill at the server's live price; only LIMIT sends a price.
+            const order = { symbol: sym, side: activeSide, product: prod, order_type: type, qty };
+            if (type === 'LIMIT') order.price = price;
+
             if (api()) {
                 try {
-                    await api().placePaperOrderStrict(order);
+                    const res = await api().placePaperOrderStrict(order);
                     await syncPortfolioFromBackend();
-                    usedBackend = true;
-                    const logged = portfolio.orders.find(o => o.symbol === sym && o.product === prod && o.qty === qty && Math.abs(o.price - price) < 0.01);
-                    pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
+                    renderAll();
+                    if (res?.status === 'PENDING') {
+                        showToast(res.message || `Limit order placed for ${sym}`, 'success');
+                        return;
+                    }
+                    const pnl = Number(res?.pnl);
+                    const pnlText = res?.pnl != null && Number.isFinite(pnl) ? ` (P&L: ${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})` : '';
+                    showToast(`${res?.message || `${activeSide} executed: ${qty} × ${sym}`}${pnlText}`, 'success');
+                    return;
                 } catch (e) {
+                    if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                     const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
                     if (!offline) {
                         showToast(`Order rejected: ${e.message}`, 'error');
@@ -1269,14 +1322,29 @@
                     }
                 }
             }
-            if (!usedBackend) {
-                pnl = executeLocalOrder(sym, activeSide, prod, qty, price);
-            }
 
+            // Offline fallback: market orders only, executed locally at the shown price.
+            if (type === 'LIMIT') {
+                showToast('Limit orders need the server. Please try again when it is back online.', 'error');
+                return;
+            }
+            const pnl = executeLocalOrder(sym, activeSide, prod, qty, price);
             renderAll();
             const pnlText = Number.isFinite(pnl) ? ` (P&L: ${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)})` : '';
-            showToast(`${activeSide} executed: ${qty} × ${sym} @ ${fmtMoney(price, itemPrefix(item))}${pnlText}`, 'success');
+            showToast(`${activeSide} executed offline: ${qty} × ${sym} @ ${fmtMoney(price, itemPrefix(item))}${pnlText}`, 'success');
         });
+
+        window.cancelPendingOrder = async function(orderId) {
+            try {
+                const res = await api().cancelPaperOrderStrict(orderId);
+                await syncPortfolioFromBackend();
+                renderAll();
+                showToast(res?.message || 'Order cancelled', 'success');
+            } catch (e) {
+                if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
+                showToast(`Cancel failed: ${e.message}`, 'error');
+            }
+        };
 
         window.squareOffPosition = async function(index) {
             const pos = portfolio.positions[index];
@@ -1293,6 +1361,7 @@
                     const logged = portfolio.orders.find(o => o.symbol === pos.symbol && o.product === pos.product && o.status === 'SQUARED OFF');
                     pnl = logged && Number.isFinite(Number(logged.pnl)) ? Number(logged.pnl) : null;
                 } catch (e) {
+                    if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                     const offline = /fetch|network|offline|failed to fetch/i.test(e.message || '');
                     if (!offline) {
                         showToast(`Square-off rejected: ${e.message}`, 'error');
@@ -1302,9 +1371,10 @@
             }
 
             if (!usedBackend) {
-                pnl = Math.round((ltp - pos.buyPrice) * pos.qty * 100) / 100;
+                const fx = fxOf(pos.symbol);
+                pnl = Math.round((ltp - pos.buyPrice) * pos.qty * fx * 100) / 100;
                 portfolio.realizedPnl += pnl;
-                const marginToReturn = pos.product === 'MIS' ? (pos.buyPrice * pos.qty) / 5 : pos.buyPrice * pos.qty;
+                const marginToReturn = (pos.product === 'MIS' ? (pos.buyPrice * pos.qty) / 5 : pos.buyPrice * pos.qty) * fx;
                 portfolio.cash += marginToReturn + pnl;
                 portfolio.orders.unshift({
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1326,8 +1396,9 @@
             let costBasis = 0;
             portfolio.positions.forEach(p => {
                 const ltp = quotePrice(p.symbol) ?? p.buyPrice;
-                const cost = p.buyPrice * p.qty;
-                unrealized += (ltp - p.buyPrice) * p.qty;
+                const fx = fxOf(p.symbol);
+                const cost = p.buyPrice * p.qty * fx;
+                unrealized += (ltp - p.buyPrice) * p.qty * fx;
                 marginUsed += (p.product === 'MIS' ? cost / 5 : cost);
                 costBasis += cost;
             });
@@ -1390,13 +1461,23 @@
         function renderOrders() {
             const tbody = el('ordersTableBody');
             if (!tbody) return;
-            if (!portfolio.orders.length) {
+            const rows = [...(portfolio.pending || []), ...portfolio.orders];
+            if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--c-text-tertiary);">No orders placed yet.</td></tr>`;
                 return;
             }
-            tbody.innerHTML = portfolio.orders.slice(0, 20).map(o => {
+            const STATUS_STYLE = {
+                PENDING: ['⏳', 'var(--c-text-secondary)'],
+                REJECTED: ['✕', 'var(--c-negative)'],
+                CANCELLED: ['–', 'var(--c-text-tertiary)']
+            };
+            tbody.innerHTML = rows.slice(0, 20).map(o => {
                 const isBuy = o.side === 'BUY';
                 const item = STOCK_CATALOG[o.symbol];
+                const [icon, color] = STATUS_STYLE[o.status] || ['✓', 'var(--c-positive)'];
+                const action = o.status === 'PENDING'
+                    ? `<div><button class="btn-action-sm" onclick="cancelPendingOrder(${Number(o.id)})">Cancel</button></div>`
+                    : (o.reason ? `<div style="font-size:10px; color:var(--c-text-tertiary);">${escapeHtml(o.reason)}</div>` : '');
                 return `
                     <tr>
                         <td style="color:var(--c-text-tertiary); font-size:12px;">${escapeHtml(o.time)}</td>
@@ -1406,7 +1487,7 @@
                         <td style="font-family:var(--ff-mono);">${o.qty}</td>
                         <td style="font-family:var(--ff-mono);">${fmtMoney(o.price, itemPrefix(item))}</td>
                         <td style="font-family:var(--ff-mono);">${fmtMoney(o.qty * o.price, itemPrefix(item))}</td>
-                        <td><span style="font-size:11px; font-weight:700; color:var(--c-positive);">✓ ${escapeHtml(o.status)}</span>
+                        <td><span style="font-size:11px; font-weight:700; color:${color};">${icon} ${escapeHtml(o.status)}</span>${action}
                             ${o.pnl !== null && o.pnl !== undefined && Number.isFinite(Number(o.pnl)) ? `<div style="font-size:10px;" class="${Number(o.pnl) >= 0 ? 'positive' : 'negative'}">${Number(o.pnl) >= 0 ? '+' : ''}${fmtMoney(o.pnl, '₹')}</div>` : ''}
                         </td>
                     </tr>`;
@@ -1656,6 +1737,7 @@
         const resetBtn = el('btnResetPortfolio');
         if (resetBtn) {
             resetBtn.addEventListener('click', async () => {
+                if (!signedInUser()) return goSignIn();
                 if (!confirm('Reset the paper portfolio to ₹10,00,000? All positions and orders will be cleared.')) return;
                 if (api()) {
                     try {
@@ -1663,6 +1745,7 @@
                         portfolio = emptyPortfolio();
                         await syncPortfolioFromBackend();
                     } catch (e) {
+                        if (e.status === 401) return goSignIn('Your session expired. Please sign in again.');
                         portfolio = emptyPortfolio();
                         savePortfolioCache();
                     }
@@ -1712,7 +1795,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await syncPortfolioFromBackend();
+            if (signedInUser()) {
+                await syncPortfolioFromBackend();
+            } else {
+                showToast('You are browsing as a guest. Sign in to place trades.', 'error');
+            }
             const loaded = await loadCatalog();
             if (!loaded) showToast('Instrument catalogue is temporarily unavailable', 'error');
 
@@ -1762,5 +1849,6 @@
             }
         });
     </script>
+    <script src="shell.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime
 
 # ========================================================
@@ -116,17 +116,30 @@ class PredictionResponse(BaseModel):
 # MOCK / PAPER TRADING SCHEMAS
 # ========================================================
 class PaperOrderRequest(BaseModel):
-    symbol: str
-    side: str # BUY, SELL
-    product: str = "CNC" # CNC, MIS
-    order_type: str = "MARKET" # MARKET, LIMIT
-    qty: int
-    price: Optional[float] = None
+    symbol: str = Field(..., min_length=1, max_length=30)
+    side: Literal["BUY", "SELL"]
+    product: Literal["CNC", "MIS"] = "CNC"
+    order_type: Literal["MARKET", "LIMIT"] = "MARKET"
+    # float so crypto can trade fractions (0.01 BTC); the engine still
+    # requires whole shares for equities.
+    qty: float = Field(..., gt=0)
+    price: Optional[float] = Field(None, gt=0)
+
+    @field_validator("symbol", "side", "product", "order_type", mode="before")
+    @classmethod
+    def _normalise(cls, v):
+        return v.strip().upper() if isinstance(v, str) else v
+
+    @model_validator(mode="after")
+    def _limit_needs_price(self):
+        if self.order_type == "LIMIT" and self.price is None:
+            raise ValueError("LIMIT orders need a price")
+        return self
 
 class PaperPositionResponse(BaseModel):
     symbol: str
     product: str
-    qty: int
+    qty: float
     avg_price: float
     ltp: float
     current_value: float
@@ -142,6 +155,10 @@ class PaperPortfolioResponse(BaseModel):
     total_trades_count: int
     positions: List[PaperPositionResponse]
     orders: List[Dict[str, Any]] = []
+    pending_orders: List[Dict[str, Any]] = []
+    # Cash is always INR; crypto positions are priced in USDT and converted
+    # with this rate, so the UI can do the same maths.
+    usd_inr_rate: float = 1.0
 
 # ========================================================
 # BROKER & UNIFIED TRADE BOOK SCHEMAS

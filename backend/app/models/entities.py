@@ -111,6 +111,16 @@ class PaperTrade(Base):
     status = Column(String(20), default="EXECUTED")
     ts = Column(DateTime, default=datetime.utcnow)
 
+class PaperBook(Base):
+    """One saved mock-trading book per user: cash, positions, orders and
+    pending limit orders, stored as the engine's JSON state."""
+    __tablename__ = "paper_books"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), unique=True, index=True, nullable=False)
+    state = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # ========================================================
 # UNIFIED TRADE BOOK & BROKER ACCOUNTS
 # ========================================================

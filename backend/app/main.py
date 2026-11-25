@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.database import init_db
+from app.security import check_jwt_config
 from app.routes import (
     instruments_router,
     markets_router,
@@ -23,6 +24,8 @@ from app.routes import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail fast: never serve production with a guessable token secret.
+    check_jwt_config()
     # Startup: Initialize DB models
     try:
         await init_db()

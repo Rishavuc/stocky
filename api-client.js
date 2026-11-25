@@ -38,17 +38,38 @@ class ApiClient {
         }
     }
 
+    getAuthToken() {
+        try {
+            return localStorage.getItem('ie_auth_token');
+        } catch (e) {
+            return null;
+        }
+    }
+
     async _fetchStrict(endpoint, options = {}) {
+        const token = this.getAuthToken();
         const res = await fetch(`${this.baseUrl}${endpoint}`, {
+            ...options,
+            // headers last, so options.headers is merged in rather than
+            // replacing Content-Type and the auth header.
             headers: {
                 'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...(options.headers || {})
-            },
-            ...options
+            }
         });
         if (!res.ok) {
+            // A token the server rejects (expired, or from before signed
+            // tokens) is useless: drop it so the UI shows "signed out".
+            if (res.status === 401 && token) this.logout();
             const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'API request failed');
+            // FastAPI validation errors send detail as a list of {msg, loc}.
+            const detail = Array.isArray(err.detail)
+                ? err.detail.map(d => String(d.msg || d).replace(/^Value error, /, '')).join('; ')
+                : err.detail;
+            const error = new Error(detail || 'API request failed');
+            error.status = res.status;
+            throw error;
         }
         return await res.json();
     }
@@ -171,6 +192,12 @@ class ApiClient {
         });
     }
 
+    async cancelPaperOrderStrict(orderId) {
+        return await this._fetchStrict(`/paper/orders/${encodeURIComponent(orderId)}`, {
+            method: 'DELETE'
+        });
+    }
+
     async squareOffPaper(symbol, product = 'CNC') {
         return await this._fetch(`/paper/square-off?symbol=${encodeURIComponent(symbol)}&product=${encodeURIComponent(product)}`, {
             method: 'POST'
@@ -255,6 +282,22 @@ class ApiClient {
         const res = await this._fetch('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ username_or_email: usernameOrEmail, password: password })
+        });
+        if (res && res.success) {
+            this.setAuthSession(res.access_token, res.user);
+        }
+        return res;
+    }
+
+    async getGoogleConfig() {
+        return await this._fetch('/auth/google/config');
+    }
+
+    async loginWithGoogle(credential) {
+        // Strict: the caller shows the real reason if Google sign-in fails.
+        const res = await this._fetchStrict('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential })
         });
         if (res && res.success) {
             this.setAuthSession(res.access_token, res.user);
