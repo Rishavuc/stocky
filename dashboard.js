@@ -320,7 +320,7 @@ function initApiIntegrationsModal() {
             <div class="api-card">
                 <div class="api-card__top">
                     <div class="api-card__name">
-                        <span>⚡</span> Binance Exchange (Crypto Feed)
+                        Binance Exchange (Crypto Feed)
                     </div>
                     <span class="api-status-pill api-status-pill--active" id="binanceStatusPill">CONNECTED</span>
                 </div>
@@ -339,7 +339,7 @@ function initApiIntegrationsModal() {
             <div class="api-card">
                 <div class="api-card__top">
                     <div class="api-card__name">
-                        <span>🪁</span> Zerodha Kite Connect (Equities & F&O)
+                        Zerodha Kite Connect (Equities & F&O)
                     </div>
                     <span class="api-status-pill api-status-pill--pending" id="kiteStatusPill">KEYS CONFIGURED</span>
                 </div>
@@ -366,7 +366,7 @@ function initApiIntegrationsModal() {
             <div class="api-card" style="margin-bottom:0;">
                 <div class="api-card__top">
                     <div class="api-card__name">
-                        <span>📈</span> Indian Indices & Stock Feed
+                        Indian Indices & Stock Feed
                     </div>
                     <span class="api-status-pill api-status-pill--active">LIVE BACKUP ACTIVE</span>
                 </div>
@@ -760,7 +760,7 @@ function initQuickTools() {
             <div class="api-modal" style="max-width: 580px;">
                 <div class="api-modal__header">
                     <div class="api-modal__title">
-                        <span>📊</span> Systematic Investment Plan (SIP) Calculator
+                        Systematic Investment Plan (SIP) Calculator
                     </div>
                     <button class="api-modal__close" id="sipModalClose">✕</button>
                 </div>

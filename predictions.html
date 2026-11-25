@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="ui.css">
     <script src="theme.js"></script>
     <style>
         .prediction-hero { background: linear-gradient(135deg, rgba(0,208,156,0.08), rgba(74,158,255,0.04)); border: 1px solid rgba(0,208,156,0.12); border-radius: var(--r-xl); padding: 36px; display: flex; gap: 32px; align-items: center; margin-bottom: 28px; }
@@ -119,22 +120,18 @@
                 <!-- Hero Banner -->
                 <div class="prediction-hero fade-in">
                     <div class="prediction-hero__left">
-                        <div class="prediction-hero__badge">🧠 Deep Learning Powered</div>
+                        <div class="prediction-hero__badge">LSTM forecasting</div>
                         <h1 class="prediction-hero__title">LSTM Price Prediction Engine</h1>
                         <p class="prediction-hero__desc">Our multi-layer LSTM neural network analyzes years of historical price data, volume patterns, and technical indicators to forecast future stock movements.</p>
                     </div>
                     <div class="prediction-hero__right">
                         <div class="prediction-hero__stat">
-                            <div class="prediction-hero__stat-val">92%</div>
-                            <div class="prediction-hero__stat-label">Accuracy</div>
+                            <div class="prediction-hero__stat-val">3–30D</div>
+                            <div class="prediction-hero__stat-label">Forecast window</div>
                         </div>
                         <div class="prediction-hero__stat">
-                            <div class="prediction-hero__stat-val" style="color:var(--c-blue);">7D</div>
-                            <div class="prediction-hero__stat-label">Forecast Window</div>
-                        </div>
-                        <div class="prediction-hero__stat">
-                            <div class="prediction-hero__stat-val" style="color:var(--c-purple);">500+</div>
-                            <div class="prediction-hero__stat-label">Stocks Covered</div>
+                            <div class="prediction-hero__stat-val">P10–P90</div>
+                            <div class="prediction-hero__stat-label">Quantile band</div>
                         </div>
                     </div>
                 </div>
@@ -769,5 +766,6 @@
         }
     });
     </script>
+    <script src="shell.js"></script>
 </body>
 </html>

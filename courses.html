@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="ui.css">
     <script src="theme.js"></script>
     <style>
         /* Learn / Courses Dashboard Styles */
@@ -490,7 +491,7 @@
                         <span class="theme-toggle-label" id="themeToggleLabel">Day</span>
                     </button>
                     <button class="btn btn--outline btn--sm" id="btnToggleSaved">
-                        ⭐ Saved (<span id="savedCountBadge">0</span>)
+                        Saved (<span id="savedCountBadge">0</span>)
                     </button>
                 </div>
             </div>
@@ -498,7 +499,7 @@
             <div class="dash-content">
                 <!-- HERO BANNER -->
                 <div class="learn-hero fade-in">
-                    <div class="learn-hero__badge">📚 100% Free Open Education</div>
+                    <div class="learn-hero__badge">Free, open courses</div>
                     <h1 class="learn-hero__title">Curated Stock Market Courses</h1>
                     <p class="learn-hero__desc">
                         No expensive ₹25,000 trading workshops needed. We curated the highest-rated free courses from YouTube, Zerodha Varsity, Yale University, NSE Academy, and edX to take you from a complete beginner to an analytical trader.
@@ -534,7 +535,7 @@
 
                     <div class="tracks-grid">
                         <div class="track-card" onclick="filterByTopic('basics')">
-                            <span class="track-card__icon">🌱</span>
+                            <span class="track-card__icon">01</span>
                             <div class="track-card__level">Stage 1 — Fundamentals</div>
                             <h3 class="track-card__title">Market Basics & Investing</h3>
                             <p class="track-card__desc">Understand stock exchanges (NSE/BSE), Demat accounts, compounding, and building long-term portfolios.</p>
@@ -542,7 +543,7 @@
                         </div>
 
                         <div class="track-card" onclick="filterByTopic('technical')">
-                            <span class="track-card__icon">📊</span>
+                            <span class="track-card__icon">02</span>
                             <div class="track-card__level">Stage 2 — Chart Reading</div>
                             <h3 class="track-card__title">Technical Analysis & Price Action</h3>
                             <p class="track-card__desc">Candlestick patterns, support & resistance, moving averages, RSI, MACD, and breakout trade setups.</p>
@@ -550,7 +551,7 @@
                         </div>
 
                         <div class="track-card" onclick="filterByTopic('fno')">
-                            <span class="track-card__icon">⚡</span>
+                            <span class="track-card__icon">03</span>
                             <div class="track-card__level">Stage 3 — Derivatives</div>
                             <h3 class="track-card__title">Futures & Options (F&O) Mastery</h3>
                             <p class="track-card__desc">Option Greeks (Delta, Theta, Gamma, Vega), open interest analysis, PCR, straddles, strangles & iron condors.</p>
@@ -558,7 +559,7 @@
                         </div>
 
                         <div class="track-card" onclick="filterByTopic('fundamental')">
-                            <span class="track-card__icon">🔍</span>
+                            <span class="track-card__icon">04</span>
                             <div class="track-card__level">Stage 4 — Valuation</div>
                             <h3 class="track-card__title">Fundamental & Financial Statement Analysis</h3>
                             <p class="track-card__desc">Read Balance Sheets, P&L statements, calculate DCF valuations, ROCE, ROE, and competitive moats.</p>
@@ -566,7 +567,7 @@
                         </div>
 
                         <div class="track-card" onclick="filterByTopic('crypto')">
-                            <span class="track-card__icon">🪙</span>
+                            <span class="track-card__icon">05</span>
                             <div class="track-card__level">Stage 5 — Digital Assets</div>
                             <h3 class="track-card__title">Crypto, Blockchain & DeFi</h3>
                             <p class="track-card__desc">Wallets & keys, spot and futures trading, stablecoins, staking, liquidity pools, and on-chain risk assessment.</p>
@@ -574,7 +575,7 @@
                         </div>
 
                         <div class="track-card" onclick="filterByTopic('algo')">
-                            <span class="track-card__icon">🤖</span>
+                            <span class="track-card__icon">06</span>
                             <div class="track-card__level">Stage 6 — Automation</div>
                             <h3 class="track-card__title">Algorithmic & Quant Trading</h3>
                             <p class="track-card__desc">Python for markets, indicator engineering, event-driven backtesting, ML/LSTM forecasting and paper-trade automation.</p>
@@ -586,7 +587,7 @@
                 <!-- FILTER & SEARCH BAR -->
                 <div class="filter-bar fade-in stagger-2">
                     <div class="filter-bar__top">
-                        <input type="text" class="search-courses-input" placeholder="🔍 Search courses by title, topic, or mentor..." id="courseSearchInput">
+                        <input type="text" class="search-courses-input" placeholder="Search courses by title, topic, or mentor..." id="courseSearchInput">
                         <select class="filter-select" id="platformSelect">
                             <option value="all">All Platforms</option>
                             <option value="YouTube">YouTube</option>
@@ -624,7 +625,7 @@
                 <div class="quiz-section fade-in">
                     <div class="quiz-header">
                         <div>
-                            <h3 style="font-size:18px; font-weight:700;">🧠 Quick Knowledge Check</h3>
+                            <h3 style="font-size:18px; font-weight:700;">Quick knowledge check</h3>
                             <p style="font-size:12px; color:var(--c-text-secondary);">Test your market terminology comprehension</p>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -643,7 +644,7 @@
                     </div>
                     <div id="quizFeedback" style="font-size:13px; font-weight:600; min-height:36px; line-height:1.5;"></div>
                     <div id="quizActions" style="display:none; margin-top:14px;">
-                        <button class="btn btn--primary btn--sm" onclick="restartQuiz()">🔄 Try Again</button>
+                        <button class="btn btn--primary btn--sm" onclick="restartQuiz()">Try again</button>
                     </div>
                 </div>
             </div>
@@ -1410,9 +1411,9 @@
                             <p class="course-desc-snip">${c.desc}</p>
                             <div class="course-meta-tags">
                                 <span class="c-tag">⏱ ${c.duration}</span>
-                                <span class="c-tag">📖 ${c.lessons} Lessons</span>
-                                <span class="c-tag">🗣 ${c.language}</span>
-                                <span class="c-tag">🎬 Video Included</span>
+                                <span class="c-tag">${c.lessons} Lessons</span>
+                                <span class="c-tag">${c.language}</span>
+                                <span class="c-tag">Video Included</span>
                             </div>
                         </div>
                         <div class="course-card-premium__footer">
@@ -1444,7 +1445,7 @@
         window.resetFilters = function() {
             activeTopic = 'all';
             showOnlySaved = false;
-            btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+            btnToggleSaved.innerHTML = `Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
             updateSavedBadge();
             catChips.forEach(chip => chip.classList.toggle('active', chip.dataset.topic === 'all'));
             searchInput.value = '';
@@ -1476,7 +1477,7 @@
             if (showOnlySaved) {
                 btnToggleSaved.innerHTML = `⬅ Show All Courses`;
             } else {
-                btnToggleSaved.innerHTML = `⭐ Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
+                btnToggleSaved.innerHTML = `Saved (<span id="savedCountBadge">${savedCourses.length}</span>)`;
                 updateSavedBadge();
             }
             renderCourses();
@@ -1605,7 +1606,7 @@
             const message = pct >= 80 ? 'Excellent — institutional-grade knowledge!' : pct >= 50 ? 'Good work — review the weaker topics and try again.' : 'Keep going — the courses above cover these concepts.';
             document.getElementById('quizScoreBadge').textContent = `Final Score: ${quizScore} / ${total}`;
             document.getElementById('quizProgressBar').style.width = '100%';
-            document.getElementById('quizQuestionText').textContent = `🎯 You scored ${quizScore} out of ${total} (${pct}%)`;
+            document.getElementById('quizQuestionText').textContent = `You scored ${quizScore} out of ${total} (${pct}%)`;
             document.getElementById('quizOptionsWrap').innerHTML = `<p style="font-size:13px; color:var(--c-text-secondary); line-height:1.6;">${message}</p>`;
             document.getElementById('quizFeedback').innerHTML = '';
             document.getElementById('quizActions').style.display = 'block';
@@ -1629,5 +1630,6 @@
             initQuiz();
         });
     </script>
+    <script src="shell.js"></script>
 </body>
 </html>
