@@ -2008,25 +2008,55 @@
             const grid = document.getElementById('majorIndicesGrid');
             if (!grid) return;
             if (!indicesList || !indicesList.length) {
+                delete grid.dataset.indicesKey;
                 grid.innerHTML = `<div class="dash-card" style="grid-column:1/-1; padding:18px; color:var(--c-text-tertiary);">Index feed unavailable right now. No estimated values are shown.</div>`;
                 return;
             }
-            grid.innerHTML = indicesList.map((idx, i) => `
-                <div class="dash-card index-big-card fade-in stagger-${i+1}">
-                    <div class="index-big-card__top">
-                        <span class="index-big-card__name">${idx.name}</span>
-                        <span class="index-big-card__change ${idx.positive ? 'positive' : 'negative'}">${idx.change_pct > 0 ? '+' : ''}${idx.change_pct}%</span>
+            const sign = (n) => (n > 0 ? '+' : '');
+            const valueText = (idx) => typeof idx.val === 'string' ? idx.val : (idx.value ? idx.value.toLocaleString('en-IN') : idx.val);
+            const tone = (idx) => (idx.positive ? 'positive' : 'negative');
+
+            // Live ticks call this every second. Rebuilding the cards each time restarted
+            // their fade-in, so the grid looked like it was loading forever. Build once per
+            // set of indices (first load or region switch), then only patch the numbers.
+            const key = indicesList.map(idx => idx.name).join('|');
+            const isUpdate = grid.dataset.indicesKey === key;
+
+            if (!isUpdate) {
+                grid.dataset.indicesKey = key;
+                grid.innerHTML = indicesList.map((idx, i) => `
+                    <div class="dash-card index-big-card fade-in stagger-${i+1}" data-index-card="${i}">
+                        <div class="index-big-card__top">
+                            <span class="index-big-card__name">${idx.name}</span>
+                            <span class="index-big-card__change" data-field="pct"></span>
+                        </div>
+                        <div class="index-big-card__val" data-field="val"></div>
+                        <div class="index-big-card__change" data-field="change"></div>
+                        <div class="index-big-card__chart"><canvas id="indexChart${i}"></canvas></div>
                     </div>
-                    <div class="index-big-card__val">${typeof idx.val === 'string' ? idx.val : (idx.value ? idx.value.toLocaleString('en-IN') : idx.val)}</div>
-                    <div class="index-big-card__change ${idx.positive ? 'positive' : 'negative'}">${idx.change > 0 ? '+' : ''}${idx.change} (${idx.change_pct > 0 ? '+' : ''}${idx.change_pct}%)</div>
-                    <div class="index-big-card__chart"><canvas id="indexChart${i}"></canvas></div>
-                </div>
-            `).join('');
+                `).join('');
+            }
+
+            indicesList.forEach((idx, i) => {
+                const card = grid.querySelector(`[data-index-card="${i}"]`);
+                if (!card) return;
+                const pct = card.querySelector('[data-field="pct"]');
+                const change = card.querySelector('[data-field="change"]');
+                pct.textContent = `${sign(idx.change_pct)}${idx.change_pct}%`;
+                change.textContent = `${sign(idx.change)}${idx.change} (${sign(idx.change_pct)}${idx.change_pct}%)`;
+                card.querySelector('[data-field="val"]').textContent = valueText(idx);
+                [pct, change].forEach(el => el.className = `index-big-card__change ${tone(idx)}`);
+            });
 
             requestAnimationFrame(() => {
                 indicesList.forEach((idx, i) => {
                     const data = idx.sparkline && idx.sparkline.length > 0 ? idx.sparkline : [];
                     if (data.length < 2) return;
+                    // Redraw only when the line or its colour actually changed.
+                    const canvas = document.getElementById(`indexChart${i}`);
+                    const sig = `${tone(idx)}:${data.length}:${data[data.length - 1]}`;
+                    if (!canvas || canvas.dataset.sig === sig) return;
+                    canvas.dataset.sig = sig;
                     const color = idx.positive ? '#00d09c' : '#f6465d';
                     drawSparkline(`indexChart${i}`, data, color, idx.positive ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
                 });
