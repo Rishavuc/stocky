@@ -643,6 +643,10 @@
                         <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
                         Currencies &amp; Forex
                     </button>
+                    <button class="subdash-tab" data-subdash="mutualfunds" id="tabSubdashMutualFunds">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M3 16V8l7-5 7 5v8" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 16v-5h6v5" stroke="currentColor" stroke-width="1.5"/></svg>
+                        Mutual Funds <span class="subdash-tab-badge">AMFI NAV</span>
+                    </button>
                 </div>
 
                 <!-- ==============================================
@@ -858,8 +862,8 @@
                         </div>
                         <div class="dash-card stat-card">
                             <div class="dash-card__subtitle">BTC / USDT Price</div>
-                            <div class="index-big-card__val" id="kpiBtcPrice">$81,480</div>
-                            <div class="breadth-row__label" id="kpiBtcInr">₹69,25,800 INR</div>
+                            <div class="index-big-card__val" id="kpiBtcPrice">—</div>
+                            <div class="breadth-row__label" id="kpiBtcInr">Loading live quote...</div>
                         </div>
                         <div class="dash-card stat-card">
                             <div class="dash-card__subtitle">Top Crypto Gainer</div>
@@ -934,11 +938,11 @@
                                 <div class="api-banner__title">
                                     Global Currency Rates &amp; Forex Feeds
                                     <span class="market-status market-status--open" style="font-size: 11px; padding: 2px 8px;">
-                                        <span class="market-status__dot"></span> RBI Reference Rates
+                                        <span class="market-status__dot"></span> ECB Reference Rates
                                     </span>
                                 </div>
                                 <div class="api-banner__desc">
-                                    Live FX crosses against Indian Rupee (INR) for foreign investment hedging and cross-border trades.
+                                    Verified FX crosses against Indian Rupee (INR) via Frankfurter/ECB. Rates update from the live feed.
                                 </div>
                             </div>
                         </div>
@@ -964,6 +968,9 @@
                                     <option value="EUR">EUR — Euro</option>
                                     <option value="GBP">GBP — British Pound</option>
                                     <option value="JPY">JPY — Japanese Yen (100x)</option>
+                                    <option value="AUD">AUD — Australian Dollar</option>
+                                    <option value="CAD">CAD — Canadian Dollar</option>
+                                    <option value="SGD">SGD — Singapore Dollar</option>
                                     <option value="INR">INR — Indian Rupee</option>
                                 </select>
                             </div>
@@ -976,11 +983,14 @@
                                     <option value="EUR">EUR — Euro</option>
                                     <option value="GBP">GBP — British Pound</option>
                                     <option value="JPY">JPY — Japanese Yen (100x)</option>
+                                    <option value="AUD">AUD — Australian Dollar</option>
+                                    <option value="CAD">CAD — Canadian Dollar</option>
+                                    <option value="SGD">SGD — Singapore Dollar</option>
                                 </select>
                             </div>
                             <div class="converter-input-wrap">
                                 <label>Converted Value</label>
-                                <input type="text" id="convResult" readonly value="₹85,000.00" style="font-weight: 800; color: var(--c-accent);">
+                                <input type="text" id="convResult" readonly value="Loading verified rate..." style="font-weight: 800; color: var(--c-accent);">
                             </div>
                         </div>
                     </div>
@@ -1008,6 +1018,108 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- ==============================================
+                     SUB-DASHBOARD 5: MUTUAL FUNDS (VERIFIED AMFI NAVs)
+                     ============================================== -->
+                <div class="subdash-view" id="subdashViewMutualFunds">
+                    <div class="api-banner">
+                        <div class="api-banner__left">
+                            <div class="api-banner__icon">🏦</div>
+                            <div>
+                                <div class="api-banner__title">
+                                    Mutual Fund NAV Explorer
+                                    <span class="market-status market-status--open" style="font-size: 11px; padding: 2px 8px;">
+                                        <span class="market-status__dot"></span> AMFI Data
+                                    </span>
+                                </div>
+                                <div class="api-banner__desc">
+                                    Verified NAV history and point-to-point returns from
+                                    <span class="api-banner__key-pill">mfapi.in</span>. No estimated or modelled NAVs.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="api-banner__actions">
+                            <button class="api-banner__btn" onclick="window.refreshMutualFunds && window.refreshMutualFunds()">↻ Refresh NAVs</button>
+                        </div>
+                    </div>
+
+                    <div class="subdash-kpi-grid" id="mutualFundKpiGrid">
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Verified Schemes</div>
+                            <div class="index-big-card__val" id="mfKpiCount">—</div>
+                            <div class="breadth-row__label">Direct growth plans</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Top 1Y Return</div>
+                            <div class="index-big-card__val positive" id="mfKpiTop">—</div>
+                            <div class="breadth-row__label" id="mfKpiTopSub">Loading scheme data...</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Average 1Y Return</div>
+                            <div class="index-big-card__val" id="mfKpiAvg">—</div>
+                            <div class="breadth-row__label">Across tracked schemes</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="dash-card__subtitle">Latest NAV Date</div>
+                            <div class="index-big-card__val" id="mfKpiDate" style="font-size:20px;">—</div>
+                            <div class="breadth-row__label">AMFI publication date</div>
+                        </div>
+                    </div>
+
+                    <div id="mfBestBuyCard" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 20px;margin-bottom:16px;border:1px solid rgba(245,158,11,0.28);border-radius:var(--r-md);background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(0,208,156,0.04));">
+                        <div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(245,158,11,0.15);color:#f59e0b;flex-shrink:0;">⭐</div>
+                        <div style="flex:1;min-width:260px;">
+                            <div style="font-size:14px;font-weight:800;color:#f59e0b;margin-bottom:4px;">Best Buy Candidate — data-driven from verified NAV history</div>
+                            <div id="mfBestName" style="font-size:15px;font-weight:700;">Loading verified schemes...</div>
+                            <div id="mfBestMeta" style="font-size:11px;color:var(--c-text-tertiary);margin-top:3px;">Ranking uses real 1M/3M/1Y returns, 30-day momentum and drawdown.</div>
+                            <div style="font-size:10px;color:var(--c-text-tertiary);margin-top:6px;">Historical shortlist only — not a guarantee or personal investment advice. Check your risk profile, charges and goal fit before buying.</div>
+                        </div>
+                        <div style="text-align:right;min-width:110px;">
+                            <div id="mfBestScore" style="font-family:var(--ff-mono);font-size:24px;font-weight:800;color:#00d09c;">—</div>
+                            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--c-text-tertiary);">Growth Score</div>
+                        </div>
+                    </div>
+
+                    <div class="catalog-toolbar">
+                        <div class="catalog-search-box">
+                            <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            <input type="text" id="mfSearchInput" placeholder="Filter by scheme, fund house or category...">
+                        </div>
+                        <select class="catalog-sort-select" id="mfSortSelect">
+                            <option value="growth_desc">Growth score (best buy)</option>
+                            <option value="return_1y">Top 1Y Return</option>
+                            <option value="return_1m">Top 1M Return</option>
+                            <option value="nav_desc">Highest NAV</option>
+                            <option value="scheme_asc">Scheme (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <div class="catalog-table-wrap">
+                        <table class="catalog-table" id="mutualFundsTable">
+                            <thead>
+                                <tr>
+                                    <th>Scheme</th>
+                                    <th>Fund House / Category</th>
+                                    <th>Latest NAV</th>
+                                    <th>1D Change</th>
+                                    <th>1M Return</th>
+                                    <th>3M Return</th>
+                                    <th>1Y Return</th>
+                                    <th>30D NAV Trend</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mutualFundsBody">
+                                <tr>
+                                    <td colspan="9" style="text-align:center; padding: 40px; color: var(--c-text-tertiary);">
+                                        Fetching verified AMFI NAV history...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -1024,13 +1136,17 @@
             'overview': document.getElementById('subdashViewOverview'),
             'stocks': document.getElementById('subdashViewStocks'),
             'crypto': document.getElementById('subdashViewCrypto'),
-            'currencies': document.getElementById('subdashViewCurrencies')
+            'currencies': document.getElementById('subdashViewCurrencies'),
+            'mutualfunds': document.getElementById('subdashViewMutualFunds')
         };
 
         let currentSubdash = 'overview';
         let stocksCatalogData = [];
         let cryptoCatalogData = [];
         let currenciesCatalogData = [];
+        let mutualFundsData = [];
+        let activeRegion = 'indian';
+        let regionIndicesData = [];
 
         function switchSubdashboard(tabName) {
             if (!subdashViews[tabName]) tabName = 'overview';
@@ -1070,6 +1186,8 @@
                 loadCryptoCatalog();
             } else if (tabName === 'currencies') {
                 loadCurrenciesCatalog();
+            } else if (tabName === 'mutualfunds') {
+                loadMutualFunds();
             }
         }
 
@@ -1136,25 +1254,12 @@
         }
 
         function renderStocksFallback() {
-            stocksCatalogData = [
-                { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', sector: 'Oil & Gas', segment: 'EQUITY', exchange: 'NSE', token: '738561', price: 2985.40, change: 34.20, change_pct: 1.16, high_24h: 3010.00, low_24h: 2950.00, volume: 5420000 },
-                { symbol: 'TCS', name: 'Tata Consultancy Services', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '2953217', price: 3840.15, change: 48.70, change_pct: 1.28, high_24h: 3865.00, low_24h: 3790.00, volume: 2180000 },
-                { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '341249', price: 1680.90, change: -12.30, change_pct: -0.73, high_24h: 1702.00, low_24h: 1675.00, volume: 8940000 },
-                { symbol: 'INFY', name: 'Infosys Ltd.', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '408065', price: 1520.45, change: 28.60, change_pct: 1.92, high_24h: 1535.00, low_24h: 1495.00, volume: 6200000 },
-                { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '1270529', price: 1145.30, change: 16.80, change_pct: 1.49, high_24h: 1152.00, low_24h: 1128.00, volume: 4850000 },
-                { symbol: 'SBIN', name: 'State Bank of India', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '779521', price: 785.60, change: 9.40, change_pct: 1.21, high_24h: 792.00, low_24h: 776.00, volume: 7300000 },
-                { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd.', sector: 'Telecommunication', segment: 'EQUITY', exchange: 'NSE', token: '2714625', price: 1340.20, change: 21.50, change_pct: 1.63, high_24h: 1348.00, low_24h: 1318.00, volume: 3200000 },
-                { symbol: 'TATASTEEL', name: 'Tata Steel Ltd.', sector: 'Metals & Mining', segment: 'EQUITY', exchange: 'NSE', token: '895745', price: 162.80, change: 3.40, change_pct: 2.13, high_24h: 165.00, low_24h: 159.00, volume: 14200000 },
-                { symbol: 'ITC', name: 'ITC Ltd.', sector: 'FMCG', segment: 'EQUITY', exchange: 'NSE', token: '424961', price: 432.10, change: -2.10, change_pct: -0.48, high_24h: 436.00, low_24h: 429.50, volume: 5600000 },
-                { symbol: 'TATAMOTORS', name: 'Tata Motors Ltd.', sector: 'Automobile', segment: 'EQUITY', exchange: 'NSE', token: '884737', price: 978.40, change: 24.60, change_pct: 2.58, high_24h: 988.00, low_24h: 954.00, volume: 5800000 },
-                { symbol: 'MARUTI', name: 'Maruti Suzuki India', sector: 'Automobile', segment: 'EQUITY', exchange: 'NSE', token: '2815745', price: 12450.00, change: 180.00, change_pct: 1.47, high_24h: 12580.00, low_24h: 12280.00, volume: 720000 },
-                { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', sector: 'Pharmaceuticals', segment: 'EQUITY', exchange: 'NSE', token: '857857', price: 1560.80, change: 14.20, change_pct: 0.92, high_24h: 1572.00, low_24h: 1542.00, volume: 1850000 },
-                { symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd.', sector: 'Banking', segment: 'EQUITY', exchange: 'NSE', token: '81153', price: 6920.00, change: -85.00, change_pct: -1.21, high_24h: 7040.00, low_24h: 6890.00, volume: 1100000 },
-                { symbol: 'WIPRO', name: 'Wipro Ltd.', sector: 'Information Technology', segment: 'EQUITY', exchange: 'NSE', token: '969473', price: 478.30, change: 5.60, change_pct: 1.18, high_24h: 484.00, low_24h: 472.00, volume: 4100000 },
-                { symbol: 'ASIANPAINT', name: 'Asian Paints Ltd.', sector: 'FMCG', segment: 'EQUITY', exchange: 'NSE', token: '60417', price: 2890.50, change: -18.40, change_pct: -0.63, high_24h: 2920.00, low_24h: 2875.00, volume: 950000 }
-            ];
+            stocksCatalogData = [];
             updateStocksKPIs();
-            renderStocksTable();
+            const tbody = document.getElementById('stocksCatalogBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">Equity feed unavailable right now. No estimated prices are shown.</td></tr>`;
+            }
         }
 
         function updateStocksKPIs() {
@@ -1300,7 +1405,8 @@
             requestAnimationFrame(() => {
                 filtered.forEach(s => {
                     const canvasId = `stockSpark_${s.symbol}`;
-                    const spark = (s.sparkline && s.sparkline.length > 0) ? s.sparkline : [s.price * 0.98, s.price * 0.99, s.price, s.price * 1.01, s.price];
+                    const spark = (s.sparkline && s.sparkline.length > 0) ? s.sparkline : [];
+                    if (spark.length < 2) return;
                     const isPos = s.change >= 0;
                     drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
                 });
@@ -1366,21 +1472,12 @@
         }
 
         function renderCryptoFallback() {
-            cryptoCatalogData = [
-                { symbol: 'BTCUSDT', pair: 'BTC/USDT', name: 'Bitcoin', base: 'BTC', quote: 'USDT', category: 'Layer-1', price: 81480.00, price_usdt: 81480.00, price_inr: 6925800.00, change: 1680.00, change_pct: 2.10, high_24h: 82200.00, low_24h: 79800.00, volume: 2450000000 },
-                { symbol: 'ETHUSDT', pair: 'ETH/USDT', name: 'Ethereum', base: 'ETH', quote: 'USDT', category: 'Smart Contracts', price: 2145.50, price_usdt: 2145.50, price_inr: 182367.50, change: 38.20, change_pct: 1.81, high_24h: 2180.00, low_24h: 2100.00, volume: 1120000000 },
-                { symbol: 'SOLUSDT', pair: 'SOL/USDT', name: 'Solana', base: 'SOL', quote: 'USDT', category: 'Layer-1', price: 142.80, price_usdt: 142.80, price_inr: 12138.00, change: 6.40, change_pct: 4.69, high_24h: 145.50, low_24h: 135.00, volume: 680000000 },
-                { symbol: 'BNBUSDT', pair: 'BNB/USDT', name: 'Binance Coin', base: 'BNB', quote: 'USDT', category: 'Exchange Token', price: 582.40, price_usdt: 582.40, price_inr: 49504.00, change: -4.50, change_pct: -0.77, high_24h: 592.00, low_24h: 578.00, volume: 240000000 },
-                { symbol: 'DOGEUSDT', pair: 'DOGE/USDT', name: 'Dogecoin', base: 'DOGE', quote: 'USDT', category: 'Memecoin', price: 0.162, price_usdt: 0.162, price_inr: 13.77, change: 0.012, change_pct: 8.00, high_24h: 0.170, low_24h: 0.149, volume: 410000000 },
-                { symbol: 'XRPUSDT', pair: 'XRP/USDT', name: 'Ripple', base: 'XRP', quote: 'USDT', category: 'Payments', price: 0.585, price_usdt: 0.585, price_inr: 49.72, change: -0.008, change_pct: -1.35, high_24h: 0.598, low_24h: 0.580, volume: 320000000 },
-                { symbol: 'ADAUSDT', pair: 'ADA/USDT', name: 'Cardano', base: 'ADA', quote: 'USDT', category: 'Layer-1', price: 0.472, price_usdt: 0.472, price_inr: 40.12, change: 0.009, change_pct: 1.94, high_24h: 0.485, low_24h: 0.460, volume: 150000000 },
-                { symbol: 'AVAXUSDT', pair: 'AVAX/USDT', name: 'Avalanche', base: 'AVAX', quote: 'USDT', category: 'Layer-1', price: 28.40, price_usdt: 28.40, price_inr: 2414.00, change: 0.95, change_pct: 3.46, high_24h: 29.20, low_24h: 27.10, volume: 180000000 },
-                { symbol: 'BTCINR', pair: 'BTC/INR', name: 'Bitcoin (INR)', base: 'BTC', quote: 'INR', category: 'Layer-1', price: 6925800.00, price_usdt: 81480.00, price_inr: 6925800.00, change: 142800.00, change_pct: 2.10, high_24h: 6987000.00, low_24h: 6783000.00, volume: 54000000 },
-                { symbol: 'ETHINR', pair: 'ETH/INR', name: 'Ethereum (INR)', base: 'ETH', quote: 'INR', category: 'Smart Contracts', price: 182367.50, price_usdt: 2145.50, price_inr: 182367.50, change: 3247.00, change_pct: 1.81, high_24h: 185300.00, low_24h: 178500.00, volume: 32000000 },
-                { symbol: 'SOLINR', pair: 'SOL/INR', name: 'Solana (INR)', base: 'SOL', quote: 'INR', category: 'Layer-1', price: 12138.00, price_usdt: 142.80, price_inr: 12138.00, change: 544.00, change_pct: 4.69, high_24h: 12367.00, low_24h: 11475.00, volume: 18000000 }
-            ];
+            cryptoCatalogData = [];
             updateCryptoKPIs();
-            renderCryptoTable();
+            const tbody = document.getElementById('cryptoCatalogBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">Binance feed unavailable right now. No estimated crypto prices are shown.</td></tr>`;
+            }
         }
 
         function updateCryptoKPIs() {
@@ -1388,12 +1485,14 @@
             const countEl = document.getElementById('kpiCryptoCount');
             if (countEl) countEl.textContent = cryptoCatalogData.length;
 
-            const btc = cryptoCatalogData.find(c => c.symbol.startsWith('BTC'));
+            const btc = cryptoCatalogData.find(c => c.symbol.startsWith('BTCUSDT'));
             if (btc) {
                 const btcPriceEl = document.getElementById('kpiBtcPrice');
                 const btcInrEl = document.getElementById('kpiBtcInr');
-                if (btcPriceEl) btcPriceEl.textContent = `$${(btc.price_usdt || btc.price).toLocaleString('en-US')}`;
-                if (btcInrEl) btcInrEl.textContent = `₹${(btc.price_inr || btc.price * 85).toLocaleString('en-IN')} INR`;
+                const usdPrice = btc.price_usdt || btc.price;
+                const inrPrice = btc.price_inr || (usdPrice && fxRates.USD ? usdPrice * fxRates.USD : 0);
+                if (btcPriceEl) btcPriceEl.textContent = usdPrice ? `$${usdPrice.toLocaleString('en-US')}` : '—';
+                if (btcInrEl) btcInrEl.textContent = inrPrice ? `₹${inrPrice.toLocaleString('en-IN')} INR` : 'FX rate unavailable';
             }
 
             const sorted = [...cryptoCatalogData].sort((a, b) => b.change_pct - a.change_pct);
@@ -1401,11 +1500,13 @@
             const gainerEl = document.getElementById('kpiCryptoTopGainer');
             const gainerSub = document.getElementById('kpiCryptoTopGainerSub');
             if (gainerEl && topGainer) {
-                gainerEl.textContent = `+${topGainer.change_pct}%`;
+                gainerEl.textContent = `${topGainer.change_pct > 0 ? '+' : ''}${topGainer.change_pct}%`;
                 gainerSub.textContent = `${topGainer.symbol} ($${topGainer.price_usdt || topGainer.price})`;
             }
 
-            const totalVol = cryptoCatalogData.reduce((acc, c) => acc + (c.volume || 0), 0);
+            const totalVol = cryptoCatalogData
+                .filter(c => c.quote === 'USDT' || c.symbol.endsWith('USDT'))
+                .reduce((acc, c) => acc + (c.volume || 0), 0);
             const volEl = document.getElementById('kpiCryptoVolume');
             if (volEl) volEl.textContent = totalVol >= 1e9 ? `$${(totalVol / 1e9).toFixed(2)}B` : `$${(totalVol / 1e6).toFixed(2)}M`;
         }
@@ -1456,6 +1557,11 @@
                 const isPos = c.change >= 0;
                 const canvasId = `cryptoSpark_${c.symbol}`;
                 const volFormatted = c.volume ? (c.volume >= 1e9 ? (c.volume / 1e9).toFixed(2) + 'B' : (c.volume >= 1e6 ? (c.volume / 1e6).toFixed(2) + 'M' : (c.volume / 1e3).toFixed(1) + 'K')) : '—';
+                const priceCur = c.quote === 'INR' || c.symbol.endsWith('INR') ? '₹' : '$';
+                const fmtPrice = (v) => v ? `${priceCur}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : '—';
+                const rangePct = (c.high_24h && c.low_24h && c.high_24h > c.low_24h)
+                    ? Math.max(0, Math.min(100, ((c.price - c.low_24h) / (c.high_24h - c.low_24h)) * 100))
+                    : 50;
 
                 return `
                 <tr>
@@ -1479,7 +1585,7 @@
                         <div class="live-price-cell">$${(c.price_usdt || c.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</div>
                     </td>
                     <td>
-                        <div class="live-price-cell" style="font-size: 13px; color: var(--c-text-secondary);">₹${(c.price_inr || (c.price * 85)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div class="live-price-cell" style="font-size: 13px; color: var(--c-text-secondary);">${c.price_inr ? `₹${c.price_inr.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</div>
                     </td>
                     <td>
                         <div class="${isPos ? 'positive' : 'negative'}" style="font-family: var(--ff-mono); font-weight: 700; font-size: 14px;">
@@ -1489,11 +1595,11 @@
                     <td>
                         <div class="high-low-bar">
                             <div class="high-low-bar__labels">
-                                <span>$${(c.low_24h || (c.price * 0.98)).toFixed(2)}</span>
-                                <span>$${(c.high_24h || (c.price * 1.02)).toFixed(2)}</span>
+                                <span>L: ${fmtPrice(c.low_24h)}</span>
+                                <span>H: ${fmtPrice(c.high_24h)}</span>
                             </div>
                             <div class="high-low-bar__track">
-                                <div class="high-low-bar__fill" style="width: 55%;"></div>
+                                <div class="high-low-bar__fill" style="width: ${rangePct}%;"></div>
                             </div>
                         </div>
                     </td>
@@ -1524,7 +1630,8 @@
             requestAnimationFrame(() => {
                 filtered.forEach(c => {
                     const canvasId = `cryptoSpark_${c.symbol}`;
-                    const spark = (c.sparkline && c.sparkline.length > 0) ? c.sparkline : [c.price * 0.98, c.price * 0.99, c.price, c.price * 1.01, c.price];
+                    const spark = (c.sparkline && c.sparkline.length > 0) ? c.sparkline : [];
+                    if (spark.length < 2) return;
                     const isPos = c.change >= 0;
                     drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
                 });
@@ -1560,44 +1667,40 @@
         // ========================================================
         // 4. CURRENCIES & FOREX CATALOG
         // ========================================================
-        const fxRates = {
-            'USD': 85.00,
-            'EUR': 92.50,
-            'GBP': 108.20,
-            'JPY': 0.56,
-            'INR': 1.00
-        };
+        const fxRates = { 'INR': 1.00 };
+
+        function syncFxRates(rows) {
+            (rows || []).forEach(d => {
+                if (d.currency) fxRates[d.currency] = d.price;
+                if (d.symbol === 'JPYINR') fxRates['JPY'] = d.price / 100;
+            });
+            recalcConversion();
+        }
 
         function loadCurrenciesCatalog() {
             if (currenciesCatalogData.length > 0) return;
-            if (window.apiClient && window.apiClient.getCurrenciesCatalog) {
-                window.apiClient.getCurrenciesCatalog().then(data => {
-                    if (data && data.length > 0) {
-                        currenciesCatalogData = data;
-                        data.forEach(d => {
-                            if (d.symbol === 'USDINR') fxRates['USD'] = d.price;
-                            if (d.symbol === 'EURINR') fxRates['EUR'] = d.price;
-                            if (d.symbol === 'GBPINR') fxRates['GBP'] = d.price;
-                            if (d.symbol === 'JPYINR') fxRates['JPY'] = d.price / 100;
-                        });
-                        renderCurrenciesTable();
-                    } else {
-                        renderCurrenciesFallback();
-                    }
-                }).catch(() => renderCurrenciesFallback());
-            } else {
+            if (!window.apiClient || !window.apiClient.getCurrenciesCatalog) {
                 renderCurrenciesFallback();
+                return;
             }
+            window.apiClient.getCurrenciesCatalog().then(data => {
+                if (data && data.length > 0) {
+                    currenciesCatalogData = data;
+                    syncFxRates(data);
+                    renderCurrenciesTable();
+                } else {
+                    renderCurrenciesFallback();
+                }
+            }).catch(() => renderCurrenciesFallback());
         }
 
         function renderCurrenciesFallback() {
-            currenciesCatalogData = [
-                { symbol: 'USDINR', pair: 'USD / INR', name: 'US Dollar / Indian Rupee', price: 85.00, change: 0.12, change_pct: 0.14 },
-                { symbol: 'EURINR', pair: 'EUR / INR', name: 'Euro / Indian Rupee', price: 92.50, change: -0.25, change_pct: -0.27 },
-                { symbol: 'GBPINR', pair: 'GBP / INR', name: 'British Pound / Indian Rupee', price: 108.20, change: 0.40, change_pct: 0.37 },
-                { symbol: 'JPYINR', pair: 'JPY / INR (100x)', name: '100 Japanese Yen / Indian Rupee', price: 56.40, change: -0.15, change_pct: -0.27 }
-            ];
-            renderCurrenciesTable();
+            currenciesCatalogData = [];
+            const tbody = document.getElementById('currenciesCatalogBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">FX feed unavailable right now. No estimated exchange rates are shown.</td></tr>`;
+            }
+            recalcConversion();
         }
 
         function renderCurrenciesTable() {
@@ -1621,7 +1724,7 @@
                     </td>
                     <td>
                         <div style="font-weight: 600;">${fx.name}</div>
-                        <div style="font-size: 11px; color: var(--c-text-tertiary);">RBI Reference Cross</div>
+                        <div style="font-size: 11px; color: var(--c-text-tertiary);">ECB reference cross via Frankfurter</div>
                     </td>
                     <td>
                         <div class="live-price-cell">₹${fx.price.toFixed(2)}</div>
@@ -1646,7 +1749,8 @@
             requestAnimationFrame(() => {
                 currenciesCatalogData.forEach(fx => {
                     const canvasId = `fxSpark_${fx.symbol}`;
-                    const spark = (fx.sparkline && fx.sparkline.length > 0) ? fx.sparkline : [fx.price * 0.99, fx.price, fx.price * 1.01];
+                    const spark = (fx.sparkline && fx.sparkline.length > 0) ? fx.sparkline : [];
+                    if (spark.length < 2) return;
                     const isPos = fx.change >= 0;
                     drawSparkline(canvasId, spark, isPos ? '#00d09c' : '#f6465d', isPos ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
                 });
@@ -1670,11 +1774,15 @@
             const resInput = document.getElementById('convResult');
             if (!resInput) return;
 
-            const fromInr = fxRates[from] || 1;
-            const toInr = fxRates[to] || 1;
+            if (!fxRates[from] || !fxRates[to]) {
+                resInput.value = 'FX feed unavailable';
+                return;
+            }
+            const fromInr = fxRates[from];
+            const toInr = fxRates[to];
             const converted = (amount * fromInr) / toInr;
 
-            const symMap = { 'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥' };
+            const symMap = { 'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'AUD': 'A$', 'CAD': 'C$', 'SGD': 'S$' };
             const prefix = symMap[to] || '';
             resInput.value = `${prefix}${converted.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${to}`;
         }
@@ -1689,18 +1797,220 @@
         recalcConversion();
 
         // ========================================================
-        // 5. MACRO OVERVIEW SCRIPTS
+        // 5. MUTUAL FUNDS (VERIFIED AMFI NAV HISTORY)
         // ========================================================
-        const indicesFallback = [
-            { name: 'NIFTY 50', value: 22456.80, change: 278.45, change_pct: 1.24, positive: true },
-            { name: 'SENSEX', value: 73890.45, change: 718.32, change_pct: 0.98, positive: true },
-            { name: 'BANK NIFTY', value: 47234.15, change: -198.70, change_pct: -0.42, positive: false },
-            { name: 'NIFTY IT', value: 34567.20, change: 728.15, change_pct: 2.15, positive: true },
-        ];
+        let mfSearchTerm = '';
+        let mfSortMode = 'growth_desc';
 
+        function renderMutualFundsEmpty(message) {
+            const tbody = document.getElementById('mutualFundsBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">${message}</td></tr>`;
+            }
+            const count = document.getElementById('mfKpiCount');
+            const top = document.getElementById('mfKpiTop');
+            const sub = document.getElementById('mfKpiTopSub');
+            const avg = document.getElementById('mfKpiAvg');
+            const date = document.getElementById('mfKpiDate');
+            if (count) count.textContent = '—';
+            if (top) top.textContent = '—';
+            if (sub) sub.textContent = message;
+            if (avg) avg.textContent = '—';
+            if (date) date.textContent = '—';
+            const bestName = document.getElementById('mfBestName');
+            const bestMeta = document.getElementById('mfBestMeta');
+            const bestScore = document.getElementById('mfBestScore');
+            if (bestName) bestName.textContent = 'No verified recommendation available';
+            if (bestMeta) bestMeta.textContent = message;
+            if (bestScore) bestScore.textContent = '—';
+        }
+
+        function enrichMutualFundScores(rows) {
+            const enriched = (rows || []).map(f => {
+                if (Number.isFinite(Number(f.growth_score))) return { ...f, growth_score: Number(f.growth_score) };
+                const spark = [];
+                (f.sparkline || []).forEach(v => { if (Number(v)) spark.push(Number(v)); });
+                const latest = spark.length ? spark[spark.length - 1] : Number(f.nav || 0);
+                const first = spark.length ? spark[0] : latest;
+                const peak = spark.length ? Math.max(...spark) : latest;
+                const momentum = first ? ((latest / first - 1) * 100) : 0;
+                const drawdown = peak ? ((peak - latest) / peak * 100) : 0;
+                const score = (0.45 * Number(f.return_1y || 0)) + (0.30 * Number(f.return_3m || 0)) +
+                    (0.15 * Number(f.return_1m || 0)) + (0.10 * momentum) - (0.25 * drawdown);
+                return {
+                    ...f,
+                    growth_score: Math.round(score * 100) / 100,
+                    momentum_30d: Math.round(momentum * 100) / 100,
+                    drawdown_30d: Math.round(drawdown * 100) / 100
+                };
+            });
+            enriched.sort((a, b) => b.growth_score - a.growth_score);
+            enriched.forEach((f, i) => {
+                f.rank = Number.isFinite(Number(f.rank)) ? Number(f.rank) : i + 1;
+                f.growth_label = f.growth_label || (i < 3 ? 'High momentum' : (i < 6 ? 'Steady growth' : 'Tracked'));
+            });
+            return enriched;
+        }
+
+        function renderBestBuy() {
+            const name = document.getElementById('mfBestName');
+            const meta = document.getElementById('mfBestMeta');
+            const score = document.getElementById('mfBestScore');
+            if (!mutualFundsData.length) {
+                renderMutualFundsEmpty('No verified mutual fund NAVs returned.');
+                return;
+            }
+            const best = [...mutualFundsData].sort((a, b) => b.growth_score - a.growth_score)[0];
+            const pct = v => `${v > 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+            if (name) name.textContent = `${best.scheme_name} (${best.scheme_code})`;
+            if (meta) {
+                meta.textContent = `1Y ${pct(best.return_1y)} · 30D momentum ${pct(best.momentum_30d)} · 30D drawdown ${Number(best.drawdown_30d || 0).toFixed(2)}% · NAV date ${best.nav_date} · ${best.api_source}`;
+            }
+            if (score) score.textContent = Number(best.growth_score).toFixed(2);
+        }
+
+        function loadMutualFunds(force = false) {
+            const client = window.apiClient;
+            const fetchGrowth = client && (client.getFundGrowth || client.getMutualFunds);
+            if (!fetchGrowth) {
+                renderMutualFundsEmpty('Mutual fund feed unavailable.');
+                return;
+            }
+            if (mutualFundsData.length && !force) return;
+            const tbody = document.getElementById('mutualFundsBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">Fetching verified AMFI NAV history...</td></tr>`;
+            }
+            const request = client.getFundGrowth ? client.getFundGrowth() : client.getMutualFunds();
+            Promise.resolve(request).then(data => {
+                if (!data || !data.length) {
+                    mutualFundsData = [];
+                    renderMutualFundsEmpty('No verified mutual fund NAVs returned.');
+                    return;
+                }
+                mutualFundsData = enrichMutualFundScores(data);
+                renderBestBuy();
+                updateMutualFundKPIs();
+                renderMutualFundsTable();
+            }).catch(() => {
+                mutualFundsData = [];
+                renderMutualFundsEmpty('Mutual fund feed unavailable right now.');
+            });
+        }
+
+        window.refreshMutualFunds = () => loadMutualFunds(true);
+
+        function updateMutualFundKPIs() {
+            if (!mutualFundsData.length) return;
+            const count = document.getElementById('mfKpiCount');
+            const top = document.getElementById('mfKpiTop');
+            const sub = document.getElementById('mfKpiTopSub');
+            const avg = document.getElementById('mfKpiAvg');
+            const date = document.getElementById('mfKpiDate');
+            const sorted = [...mutualFundsData].sort((a, b) => (b.return_1y || 0) - (a.return_1y || 0));
+            const avgReturn = sorted.reduce((acc, f) => acc + (f.return_1y || 0), 0) / sorted.length;
+            if (count) count.textContent = String(sorted.length);
+            if (top) top.textContent = `${sorted[0].return_1y > 0 ? '+' : ''}${sorted[0].return_1y}%`;
+            if (sub) sub.textContent = sorted[0].scheme_name;
+            if (avg) avg.textContent = `${avgReturn > 0 ? '+' : ''}${avgReturn.toFixed(2)}%`;
+            if (date) date.textContent = sorted[0].nav_date || '—';
+        }
+
+        function renderMutualFundsTable() {
+            const tbody = document.getElementById('mutualFundsBody');
+            if (!tbody) return;
+            let rows = [...mutualFundsData];
+            if (mfSearchTerm) {
+                const term = mfSearchTerm.toLowerCase();
+                rows = rows.filter(f =>
+                    (f.scheme_name || '').toLowerCase().includes(term) ||
+                    (f.fund_house || '').toLowerCase().includes(term) ||
+                    (f.category || '').toLowerCase().includes(term)
+                );
+            }
+            if (mfSortMode === 'return_1y') rows.sort((a, b) => (b.return_1y || 0) - (a.return_1y || 0));
+            else if (mfSortMode === 'return_1m') rows.sort((a, b) => (b.return_1m || 0) - (a.return_1m || 0));
+            else if (mfSortMode === 'nav_desc') rows.sort((a, b) => (b.nav || 0) - (a.nav || 0));
+            else if (mfSortMode === 'scheme_asc') rows.sort((a, b) => (a.scheme_name || '').localeCompare(b.scheme_name || ''));
+            else rows.sort((a, b) => b.growth_score - a.growth_score);
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">No verified schemes matched your filter.</td></tr>`;
+                return;
+            }
+
+            const pct = (v) => `${v > 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+            const cls = (v) => v >= 0 ? 'positive' : 'negative';
+            tbody.innerHTML = rows.map(f => {
+                const canvasId = `mfSpark_${f.scheme_code}`;
+                return `
+                <tr>
+                    <td>
+                        <div class="asset-identity">
+                            <div class="asset-identity__avatar" style="background:rgba(0,208,156,0.12);color:#00d09c;">MF</div>
+                            <div>
+                                <div class="asset-identity__symbol" style="white-space:normal;">${f.scheme_name}</div>
+                                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                                    <span class="token-badge">${f.scheme_code}</span>
+                                    ${Number(f.rank) === 1 ? `<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.16);color:#f59e0b;">⭐ Best Buy</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight:600;">${f.fund_house}</div>
+                        <div style="font-size:11px;color:var(--c-text-tertiary);">${f.category}</div>
+                    </td>
+                    <td>
+                        <div class="live-price-cell">₹${Number(f.nav).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</div>
+                        <div style="font-size:11px;color:var(--c-text-tertiary);">${f.nav_date}</div>
+                    </td>
+                    <td><span class="${cls(f.change_pct)}" style="font-family:var(--ff-mono);font-weight:700;">${pct(f.change_pct)}</span></td>
+                    <td><span class="${cls(f.return_1m)}" style="font-family:var(--ff-mono);font-weight:600;">${pct(f.return_1m)}</span></td>
+                    <td><span class="${cls(f.return_3m)}" style="font-family:var(--ff-mono);font-weight:600;">${pct(f.return_3m)}</span></td>
+                    <td><span class="${cls(f.return_1y)}" style="font-family:var(--ff-mono);font-weight:700;">${pct(f.return_1y)}</span></td>
+                    <td><canvas id="${canvasId}" class="sparkline-canvas"></canvas></td>
+                    <td style="font-size:11px;color:var(--c-text-tertiary);">${f.api_source}</td>
+                </tr>
+                `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                rows.forEach(f => {
+                    const spark = f.sparkline || [];
+                    if (spark.length < 2) return;
+                    drawSparkline(`mfSpark_${f.scheme_code}`, spark,
+                        f.return_1y >= 0 ? '#00d09c' : '#f6465d',
+                        f.return_1y >= 0 ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
+                });
+            });
+        }
+
+        const mfSearch = document.getElementById('mfSearchInput');
+        if (mfSearch) {
+            mfSearch.addEventListener('input', (e) => {
+                mfSearchTerm = e.target.value.trim();
+                renderMutualFundsTable();
+            });
+        }
+        const mfSort = document.getElementById('mfSortSelect');
+        if (mfSort) {
+            mfSort.addEventListener('change', (e) => {
+                mfSortMode = e.target.value;
+                renderMutualFundsTable();
+            });
+        }
+
+        // ========================================================
+        // 6. MACRO OVERVIEW SCRIPTS
+        // ========================================================
         function renderIndices(indicesList) {
             const grid = document.getElementById('majorIndicesGrid');
             if (!grid) return;
+            if (!indicesList || !indicesList.length) {
+                grid.innerHTML = `<div class="dash-card" style="grid-column:1/-1; padding:18px; color:var(--c-text-tertiary);">Index feed unavailable right now. No estimated values are shown.</div>`;
+                return;
+            }
             grid.innerHTML = indicesList.map((idx, i) => `
                 <div class="dash-card index-big-card fade-in stagger-${i+1}">
                     <div class="index-big-card__top">
@@ -1715,7 +2025,8 @@
 
             requestAnimationFrame(() => {
                 indicesList.forEach((idx, i) => {
-                    const data = idx.sparkline && idx.sparkline.length > 0 ? idx.sparkline : generateChartData(1000, 15, 30, idx.positive ? 'up' : 'down');
+                    const data = idx.sparkline && idx.sparkline.length > 0 ? idx.sparkline : [];
+                    if (data.length < 2) return;
                     const color = idx.positive ? '#00d09c' : '#f6465d';
                     drawSparkline(`indexChart${i}`, data, color, idx.positive ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)');
                 });
@@ -1724,42 +2035,50 @@
 
         if (window.apiClient) {
             window.apiClient.getIndices().then(data => {
-                if (data && data.length > 0) renderIndices(data);
-                else renderIndices(indicesFallback);
-            }).catch(() => renderIndices(indicesFallback));
+                regionIndicesData = (data || []).map(i => ({ ...i, symbol: i.name }));
+                renderIndices(regionIndicesData);
+            }).catch(() => renderIndices([]));
         } else {
-            renderIndices(indicesFallback);
+            renderIndices([]);
         }
 
         // Tabs: Market Region Switcher
-        const globalIndices = [
-            { name: 'S&P 500', value: 5214.20, change: 48.30, change_pct: 0.94, positive: true },
-            { name: 'NASDAQ 100', value: 18240.15, change: 210.45, change_pct: 1.17, positive: true },
-            { name: 'DOW JONES', value: 38980.50, change: -120.30, change_pct: -0.31, positive: false },
-            { name: 'FTSE 100', value: 7930.25, change: 35.80, change_pct: 0.45, positive: true }
-        ];
-
-        const cryptoIndices = [
-            { name: 'BTC / USDT', value: 81480.00, change: 1680.00, change_pct: 2.10, positive: true },
-            { name: 'ETH / USDT', value: 2145.50, change: 38.20, change_pct: 1.81, positive: true },
-            { name: 'SOL / USDT', value: 142.80, change: 6.40, change_pct: 4.69, positive: true },
-            { name: 'BNB / USDT', value: 582.40, change: -4.50, change_pct: -0.77, positive: false }
-        ];
-
-        initTabSwitcher('marketRegionTabs', (tab) => {
-            if (tab === 'global') renderIndices(globalIndices);
-            else if (tab === 'crypto') renderIndices(cryptoIndices);
-            else {
-                if (window.apiClient) {
-                    window.apiClient.getIndices().then(data => {
-                        if (data && data.length > 0) renderIndices(data);
-                        else renderIndices(indicesFallback);
-                    }).catch(() => renderIndices(indicesFallback));
-                } else {
-                    renderIndices(indicesFallback);
-                }
+        async function loadRegionIndices(tab) {
+            activeRegion = tab || 'indian';
+            if (!window.apiClient) {
+                regionIndicesData = [];
+                renderIndices([]);
+                return;
             }
-        });
+            try {
+                if (tab === 'global') {
+                    const data = await window.apiClient.getGlobalIndices();
+                    regionIndicesData = (data || []).map(i => ({ ...i, symbol: i.name }));
+                } else if (tab === 'crypto') {
+                    const rows = cryptoCatalogData.length ? cryptoCatalogData : await window.apiClient.getCryptoCatalog();
+                    const wanted = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT'];
+                    regionIndicesData = (rows || [])
+                        .filter(c => wanted.includes(c.symbol))
+                        .map(c => ({
+                            name: `${c.base || c.symbol.replace('USDT', '')} / USDT`,
+                            symbol: c.symbol,
+                            value: c.price_usdt || c.price,
+                            change: c.change,
+                            change_pct: c.change_pct,
+                            positive: c.change >= 0,
+                            sparkline: c.sparkline || [],
+                        }));
+                } else {
+                    const data = await window.apiClient.getIndices();
+                    regionIndicesData = (data || []).map(i => ({ ...i, symbol: i.name }));
+                }
+            } catch (e) {
+                regionIndicesData = [];
+            }
+            renderIndices(regionIndicesData);
+        }
+
+        initTabSwitcher('marketRegionTabs', loadRegionIndices);
 
         // Heatmap: Populate with Real Market Quotes
         function renderHeatmap(quotes) {
@@ -1785,7 +2104,14 @@
         if (window.apiClient) {
             window.apiClient.getQuotes().then(quotes => {
                 if (quotes && quotes.length > 0) renderHeatmap(quotes);
-            }).catch(() => {});
+                else {
+                    const grid = document.getElementById('heatmapGrid');
+                    if (grid) grid.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);">Heatmap feed unavailable right now.</div>`;
+                }
+            }).catch(() => {
+                const grid = document.getElementById('heatmapGrid');
+                if (grid) grid.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);">Heatmap feed unavailable right now.</div>`;
+            });
         }
 
         // Sectors
@@ -1808,8 +2134,12 @@
                                 <span class="sector-row__pct ${s.positive ? 'positive' : 'negative'}">${s.change_pct > 0 ? '+' : ''}${s.change_pct}%</span>
                             </div>
                         `).join('');
+                    } else {
+                        sectorList.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);">Sector feed unavailable right now.</div>`;
                     }
-                }).catch(() => {});
+                }).catch(() => {
+                    sectorList.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);">Sector feed unavailable right now.</div>`;
+                });
             }
         }
 
@@ -1830,75 +2160,113 @@
                                 <div class="breadth-row"><span class="breadth-row__label">A/D Ratio</span><span class="breadth-row__value ${b.ad_ratio >= 1 ? 'positive' : 'negative'}">${b.ad_ratio} (${b.sentiment})</span></div>
                             `;
                         }
-                        const breadthLabels = ['9:15', '10:30', '11:45', '13:00', '14:15', '15:30'];
-                        const advTrend = [Math.round(b.advances * 0.7), Math.round(b.advances * 0.8), Math.round(b.advances * 0.95), Math.round(b.advances * 0.9), Math.round(b.advances * 0.98), b.advances];
-                        drawAreaChart('breadthChart', advTrend, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+                        drawBarChart(
+                            'breadthChart',
+                            ['Advances', 'Declines', 'Unchanged'],
+                            [b.advances, b.declines, b.unchanged],
+                            ['#00d09c', '#f6465d', '#64748b']
+                        );
+                        window.marketBreadth = b;
                     }
                 }).catch(() => {
-                    const breadthLabels = ['9:15', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '15:30'];
-                    const advData = [1200, 1800, 2200, 2400, 2600, 2700, 2800, 2841];
-                    drawAreaChart('breadthChart', advData, '#00d09c', 'rgba(0,208,156,0.15)', true, breadthLabels);
+                    const canvas = document.getElementById('breadthChart');
+                    if (canvas && canvas.getContext) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    const stats = document.getElementById('breadthStats');
+                    if (stats) stats.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);">Breadth feed unavailable right now.</div>`;
                 });
             }
         }
         loadMarketBreadth();
 
-        // FII / DII Activity
-        function loadFiiDii() {
-            if (window.apiClient) {
-                window.apiClient.getFiiDii().then(f => {
-                    const grid = document.getElementById('fiiDiiGrid');
-                    const canvas = document.getElementById('fiiDiiChart');
-                    if (!f || f.available === false || !Array.isArray(f.historical_5d) || !f.historical_5d.length) {
-                        if (grid) {
-                            grid.innerHTML = `
-                                <div class="fii-dii-card" style="grid-column: 1 / -1;">
-                                    <div class="fii-dii-card__label">FII / DII Activity</div>
-                                    <div class="fii-dii-card__value" style="font-size:15px;">Feed not connected</div>
-                                    <div class="fii-dii-card__sub">Institutional flow data is shown only when a verified provider is connected.</div>
-                                </div>
-                            `;
-                        }
-                        if (canvas && canvas.getContext) {
-                            const ctx = canvas.getContext('2d');
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        }
-                        return;
-                    }
-                    if (grid) {
-                        grid.innerHTML = `
-                            <div class="fii-dii-card">
-                                <div class="fii-dii-card__label">FII Net</div>
-                                <div class="fii-dii-card__value ${f.fii_net >= 0 ? 'positive' : 'negative'}">${f.fii_net >= 0 ? '+' : ''}₹${f.fii_net.toLocaleString('en-IN')} Cr</div>
-                                <div class="fii-dii-card__sub">Buy: ₹${f.fii_buy.toLocaleString('en-IN')} | Sell: ₹${f.fii_sell.toLocaleString('en-IN')}</div>
-                            </div>
-                            <div class="fii-dii-card">
-                                <div class="fii-dii-card__label">DII Net</div>
-                                <div class="fii-dii-card__value ${f.dii_net >= 0 ? 'positive' : 'negative'}">${f.dii_net >= 0 ? '+' : ''}₹${f.dii_net.toLocaleString('en-IN')} Cr</div>
-                                <div class="fii-dii-card__sub">Buy: ₹${f.dii_buy.toLocaleString('en-IN')} | Sell: ₹${f.dii_sell.toLocaleString('en-IN')}</div>
-                            </div>
-                        `;
-                    }
-                    const labels = f.historical_5d.map(h => h.day);
-                    const vals = f.historical_5d.map(h => h.fii);
-                    drawBarChart('fiiDiiChart', labels, vals);
-                }).catch(() => {
-                    const grid = document.getElementById('fiiDiiGrid');
-                    const canvas = document.getElementById('fiiDiiChart');
-                    if (grid) {
-                        grid.innerHTML = `
-                            <div class="fii-dii-card" style="grid-column: 1 / -1;">
-                                <div class="fii-dii-card__label">FII / DII Activity</div>
-                                <div class="fii-dii-card__value" style="font-size:15px;">Feed not connected</div>
-                            </div>
-                        `;
-                    }
-                    if (canvas && canvas.getContext) {
-                        const ctx = canvas.getContext('2d');
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
+        // FII / DII Activity — verified provisional cash-market flows
+        function drawFiiDiiChart(history) {
+            const canvas = document.getElementById('fiiDiiChart');
+            if (!canvas || !canvas.getContext || !Array.isArray(history) || !history.length) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.clientWidth || 420;
+            const h = canvas.clientHeight || 140;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            const pad = { l: 10, r: 10, t: 12, b: 24 };
+            const chartH = h - pad.t - pad.b;
+            const baseline = pad.t + chartH / 2;
+            const half = chartH / 2;
+            const max = Math.max(1, ...history.flatMap(r => [Math.abs(r.fii || 0), Math.abs(r.dii || 0)]));
+            const slot = (w - pad.l - pad.r) / history.length;
+            const bw = Math.min(16, slot * 0.3);
+
+            ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pad.l, baseline);
+            ctx.lineTo(w - pad.r, baseline);
+            ctx.stroke();
+
+            history.forEach((row, i) => {
+                const cx = pad.l + i * slot + slot / 2;
+                [[row.fii || 0, cx - bw - 2, '#00d09c', '#f6465d'], [row.dii || 0, cx + 2, '#818cf8', '#fb7185']].forEach(([v, x, pos, neg]) => {
+                    const bh = Math.max(2, Math.abs(v) / max * half);
+                    ctx.fillStyle = v >= 0 ? pos : neg;
+                    ctx.fillRect(x, v >= 0 ? baseline - bh : baseline, bw, bh);
                 });
+                ctx.fillStyle = '#64748b';
+                ctx.font = '10px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(String(row.day || '').split(' ').slice(0, 2).join(' '), cx, h - 6);
+            });
+        }
+
+        function loadFiiDii() {
+            const grid = document.getElementById('fiiDiiGrid');
+            const canvas = document.getElementById('fiiDiiChart');
+            const showUnavailable = (message) => {
+                if (grid) {
+                    grid.innerHTML = `
+                        <div class="fii-dii-card" style="grid-column: 1 / -1;">
+                            <div class="fii-dii-card__label">FII / DII Activity</div>
+                            <div class="fii-dii-card__value" style="font-size:15px;">${message}</div>
+                            <div class="fii-dii-card__sub">Institutional flows are shown only from a verified provider.</div>
+                        </div>
+                    `;
+                }
+                if (canvas && canvas.getContext) {
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                }
+            };
+            if (!window.apiClient || !window.apiClient.getFiiDii) {
+                showUnavailable('FII / DII feed unavailable');
+                return;
             }
+            window.apiClient.getFiiDii().then(f => {
+                if (!f || f.available === false || !Array.isArray(f.historical_5d) || !f.historical_5d.length) {
+                    showUnavailable('FII / DII feed unavailable');
+                    return;
+                }
+                const money = (v) => `${v >= 0 ? '+' : '-'}₹${Math.abs(v).toLocaleString('en-IN')} Cr`;
+                const asOf = f.as_of ? ` · ${f.as_of}` : '';
+                if (grid) {
+                    grid.innerHTML = `
+                        <div class="fii-dii-card">
+                            <div class="fii-dii-card__label">FII Net${asOf}</div>
+                            <div class="fii-dii-card__value ${f.fii_net >= 0 ? 'positive' : 'negative'}">${money(f.fii_net)}</div>
+                            <div class="fii-dii-card__sub">Buy ₹${f.fii_buy.toLocaleString('en-IN')} | Sell ₹${f.fii_sell.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="fii-dii-card">
+                            <div class="fii-dii-card__label">DII Net${asOf}</div>
+                            <div class="fii-dii-card__value ${f.dii_net >= 0 ? 'positive' : 'negative'}">${money(f.dii_net)}</div>
+                            <div class="fii-dii-card__sub">Buy ₹${f.dii_buy.toLocaleString('en-IN')} | Sell ₹${f.dii_sell.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="fii-dii-card" style="grid-column: 1 / -1;">
+                            <div class="fii-dii-card__sub">${f.source || 'Verified institutional feed'} · 5-day net flows (₹ Cr)</div>
+                        </div>
+                    `;
+                }
+                drawFiiDiiChart(f.historical_5d);
+            }).catch(() => showUnavailable('FII / DII feed unavailable'));
         }
         loadFiiDii();
 
@@ -1932,9 +2300,13 @@
                 cryptoCatalogData = cryptoCatalogData.map(c => {
                     const q = bySymbol.get(c.symbol);
                     if (!q) return c;
+                    const isInr = c.quote === 'INR' || c.symbol.endsWith('INR');
+                    const usdInr = fxRates.USD || (c.price_usdt && q.price && isInr ? q.price / c.price_usdt : 0);
                     return {
                         ...c,
                         price: q.price,
+                        price_usdt: isInr ? (usdInr ? q.price / usdInr : c.price_usdt) : q.price,
+                        price_inr: isInr ? q.price : (usdInr ? q.price * usdInr : c.price_inr),
                         change: q.change,
                         change_pct: q.change_pct,
                         high_24h: q.high_24h,
@@ -1945,6 +2317,38 @@
                 });
                 updateCryptoKPIs();
                 renderCryptoTable();
+            }
+
+            if (currenciesCatalogData.length) {
+                currenciesCatalogData = currenciesCatalogData.map(fx => {
+                    const q = bySymbol.get(fx.symbol);
+                    if (!q) return fx;
+                    return {
+                        ...fx,
+                        price: q.price,
+                        change: q.change,
+                        change_pct: q.change_pct,
+                        positive: q.change >= 0,
+                        source: q.source
+                    };
+                });
+                syncFxRates(currenciesCatalogData);
+                renderCurrenciesTable();
+            }
+
+            if (regionIndicesData.length) {
+                regionIndicesData = regionIndicesData.map(i => {
+                    const q = bySymbol.get(i.symbol || i.name);
+                    if (!q) return i;
+                    return {
+                        ...i,
+                        value: q.price,
+                        change: q.change,
+                        change_pct: q.change_pct,
+                        positive: q.change >= 0,
+                    };
+                });
+                renderIndices(regionIndicesData);
             }
 
             if (type !== 'SIMULATED_TICK' && (bySymbol.has('NIFTY 50') || bySymbol.has('SENSEX'))) {
@@ -1960,13 +2364,23 @@
             return rows.map(s => {
                 const q = window.apiClient.getLiveQuote(s.symbol || s.name);
                 if (!q) return s;
+                const isInr = s.quote === 'INR' || (s.symbol || '').endsWith('INR');
+                const usdInr = fxRates.USD || 0;
                 return {
                     ...s,
                     price: q.price,
+                    price_usdt: s.price_usdt !== undefined
+                        ? (isInr ? (usdInr ? q.price / usdInr : s.price_usdt) : q.price)
+                        : s.price_usdt,
+                    price_inr: s.price_inr !== undefined
+                        ? (isInr ? q.price : (usdInr ? q.price * usdInr : s.price_inr))
+                        : s.price_inr,
                     change: q.change,
                     change_pct: q.change_pct,
+                    positive: q.change >= 0,
                     high_24h: q.high_24h,
                     low_24h: q.low_24h,
+                    volume: q.volume,
                     source: q.source
                 };
             });
@@ -1978,10 +2392,13 @@
                 window.apiClient.getIndices().catch(() => null),
                 window.apiClient.getQuotes().catch(() => null)
             ]).then(([idx, quotes]) => {
-                if (idx && idx.length) renderIndices(idx.map(i => {
-                    const q = window.apiClient.getLiveQuote(i.name);
-                    return q ? { ...i, value: q.price, change: q.change, change_pct: q.change_pct } : i;
-                }));
+                if (idx && idx.length && activeRegion === 'indian') {
+                    regionIndicesData = idx.map(i => {
+                        const q = window.apiClient.getLiveQuote(i.name);
+                        return q ? { ...i, symbol: i.name, value: q.price, change: q.change, change_pct: q.change_pct, positive: q.change >= 0 } : { ...i, symbol: i.name };
+                    });
+                    renderIndices(regionIndicesData);
+                }
                 if (quotes && quotes.length) renderHeatmap(mergeLivePrices(quotes));
             });
             if (window.apiClient.getStocksCatalog) {
@@ -1996,10 +2413,15 @@
             }
             if (window.apiClient.getCurrenciesCatalog) {
                 window.apiClient.getCurrenciesCatalog().then(d => {
-                    if (d && d.length) { currenciesCatalogData = d; renderCurrenciesTable(); }
+                    if (d && d.length) {
+                        currenciesCatalogData = mergeLivePrices(d);
+                        syncFxRates(currenciesCatalogData);
+                        renderCurrenciesTable();
+                    }
                 }).catch(() => {});
             }
             loadMarketBreadth();
+            loadFiiDii();
         }
         refreshLivePrices();
         setInterval(refreshLivePrices, 15000);
@@ -2007,7 +2429,7 @@
         // Check if page opened with subdashboard query param (e.g. ?type=stocks)
         const urlParams = new URLSearchParams(window.location.search);
         const initType = urlParams.get('type') || urlParams.get('tab');
-        if (initType && ['stocks', 'crypto', 'currencies'].includes(initType)) {
+        if (initType && ['stocks', 'crypto', 'currencies', 'mutualfunds'].includes(initType)) {
             switchSubdashboard(initType);
         }
 

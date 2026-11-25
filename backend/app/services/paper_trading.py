@@ -19,9 +19,20 @@ MIS_LEVERAGE = 5
 QTY_EPSILON = 1e-9  # treat float dust left after selling crypto as zero
 
 
+def _usd_inr() -> float:
+    """Live USD/INR (ECB feed, cached 30 min), else the fixed fallback."""
+    try:
+        rate = market_ingest.get_usd_inr_rate()
+        if rate and rate > 0:
+            return float(rate)
+    except Exception:
+        pass
+    return USD_INR_RATE
+
+
 def _fx(symbol: str) -> float:
     """Multiplier from the instrument's quote currency to INR (cash is INR)."""
-    return USD_INR_RATE if symbol.endswith("USDT") else 1.0
+    return _usd_inr() if symbol.endswith("USDT") else 1.0
 
 
 def _ccy(symbol: str) -> str:
@@ -216,7 +227,7 @@ class PaperTradingEngine:
             positions=positions_res,
             orders=[dict(o) for o in self.orders],
             pending_orders=[dict(o) for o in self.pending_orders],
-            usd_inr_rate=USD_INR_RATE,
+            usd_inr_rate=_usd_inr(),
         )
 
     def execute_order(self, req: PaperOrderRequest) -> Dict:

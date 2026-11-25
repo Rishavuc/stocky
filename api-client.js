@@ -87,6 +87,10 @@ class ApiClient {
         return await this._fetch('/markets/indices');
     }
 
+    async getGlobalIndices() {
+        return await this._fetch('/markets/global-indices');
+    }
+
     async searchInstruments(query) {
         return await this._fetchStrict(`/instruments/search?q=${encodeURIComponent(query)}`);
     }
@@ -101,6 +105,14 @@ class ApiClient {
 
     async getCandlesStrict(symbol, timeframe = '1d', limit = 30) {
         return await this._fetchStrict(`/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`);
+    }
+
+    async getFundGrowth() {
+        return await this._fetch('/analysis/funds/growth');
+    }
+
+    async getFundAnalysis(code) {
+        return await this._fetchStrict(`/analysis/funds/${encodeURIComponent(code)}`);
     }
 
     async getBreadth() {
@@ -125,6 +137,14 @@ class ApiClient {
 
     async getCurrenciesCatalog() {
         return await this._fetch('/markets/currencies');
+    }
+
+    async getMutualFunds() {
+        return await this._fetch('/markets/mutual-funds');
+    }
+
+    async searchMutualFunds(query) {
+        return await this._fetch(`/markets/mutual-funds/search?q=${encodeURIComponent(query)}`);
     }
 
     // --- Analysis ---
@@ -433,8 +453,10 @@ class ApiClient {
         this._seedPromise = Promise.all([
             this.getStocksCatalog(),
             this.getCryptoCatalog(),
-            this.getIndices()
-        ]).then(([stocks, crypto, indices]) => {
+            this.getIndices(),
+            this.getCurrenciesCatalog(),
+            this.getGlobalIndices()
+        ]).then(([stocks, crypto, indices, currencies, globalIndices]) => {
             const quotes = [];
             (Array.isArray(stocks) ? stocks : []).forEach(s => quotes.push({
                 symbol: s.symbol,
@@ -465,6 +487,22 @@ class ApiClient {
                 change: s.change,
                 change_pct: s.change_pct,
                 source: 'Verified index feed'
+            }));
+            (Array.isArray(currencies) ? currencies : []).forEach(s => quotes.push({
+                symbol: s.symbol,
+                name: s.name,
+                price: s.price,
+                change: s.change,
+                change_pct: s.change_pct,
+                source: s.api_source || 'Verified FX feed'
+            }));
+            (Array.isArray(globalIndices) ? globalIndices : []).forEach(s => quotes.push({
+                symbol: s.name,
+                name: s.name,
+                price: s.value,
+                change: s.change,
+                change_pct: s.change_pct,
+                source: 'Verified global index feed'
             }));
             this._ingestRealQuotes(quotes, 'INITIAL_SNAPSHOT', true);
         }).catch(e => {

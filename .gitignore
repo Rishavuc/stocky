@@ -13,6 +13,8 @@ backend/.env.local
 *.sqlite3
 investors_eye.db
 backend/investors_eye.db
+backend/data/
+backend/app/data/
 *.log
 
 # Python cache & bytecode

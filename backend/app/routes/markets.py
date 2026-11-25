@@ -9,6 +9,10 @@ router = APIRouter(prefix="/v1/markets", tags=["Markets"])
 def get_market_indices():
     return market_ingest.get_indices()
 
+@router.get("/global-indices", response_model=List[IndexOverview])
+def get_global_indices():
+    return market_ingest.get_global_indices()
+
 @router.get("/trending")
 def get_trending_stocks():
     all_quotes = market_ingest.get_all_quotes()
@@ -45,3 +49,11 @@ def get_crypto_catalog():
 @router.get("/currencies")
 def get_currencies_catalog():
     return market_ingest.get_currencies_catalog()
+
+@router.get("/mutual-funds")
+def get_mutual_funds_catalog():
+    return market_ingest.get_mutual_funds_catalog()
+
+@router.get("/mutual-funds/search")
+def search_mutual_funds(q: str = ""):
+    return market_ingest.search_mutual_funds(q)

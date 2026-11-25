@@ -1846,6 +1846,16 @@
                     drawEquityChart();
                 });
                 api().connectWebSocket();
+
+                // Keep the ledger authoritative across tabs and refreshes.
+                // Guests have no server book, so skip the sync for them.
+                const resync = async () => {
+                    if (!signedInUser()) return;
+                    const ok = await syncPortfolioFromBackend();
+                    if (ok) renderAll();
+                };
+                setInterval(resync, 15000);
+                window.addEventListener('focus', resync);
             }
         });
     </script>

@@ -51,6 +51,26 @@
         .stock-search-hero__input-wrap { display: flex; gap: 10px; max-width: 500px; margin: 0 auto; }
         .stock-search-hero__input { flex: 1; padding: 12px 18px; border-radius: var(--r-sm); border: 1px solid var(--c-border); background: rgba(255,255,255,0.04); color: var(--c-text-primary); font-size: 14px; font-family: var(--ff-primary); outline: none; transition: border-color var(--t-fast); }
         .stock-search-hero__input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-dim); }
+
+        .fund-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border: 1px solid rgba(167,139,250,0.25); background: rgba(167,139,250,0.06); border-radius: var(--r-md); margin-bottom: 18px; }
+        .fund-banner__title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .fund-banner__desc { font-size: 12px; color: var(--c-text-secondary); line-height: 1.5; }
+        .fund-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .fund-input, .fund-select { padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--c-border); background: rgba(255,255,255,0.04); color: var(--c-text-primary); font-size: 12px; font-family: var(--ff-primary); outline: none; }
+        .fund-input { min-width: 280px; }
+        .fund-input:focus, .fund-select:focus { border-color: var(--c-purple); }
+        .fund-table-wrap { overflow-x: auto; border: 1px solid var(--c-border); border-radius: var(--r-md); background: rgba(255,255,255,0.02); }
+        .fund-table { width: 100%; border-collapse: collapse; min-width: 1050px; }
+        .fund-table th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--c-text-tertiary); font-weight: 700; padding: 12px 14px; border-bottom: 1px solid var(--c-border); background: rgba(255,255,255,0.02); }
+        .fund-table td { padding: 12px 14px; border-bottom: 1px solid var(--c-border); font-size: 12px; }
+        .fund-table tr:last-child td { border-bottom: none; }
+        .fund-table tbody tr:hover { background: rgba(167,139,250,0.04); }
+        .fund-rank { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--ff-mono); font-weight: 700; background: rgba(167,139,250,0.12); color: var(--c-purple); }
+        .fund-rank--top { background: rgba(0,208,156,0.14); color: var(--c-accent); }
+        .fund-name { font-weight: 700; margin-bottom: 3px; }
+        .fund-meta { font-size: 11px; color: var(--c-text-tertiary); }
+        .fund-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--r-pill); background: rgba(167,139,250,0.12); color: var(--c-purple); white-space: nowrap; }
+        .fund-spark { width: 100px; height: 32px; }
     </style>
 </head>
 <body>
@@ -154,6 +174,83 @@
                         <h3 class="analysis-type-card__title">Crypto</h3>
                         <p class="analysis-type-card__desc">On-chain analytics & sentiment tracking</p>
                         <span class="analysis-type-card__count">200+ coins</span>
+                    </div>
+                </div>
+
+                <!-- Mutual Fund Growth Analysis (shown for Mutual Funds category) -->
+                <div id="fundAnalysisPanel" style="display:none;">
+                    <div class="page-header fade-in stagger-5">
+                        <div>
+                            <h2 class="page-header__title" style="font-size: 22px;">Mutual Funds — Historical Growth Momentum</h2>
+                            <p class="page-header__subtitle">Verified AMFI NAV history via mfapi.in · ranked by real returns, never by forecasts</p>
+                        </div>
+                        <div class="page-header__actions">
+                            <button class="btn btn--outline btn--sm" id="btnRefreshFundGrowth">↻ Refresh NAVs</button>
+                        </div>
+                    </div>
+
+                    <div class="fund-banner fade-in">
+                        <div>
+                            <div class="fund-banner__title">Fast-growing schemes are ranked from verified NAV data</div>
+                            <div class="fund-banner__desc">Growth score = 1Y (45%) + 3M (30%) + 1M (15%) + 30-day momentum (10%) − 30-day drawdown penalty. Past performance does not guarantee future returns.</div>
+                        </div>
+                        <span class="fund-pill">AMFI / mfapi.in</span>
+                    </div>
+
+                    <div class="dash-grid dash-grid--4" style="margin-bottom: 20px;">
+                        <div class="dash-card stat-card">
+                            <div class="stat-card__label">Top Growth Score</div>
+                            <div class="stat-card__value" id="fundKpiTopScore">—</div>
+                            <div class="stat-card__trend positive" id="fundKpiTopName">Loading verified NAVs...</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="stat-card__label">Best 1Y Return</div>
+                            <div class="stat-card__value" id="fundKpiBest1y">—</div>
+                            <div class="stat-card__trend" id="fundKpiBest1yName">—</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="stat-card__label">Average Growth Score</div>
+                            <div class="stat-card__value" id="fundKpiAvgScore">—</div>
+                            <div class="stat-card__trend">Across tracked direct plans</div>
+                        </div>
+                        <div class="dash-card stat-card">
+                            <div class="stat-card__label">Latest NAV Date</div>
+                            <div class="stat-card__value" id="fundKpiDate" style="font-size:20px;">—</div>
+                            <div class="stat-card__trend">AMFI publication date</div>
+                        </div>
+                    </div>
+
+                    <div class="fund-toolbar">
+                        <input type="text" class="fund-input" id="fundSearchInput" placeholder="Filter by scheme, fund house or category...">
+                        <select class="fund-select" id="fundSortSelect">
+                            <option value="growth">Growth score (high to low)</option>
+                            <option value="return_1y">1Y return</option>
+                            <option value="momentum">30D momentum</option>
+                            <option value="drawdown">Lowest 30D drawdown</option>
+                        </select>
+                    </div>
+
+                    <div class="fund-table-wrap">
+                        <table class="fund-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Scheme</th>
+                                    <th>Fund House / Category</th>
+                                    <th>NAV</th>
+                                    <th>1M</th>
+                                    <th>3M</th>
+                                    <th>1Y</th>
+                                    <th>30D Momentum</th>
+                                    <th>30D Drawdown</th>
+                                    <th>Growth Score</th>
+                                    <th>30D NAV Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fundTableBody">
+                                <tr><td colspan="11" style="text-align:center;padding:36px;color:var(--c-text-tertiary);">Loading verified mutual fund NAVs...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -263,6 +360,10 @@
     let currentTech = null;
     let currentCandles = [];
     let activeTimeframe = '1m';
+    let fundRows = [];
+    let fundSearchTerm = '';
+    let fundSortMode = 'growth';
+    let fundLoaded = false;
 
     function esc(value) {
         return String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -569,14 +670,145 @@
         }
     }
 
+    function showFundPanel(show) {
+        const fundPanel = document.getElementById('fundAnalysisPanel');
+        const stockPanel = document.getElementById('analysisPanel');
+        if (fundPanel) fundPanel.style.display = show ? 'block' : 'none';
+        if (stockPanel) stockPanel.style.display = show ? 'none' : 'block';
+        if (show) {
+            loadFundGrowth();
+            fundPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function setFundEmpty(message) {
+        const tbody = document.getElementById('fundTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--c-text-tertiary);">${esc(message)}</td></tr>`;
+        }
+        ['fundKpiTopScore', 'fundKpiBest1y', 'fundKpiAvgScore', 'fundKpiDate'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
+        const topName = document.getElementById('fundKpiTopName');
+        if (topName) topName.textContent = message;
+    }
+
+    async function loadFundGrowth(force = false) {
+        if (!window.apiClient || !window.apiClient.getFundGrowth) {
+            setFundEmpty('Verified mutual fund feed unavailable.');
+            return;
+        }
+        if (fundLoaded && !force) return;
+        const tbody = document.getElementById('fundTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--c-text-tertiary);">Fetching verified AMFI NAV history...</td></tr>`;
+        }
+        try {
+            const data = await window.apiClient.getFundGrowth();
+            if (!Array.isArray(data) || !data.length) {
+                fundRows = [];
+                setFundEmpty('No verified mutual fund NAVs returned.');
+                return;
+            }
+            fundRows = data;
+            fundLoaded = true;
+            renderFundKPIs();
+            renderFundTable();
+        } catch (e) {
+            fundRows = [];
+            setFundEmpty('Verified mutual fund feed unavailable right now.');
+        }
+    }
+
+    function renderFundKPIs() {
+        if (!fundRows.length) return;
+        const top = fundRows[0];
+        const best1y = [...fundRows].sort((a, b) => (b.return_1y || 0) - (a.return_1y || 0))[0];
+        const avg = fundRows.reduce((acc, f) => acc + (f.growth_score || 0), 0) / fundRows.length;
+        const topScore = document.getElementById('fundKpiTopScore');
+        const topName = document.getElementById('fundKpiTopName');
+        const bestEl = document.getElementById('fundKpiBest1y');
+        const bestName = document.getElementById('fundKpiBest1yName');
+        const avgEl = document.getElementById('fundKpiAvgScore');
+        const dateEl = document.getElementById('fundKpiDate');
+        if (topScore) topScore.textContent = Number(top.growth_score).toFixed(2);
+        if (topName) topName.textContent = top.scheme_name;
+        if (bestEl) bestEl.textContent = `${best1y.return_1y > 0 ? '+' : ''}${best1y.return_1y}%`;
+        if (bestName) bestName.textContent = best1y.scheme_name;
+        if (avgEl) avgEl.textContent = avg.toFixed(2);
+        if (dateEl) dateEl.textContent = top.nav_date || '—';
+    }
+
+    function renderFundTable() {
+        const tbody = document.getElementById('fundTableBody');
+        if (!tbody) return;
+        let rows = [...fundRows];
+        if (fundSearchTerm) {
+            const term = fundSearchTerm.toLowerCase();
+            rows = rows.filter(f =>
+                String(f.scheme_name || '').toLowerCase().includes(term) ||
+                String(f.fund_house || '').toLowerCase().includes(term) ||
+                String(f.category || '').toLowerCase().includes(term)
+            );
+        }
+        if (fundSortMode === 'return_1y') rows.sort((a, b) => (b.return_1y || 0) - (a.return_1y || 0));
+        else if (fundSortMode === 'momentum') rows.sort((a, b) => (b.momentum_30d || 0) - (a.momentum_30d || 0));
+        else if (fundSortMode === 'drawdown') rows.sort((a, b) => (a.drawdown_30d || 0) - (b.drawdown_30d || 0));
+        else rows.sort((a, b) => (b.growth_score || 0) - (a.growth_score || 0));
+
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--c-text-tertiary);">No verified schemes matched this filter.</td></tr>`;
+            return;
+        }
+
+        const pct = v => `${v > 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+        const cls = v => v >= 0 ? 'positive' : 'negative';
+        tbody.innerHTML = rows.map(f => `
+            <tr>
+                <td><div class="fund-rank ${f.rank <= 3 ? 'fund-rank--top' : ''}">${f.rank}</div></td>
+                <td>
+                    <div class="fund-name">${esc(f.scheme_name)}</div>
+                    <div class="fund-meta">Code ${esc(f.scheme_code)} · ${Number(f.rank) === 1 ? '⭐ Best Buy · ' : ''}${esc(f.growth_label)}</div>
+                </td>
+                <td>
+                    <div>${esc(f.fund_house)}</div>
+                    <div class="fund-meta">${esc(f.category)}</div>
+                </td>
+                <td><span style="font-family:var(--ff-mono);font-weight:700;">₹${Number(f.nav).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span><div class="fund-meta">${esc(f.nav_date)}</div></td>
+                <td class="${cls(f.return_1m)}"><span style="font-family:var(--ff-mono);">${pct(f.return_1m)}</span></td>
+                <td class="${cls(f.return_3m)}"><span style="font-family:var(--ff-mono);">${pct(f.return_3m)}</span></td>
+                <td class="${cls(f.return_1y)}"><span style="font-family:var(--ff-mono);font-weight:700;">${pct(f.return_1y)}</span></td>
+                <td class="${cls(f.momentum_30d)}"><span style="font-family:var(--ff-mono);">${pct(f.momentum_30d)}</span></td>
+                <td><span style="font-family:var(--ff-mono);color:var(--c-text-secondary);">${Number(f.drawdown_30d).toFixed(2)}%</span></td>
+                <td><span class="fund-pill">${Number(f.growth_score).toFixed(2)}</span></td>
+                <td><canvas class="fund-spark" id="fundSpark_${f.scheme_code}"></canvas></td>
+            </tr>
+        `).join('');
+
+        requestAnimationFrame(() => {
+            rows.forEach(f => {
+                const spark = f.sparkline || [];
+                if (spark.length < 2) return;
+                const positive = (f.growth_score || 0) >= 0;
+                drawSparkline(
+                    `fundSpark_${f.scheme_code}`,
+                    spark,
+                    positive ? '#00d09c' : '#f6465d',
+                    positive ? 'rgba(0,208,156,0.1)' : 'rgba(246,70,93,0.1)'
+                );
+            });
+        });
+    }
+
     function showAnalysis(type) {
         const key = String(type || '').toLowerCase();
         const shortcuts = { stocks: 'RELIANCE', fno: 'NIFTY 50', crypto: 'BTCUSDT' };
         if (key === 'mf') {
-            const sipLink = [...document.querySelectorAll('.sidebar__link')].find(l => l.textContent.includes('SIP Calculator'));
-            if (sipLink) sipLink.click();
+            showFundPanel(true);
             return;
         }
+        showFundPanel(false);
         const sym = shortcuts[key] || String(type || '').toUpperCase().trim() || 'RELIANCE';
         loadAnalysis(sym);
         document.getElementById('analysisPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -608,8 +840,25 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
-        const requested = params.get('symbol') || params.get('cat') || 'RELIANCE';
-        loadAnalysis(requested);
+        const cat = params.get('cat') || '';
+        if (cat.toLowerCase() === 'mf') {
+            showAnalysis('mf');
+        } else {
+            loadAnalysis(params.get('symbol') || 'RELIANCE');
+        }
+
+        const fundSearch = document.getElementById('fundSearchInput');
+        if (fundSearch) fundSearch.addEventListener('input', e => {
+            fundSearchTerm = e.target.value.trim();
+            renderFundTable();
+        });
+        const fundSort = document.getElementById('fundSortSelect');
+        if (fundSort) fundSort.addEventListener('change', e => {
+            fundSortMode = e.target.value;
+            renderFundTable();
+        });
+        const refreshFunds = document.getElementById('btnRefreshFundGrowth');
+        if (refreshFunds) refreshFunds.addEventListener('click', () => loadFundGrowth(true));
 
         document.querySelectorAll('#chartTimeTabs .dash-tab').forEach(tab => {
             tab.addEventListener('click', () => loadChart(tab.dataset.tab));
@@ -619,7 +868,22 @@
         const analyzeBtn = document.getElementById('btnAnalyzeSearch');
         function runSearch() {
             const val = searchInput?.value.trim();
-            if (val) loadAnalysis(val);
+            if (!val) return;
+            const lower = val.toLowerCase();
+            const fundHit = fundRows.find(f =>
+                String(f.scheme_code) === val || String(f.scheme_name || '').toLowerCase().includes(lower)
+            );
+            if (fundHit) {
+                showFundPanel(true);
+                const filter = document.getElementById('fundSearchInput');
+                if (filter) {
+                    filter.value = fundHit.scheme_name;
+                    fundSearchTerm = fundHit.scheme_name.toLowerCase();
+                    renderFundTable();
+                }
+                return;
+            }
+            loadAnalysis(val);
         }
         if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
         if (analyzeBtn) analyzeBtn.addEventListener('click', runSearch);

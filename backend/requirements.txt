@@ -22,3 +22,5 @@ python-dotenv>=1.0.1
 pyjwt>=2.8.0
 aiofiles>=24.1.0
 google-auth>=2.30.0
+# Parses the verified Groww FII/DII institutional-flow table.
+beautifulsoup4>=4.12.0
