@@ -769,7 +769,7 @@
                 <td><div class="fund-rank ${f.rank <= 3 ? 'fund-rank--top' : ''}">${f.rank}</div></td>
                 <td>
                     <div class="fund-name">${esc(f.scheme_name)}</div>
-                    <div class="fund-meta">Code ${esc(f.scheme_code)} · ${esc(f.growth_label)}</div>
+                    <div class="fund-meta">Code ${esc(f.scheme_code)} · ${Number(f.rank) === 1 ? '⭐ Best Buy · ' : ''}${esc(f.growth_label)}</div>
                 </td>
                 <td>
                     <div>${esc(f.fund_house)}</div>

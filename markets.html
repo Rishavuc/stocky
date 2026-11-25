@@ -1067,12 +1067,27 @@
                         </div>
                     </div>
 
+                    <div id="mfBestBuyCard" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 20px;margin-bottom:16px;border:1px solid rgba(245,158,11,0.28);border-radius:var(--r-md);background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(0,208,156,0.04));">
+                        <div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(245,158,11,0.15);color:#f59e0b;flex-shrink:0;">⭐</div>
+                        <div style="flex:1;min-width:260px;">
+                            <div style="font-size:14px;font-weight:800;color:#f59e0b;margin-bottom:4px;">Best Buy Candidate — data-driven from verified NAV history</div>
+                            <div id="mfBestName" style="font-size:15px;font-weight:700;">Loading verified schemes...</div>
+                            <div id="mfBestMeta" style="font-size:11px;color:var(--c-text-tertiary);margin-top:3px;">Ranking uses real 1M/3M/1Y returns, 30-day momentum and drawdown.</div>
+                            <div style="font-size:10px;color:var(--c-text-tertiary);margin-top:6px;">Historical shortlist only — not a guarantee or personal investment advice. Check your risk profile, charges and goal fit before buying.</div>
+                        </div>
+                        <div style="text-align:right;min-width:110px;">
+                            <div id="mfBestScore" style="font-family:var(--ff-mono);font-size:24px;font-weight:800;color:#00d09c;">—</div>
+                            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--c-text-tertiary);">Growth Score</div>
+                        </div>
+                    </div>
+
                     <div class="catalog-toolbar">
                         <div class="catalog-search-box">
                             <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                             <input type="text" id="mfSearchInput" placeholder="Filter by scheme, fund house or category...">
                         </div>
                         <select class="catalog-sort-select" id="mfSortSelect">
+                            <option value="growth_desc">Growth score (best buy)</option>
                             <option value="return_1y">Top 1Y Return</option>
                             <option value="return_1m">Top 1M Return</option>
                             <option value="nav_desc">Highest NAV</option>
@@ -1785,7 +1800,7 @@
         // 5. MUTUAL FUNDS (VERIFIED AMFI NAV HISTORY)
         // ========================================================
         let mfSearchTerm = '';
-        let mfSortMode = 'return_1y';
+        let mfSortMode = 'growth_desc';
 
         function renderMutualFundsEmpty(message) {
             const tbody = document.getElementById('mutualFundsBody');
@@ -1802,10 +1817,62 @@
             if (sub) sub.textContent = message;
             if (avg) avg.textContent = '—';
             if (date) date.textContent = '—';
+            const bestName = document.getElementById('mfBestName');
+            const bestMeta = document.getElementById('mfBestMeta');
+            const bestScore = document.getElementById('mfBestScore');
+            if (bestName) bestName.textContent = 'No verified recommendation available';
+            if (bestMeta) bestMeta.textContent = message;
+            if (bestScore) bestScore.textContent = '—';
+        }
+
+        function enrichMutualFundScores(rows) {
+            const enriched = (rows || []).map(f => {
+                if (Number.isFinite(Number(f.growth_score))) return { ...f, growth_score: Number(f.growth_score) };
+                const spark = [];
+                (f.sparkline || []).forEach(v => { if (Number(v)) spark.push(Number(v)); });
+                const latest = spark.length ? spark[spark.length - 1] : Number(f.nav || 0);
+                const first = spark.length ? spark[0] : latest;
+                const peak = spark.length ? Math.max(...spark) : latest;
+                const momentum = first ? ((latest / first - 1) * 100) : 0;
+                const drawdown = peak ? ((peak - latest) / peak * 100) : 0;
+                const score = (0.45 * Number(f.return_1y || 0)) + (0.30 * Number(f.return_3m || 0)) +
+                    (0.15 * Number(f.return_1m || 0)) + (0.10 * momentum) - (0.25 * drawdown);
+                return {
+                    ...f,
+                    growth_score: Math.round(score * 100) / 100,
+                    momentum_30d: Math.round(momentum * 100) / 100,
+                    drawdown_30d: Math.round(drawdown * 100) / 100
+                };
+            });
+            enriched.sort((a, b) => b.growth_score - a.growth_score);
+            enriched.forEach((f, i) => {
+                f.rank = Number.isFinite(Number(f.rank)) ? Number(f.rank) : i + 1;
+                f.growth_label = f.growth_label || (i < 3 ? 'High momentum' : (i < 6 ? 'Steady growth' : 'Tracked'));
+            });
+            return enriched;
+        }
+
+        function renderBestBuy() {
+            const name = document.getElementById('mfBestName');
+            const meta = document.getElementById('mfBestMeta');
+            const score = document.getElementById('mfBestScore');
+            if (!mutualFundsData.length) {
+                renderMutualFundsEmpty('No verified mutual fund NAVs returned.');
+                return;
+            }
+            const best = [...mutualFundsData].sort((a, b) => b.growth_score - a.growth_score)[0];
+            const pct = v => `${v > 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+            if (name) name.textContent = `${best.scheme_name} (${best.scheme_code})`;
+            if (meta) {
+                meta.textContent = `1Y ${pct(best.return_1y)} · 30D momentum ${pct(best.momentum_30d)} · 30D drawdown ${Number(best.drawdown_30d || 0).toFixed(2)}% · NAV date ${best.nav_date} · ${best.api_source}`;
+            }
+            if (score) score.textContent = Number(best.growth_score).toFixed(2);
         }
 
         function loadMutualFunds(force = false) {
-            if (!window.apiClient || !window.apiClient.getMutualFunds) {
+            const client = window.apiClient;
+            const fetchGrowth = client && (client.getFundGrowth || client.getMutualFunds);
+            if (!fetchGrowth) {
                 renderMutualFundsEmpty('Mutual fund feed unavailable.');
                 return;
             }
@@ -1814,13 +1881,15 @@
             if (tbody) {
                 tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">Fetching verified AMFI NAV history...</td></tr>`;
             }
-            window.apiClient.getMutualFunds().then(data => {
+            const request = client.getFundGrowth ? client.getFundGrowth() : client.getMutualFunds();
+            Promise.resolve(request).then(data => {
                 if (!data || !data.length) {
                     mutualFundsData = [];
                     renderMutualFundsEmpty('No verified mutual fund NAVs returned.');
                     return;
                 }
-                mutualFundsData = data;
+                mutualFundsData = enrichMutualFundScores(data);
+                renderBestBuy();
                 updateMutualFundKPIs();
                 renderMutualFundsTable();
             }).catch(() => {
@@ -1862,7 +1931,8 @@
             if (mfSortMode === 'return_1y') rows.sort((a, b) => (b.return_1y || 0) - (a.return_1y || 0));
             else if (mfSortMode === 'return_1m') rows.sort((a, b) => (b.return_1m || 0) - (a.return_1m || 0));
             else if (mfSortMode === 'nav_desc') rows.sort((a, b) => (b.nav || 0) - (a.nav || 0));
-            else rows.sort((a, b) => (a.scheme_name || '').localeCompare(b.scheme_name || ''));
+            else if (mfSortMode === 'scheme_asc') rows.sort((a, b) => (a.scheme_name || '').localeCompare(b.scheme_name || ''));
+            else rows.sort((a, b) => b.growth_score - a.growth_score);
 
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--c-text-tertiary);">No verified schemes matched your filter.</td></tr>`;
@@ -1880,7 +1950,10 @@
                             <div class="asset-identity__avatar" style="background:rgba(0,208,156,0.12);color:#00d09c;">MF</div>
                             <div>
                                 <div class="asset-identity__symbol" style="white-space:normal;">${f.scheme_name}</div>
-                                <span class="token-badge">${f.scheme_code}</span>
+                                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                                    <span class="token-badge">${f.scheme_code}</span>
+                                    ${Number(f.rank) === 1 ? `<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.16);color:#f59e0b;">⭐ Best Buy</span>` : ''}
+                                </div>
                             </div>
                         </div>
                     </td>
