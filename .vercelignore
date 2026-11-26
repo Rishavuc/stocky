@@ -1,0 +1,19 @@
+# Backend and local runtime files are not part of the static frontend.
+backend/
+tools/
+venv/
+*.py
+*.pyc
+__pycache__/
+*.db
+*.db-*
+*.log
+.env
+.env.*
+!.env.example
+
+# Docs and deployment metadata
+DEPLOYMENT.md
+README.md
+Untitled.md
+render.yaml
