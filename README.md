@@ -5,6 +5,16 @@
 
 ---
 
+## 🚀 Deployed App
+
+- **Frontend (Vercel):** https://stockvista-analysis-platform.vercel.app
+- **Backend (Render):** https://stockvista-api.onrender.com
+- **API Docs:** https://stockvista-api.onrender.com/docs
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for full deployment details.
+
+---
+
 ## 🌟 Key Highlights
 
 - **Live Market Feeds & Exchange Integration:**

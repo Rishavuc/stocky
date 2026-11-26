@@ -1,5 +1,12 @@
 # Deployment: Vercel frontend + Render backend
 
+## Deployed URLs
+
+- **Frontend:** https://stockvista-analysis-platform.vercel.app
+- **Backend:** https://stockvista-api.onrender.com
+- **API docs:** https://stockvista-api.onrender.com/docs
+- **Health:** https://stockvista-api.onrender.com/health
+
 ## Architecture
 
 - **Frontend:** static HTML/CSS/JS in the repository root, deployed to Vercel.
@@ -15,8 +22,8 @@
 4. Set any optional credentials in the Render dashboard:
    - `GOOGLE_CLIENT_ID` (for Google sign-in)
    - Zerodha keys if you want broker-backed live data
-5. Wait for the service to become live and copy its URL, e.g.
-   `https://stockvista-api.onrender.com`.
+5. Wait for the service to become live. The current service is
+   `stockvista-api` at `https://stockvista-api.onrender.com`.
 6. Verify:
    ```text
    https://<your-render-service>/health
@@ -40,7 +47,21 @@ window.SV_BACKEND_URL = "https://<your-render-service>";
 1. Sign in to Vercel and choose **Add New → Project**.
 2. Import the same GitHub repository.
 3. Vercel detects `vercel.json`; no build command is required.
-4. Deploy and open the generated `*.vercel.app` URL.
+4. Deploy and open the generated `*.vercel.app` URL. The current production
+   URL is `https://stockvista-analysis-platform.vercel.app`.
+
+## Enable automatic frontend deploys
+
+The first deployment was uploaded with the Vercel CLI. To deploy automatically
+on every push to `main`, authorize Vercel's GitHub app for `Rishavuc/stocky`,
+then run:
+
+```bash
+vercel git connect --project stockvista-analysis-platform --yes
+```
+
+If the GitHub app is not yet authorized, that command fails with a repository
+access error; the deployed site itself is unaffected.
 
 ## Local development
 
