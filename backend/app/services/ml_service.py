@@ -12,9 +12,15 @@ If PyTorch is not installed (or a symbol lacks enough history) the service
 falls back to an empirically-calibrated quantile forecaster built directly from
 the instrument's own historical return distribution, so the endpoint always
 returns correct, data-driven, deterministic output.
+
+On memory-constrained hosts (for example Render's free 512 MB instance) PyTorch
+is deliberately skipped so a single estimate request cannot OOM the process.
+Set STOCKVISTA_DISABLE_TORCH=true to force that mode; Render sets RENDER=true,
+which enables it automatically. Local development still uses the real LSTM.
 """
 
 import math
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -26,7 +32,15 @@ from app.services.market_ingest import market_ingest
 from app.schemas.schemas import PredictionResponse, PredictionPoint
 
 # ----- Optional PyTorch (real neural network) -----
+def _torch_disabled() -> bool:
+    flag = os.getenv("STOCKVISTA_DISABLE_TORCH", "").strip().lower()
+    on_render = os.getenv("RENDER", "").strip().lower() in {"1", "true", "yes"}
+    return flag in {"1", "true", "yes"} or on_render
+
+
 try:
+    if _torch_disabled():
+        raise ImportError("PyTorch disabled on this host to stay within memory limits")
     import torch
     import torch.nn as nn
 

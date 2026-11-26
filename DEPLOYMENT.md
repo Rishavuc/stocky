@@ -34,6 +34,12 @@
 > ephemeral, so user accounts and audit logs reset after a redeploy. For
 > production persistence, switch `DATABASE_URL` to a managed Postgres database.
 
+> Memory: Render sets `RENDER=true`, which automatically switches the estimate
+> endpoint to its low-memory empirical quantile estimator so a single LSTM
+> training request cannot exhaust the free 512 MB instance. Local development
+> still uses the real PyTorch LSTM. On a paid Render plan you can force the
+> LSTM back on with `STOCKVISTA_DISABLE_TORCH=false`.
+
 ## 2. Point the frontend at the backend
 
 Edit `config.js` and set the Render URL:
