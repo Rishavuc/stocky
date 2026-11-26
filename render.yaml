@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: stockvista-api
+    runtime: python
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install torch --index-url https://download.pytorch.org/whl/cpu
+      pip install -r backend/requirements.txt
+
+    startCommand: |
+      mkdir -p backend/data
+      cd backend
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:////opt/render/project/src/backend/data/investors_eye.db
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ZERODHA_API_KEY
+        sync: false
+      - key: ZERODHA_API_SECRET
+        sync: false
+      - key: ZERODHA_ACCESS_TOKEN
+        sync: false

@@ -4,14 +4,20 @@
  * ========================================================
  */
 
+const _configuredBackend = String(window.SV_BACKEND_URL || '').trim().replace(/\/+$/, '');
+const _isLocalDev = window.location.port === '8000' || window.location.port === '3000';
+const _toWebSocketUrl = (url) => url.replace(/^http:\/\//, 'ws://').replace(/^https:\/\//, 'wss://');
+
 const API_CONFIG = {
-    // Automatically detect host or default to port 8000
-    BASE_URL: (window.location.port === '8000' || window.location.port === '3000') 
-        ? `http://${window.location.hostname}:8000/v1` 
-        : '/v1',
-    WS_URL: (window.location.port === '8000' || window.location.port === '3000') 
-        ? `ws://${window.location.hostname}:8000/ws/stream` 
-        : `ws://${window.location.host}/ws/stream`
+    // Use the deployed Render backend when configured; otherwise auto-detect locally.
+    BASE_URL: _configuredBackend
+        ? `${_configuredBackend}/v1`
+        : (_isLocalDev ? `http://${window.location.hostname}:8000/v1` : '/v1'),
+    WS_URL: _configuredBackend
+        ? `${_toWebSocketUrl(_configuredBackend)}/ws/stream`
+        : (_isLocalDev
+            ? `ws://${window.location.hostname}:8000/ws/stream`
+            : `ws://${window.location.host}/ws/stream`)
 };
 
 class ApiClient {
