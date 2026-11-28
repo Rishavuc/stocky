@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     KITE_API_KEY: Optional[str] = None
     KITE_API_SECRET: Optional[str] = None
     KITE_ACCESS_TOKEN: Optional[str] = None
-    # Older name used in render.yaml; copied into KITE_ACCESS_TOKEN if that is unset.
+    # Older variable name; copied into KITE_ACCESS_TOKEN if that is unset.
     ZERODHA_ACCESS_TOKEN: Optional[str] = None
 
     BINANCE_API_KEY: Optional[str] = None

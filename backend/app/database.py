@@ -6,7 +6,24 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from app.config import settings
 
-_url = make_url(settings.DATABASE_URL)
+def _normalize_db_url(raw: str):
+    """Accept the URL forms managed hosts hand out.
+
+    Render/Heroku Postgres URLs start with postgres:// or postgresql://, which
+    makes SQLAlchemy look for psycopg (not installed); this app is async, so
+    use asyncpg. asyncpg also rejects libpq's ?sslmode=..., it wants ?ssl=...
+    """
+    url = make_url(raw)
+    if url.drivername in ("postgres", "postgresql", "postgresql+psycopg2", "postgresql+psycopg"):
+        url = url.set(drivername="postgresql+asyncpg")
+    if url.drivername == "postgresql+asyncpg" and "sslmode" in url.query:
+        query = dict(url.query)
+        query["ssl"] = query.pop("sslmode")
+        url = url.set(query=query)
+    return url
+
+
+_url = _normalize_db_url(settings.DATABASE_URL)
 IS_SQLITE = _url.get_backend_name() == "sqlite"
 
 connect_args = {}
@@ -16,11 +33,17 @@ if IS_SQLITE:
     if _url.database and _url.database != ":memory:":
         Path(_url.database).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
+engine_kwargs = {}
+if not IS_SQLITE:
+    # Managed Postgres drops idle connections; check before use and recycle.
+    engine_kwargs = {"pool_pre_ping": True, "pool_recycle": 300}
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    _url,
     echo=False,
     connect_args=connect_args,
-    future=True
+    future=True,
+    **engine_kwargs,
 )
 
 if IS_SQLITE:

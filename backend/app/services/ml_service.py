@@ -33,9 +33,13 @@ from app.schemas.schemas import PredictionResponse, PredictionPoint
 
 # ----- Optional PyTorch (real neural network) -----
 def _torch_disabled() -> bool:
+    """Explicit STOCKVISTA_DISABLE_TORCH wins; otherwise off on Render (512 MB)."""
     flag = os.getenv("STOCKVISTA_DISABLE_TORCH", "").strip().lower()
-    on_render = os.getenv("RENDER", "").strip().lower() in {"1", "true", "yes"}
-    return flag in {"1", "true", "yes"} or on_render
+    if flag in {"1", "true", "yes"}:
+        return True
+    if flag in {"0", "false", "no"}:
+        return False
+    return os.getenv("RENDER", "").strip().lower() in {"1", "true", "yes"}
 
 
 try:

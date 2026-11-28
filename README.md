@@ -86,6 +86,10 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r backend/requirements.txt
+
+# Optional: real PyTorch LSTM estimates (otherwise the empirical model is used)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r backend/requirements-ml.txt
 ```
 
 ### 3. Configure Environment Variables

@@ -36,9 +36,11 @@
 
 > Memory: Render sets `RENDER=true`, which automatically switches the estimate
 > endpoint to its low-memory empirical quantile estimator so a single LSTM
-> training request cannot exhaust the free 512 MB instance. Local development
-> still uses the real PyTorch LSTM. On a paid Render plan you can force the
-> LSTM back on with `STOCKVISTA_DISABLE_TORCH=false`.
+> training request cannot exhaust the free 512 MB instance. The Render build
+> no longer installs PyTorch at all (it is in `backend/requirements-ml.txt`).
+> Local development uses the real LSTM when torch is installed. On a paid
+> Render plan, add the CPU torch install plus `requirements-ml.txt` to the
+> build command and set `STOCKVISTA_DISABLE_TORCH=false`.
 
 ## 2. Point the frontend at the backend
 
@@ -75,7 +77,7 @@ Leave `window.SV_BACKEND_URL = ""` in `config.js` and run:
 
 ```bash
 cd backend
-venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Then open `http://localhost:8000/`.
@@ -88,3 +90,11 @@ Then open `http://localhost:8000/`.
 - `KITE_CALLBACK_ENABLED`: off by default in production. Turn it on only while the admin re-authorizes Kite.
 - Rate limits read the client IP from the rightmost `X-Forwarded-For` entry on Render. Do not add `--forwarded-allow-ips='*'` to the start command.
 - Security regression checks: `cd backend && ../.venv/bin/python tests/security_checks.py`
+
+## Moving to managed Postgres
+
+The SQLite file is wiped on every Render free-tier deploy. To keep users and
+paper books, create a Render Postgres database and set `DATABASE_URL` to its
+connection string. The app rewrites `postgres://` / `postgresql://` URLs to the
+asyncpg driver and converts `sslmode=` to `ssl=` automatically; `asyncpg` is in
+`backend/requirements.txt`. Tables are created on first boot.

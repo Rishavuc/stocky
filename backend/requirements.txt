@@ -16,9 +16,9 @@ websockets>=12.0,<18
 greenlet>=3.0,<4
 # Live NSE/BSE (and index) price + candle feed.
 yfinance>=0.2.40,<2
-# Real multi-layer LSTM used by the prediction service.
-# CPU build install: pip install torch --index-url https://download.pytorch.org/whl/cpu
-torch>=2.2.0,<3
+# PyTorch (LSTM estimates) is optional: see requirements-ml.txt. Without it
+# the estimate endpoint uses its empirical quantile model (always the case on
+# Render's free tier).
 python-multipart>=0.0.9,<0.1
 python-dotenv>=1.0.1,<2
 pyjwt>=2.8.0,<3
@@ -26,3 +26,5 @@ aiofiles>=24.1.0,<26
 google-auth>=2.30.0,<3
 # Parses the verified Groww FII/DII institutional-flow table.
 beautifulsoup4>=4.12.0,<5
+# Async Postgres driver, for when DATABASE_URL points at managed Postgres.
+asyncpg>=0.29,<1

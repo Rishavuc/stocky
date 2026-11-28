@@ -8,7 +8,6 @@ services:
 
     buildCommand: |
       pip install --upgrade pip
-      pip install torch --index-url https://download.pytorch.org/whl/cpu
       pip install -r backend/requirements.txt
 
     startCommand: |
