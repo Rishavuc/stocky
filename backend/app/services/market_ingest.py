@@ -1490,7 +1490,9 @@ class MarketIngestService:
     # any code, so misses are cached too or random codes hit mfapi every time.
     _MF_CACHE_MAX = 300
     _MF_HIT_TTL = 3600.0
-    _MF_MISS_TTL = 600.0
+    # Short: _fetch_mutual_fund returns None for network errors too, and a
+    # blip should not hide a real fund for long.
+    _MF_MISS_TTL = 60.0
 
     def _mf_cache_get(self, key: str):
         with _MF_CACHE_LOCK:

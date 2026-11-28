@@ -16,9 +16,15 @@ def _normalize_db_url(raw: str):
     url = make_url(raw)
     if url.drivername in ("postgres", "postgresql", "postgresql+psycopg2", "postgresql+psycopg"):
         url = url.set(drivername="postgresql+asyncpg")
-    if url.drivername == "postgresql+asyncpg" and "sslmode" in url.query:
+    if url.drivername == "postgresql+asyncpg":
         query = dict(url.query)
-        query["ssl"] = query.pop("sslmode")
+        if "sslmode" in query:
+            query["ssl"] = query.pop("sslmode")
+        # libpq-only options (Neon/Supabase URLs carry some) that asyncpg's
+        # connect() rejects as unexpected keyword arguments.
+        for key in ("channel_binding", "sslrootcert", "sslcert", "sslkey",
+                    "target_session_attrs", "gssencmode"):
+            query.pop(key, None)
         url = url.set(query=query)
     return url
 

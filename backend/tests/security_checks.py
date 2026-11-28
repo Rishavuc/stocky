@@ -85,6 +85,17 @@ with TestClient(m.app, raise_server_exceptions=False) as c:
     r = c.get("/v1/auth/activity?offset=9223372036854775808", headers={"Authorization": f"Bearer {tok}"})
     check("huge activity offset no 500", r.status_code == 200, r.status_code)
 
+# 7c. Oversized bodies get 413 with CORS headers, chunked or not.
+O = {"Origin": "https://stockvista-analysis-platform.vercel.app", "Content-Type": "application/json"}
+with TestClient(m.app, raise_server_exceptions=False) as c:
+    r = c.post("/v1/auth/login", content=b"x" * (3 << 20), headers=O)
+    check("oversize body 413 + CORS", r.status_code == 413 and r.headers.get("access-control-allow-origin"), r.status_code)
+    def _chunks():
+        for _ in range(30):
+            yield b"x" * 100_000
+    r = c.post("/v1/auth/login", content=_chunks(), headers=O)
+    check("oversize chunked body 413", r.status_code == 413, r.status_code)
+
 # 8. Google sign-in disables a password someone else pre-registered.
 import app.routes.auth as auth
 auth.google_id_token.verify_oauth2_token = lambda cred, req, aud: {

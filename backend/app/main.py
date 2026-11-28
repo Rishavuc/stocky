@@ -1,4 +1,5 @@
 import html as html_lib
+import json
 import os
 import re
 import time
@@ -74,14 +75,6 @@ def _finite(value):
     return value
 
 
-@app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception):
-    # Last resort: log the type server-side, return JSON (the frontend parses
-    # every error body) and never leak the exception text to the client.
-    print(f"[Unhandled] {request.method} {request.url.path}: {type(exc).__name__}")
-    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     # Same 422 shape as FastAPI's default, minus the echoed raw input: it can
@@ -125,19 +118,30 @@ async def log_user_activity(request: Request, call_next):
             )
     return response
 
-# CORS: explicit origins only. The frontend sends a Bearer token header, not
-# cookies, so credentials stay off (a wildcard plus credentials would let any
-# site make authenticated calls). No wildcard regex: anyone can create a
-# Vercel project whose name starts with ours. Add preview URLs to CORS_ORIGINS.
-class BodySizeLimitMiddleware:
-    """Reject request bodies over `max_bytes` (HTTP 413).
+MAX_BODY_BYTES = 2 * 1024 * 1024  # CSV import caps itself at 1 MB; JSON bodies are tiny
 
-    Pure ASGI so it also catches chunked uploads with no Content-Length: it
-    counts bytes as they stream in instead of trusting the header. The CSV
-    import caps itself at 1 MB; nothing else needs more than a few KB.
+
+def _json_body(status: int, detail: str) -> tuple:
+    body = json.dumps({"detail": detail}).encode()
+    start = {
+        "type": "http.response.start",
+        "status": status,
+        "headers": [(b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode())],
+    }
+    return start, {"type": "http.response.body", "body": body}
+
+
+class SafetyNetMiddleware:
+    """Body-size cap plus a JSON 500 for anything unhandled.
+
+    Pure ASGI and added BEFORE CORSMiddleware, so CORS wraps it and these
+    responses carry CORS headers (otherwise the browser hides them behind a
+    CORS error). Size is counted as bytes stream in, so chunked uploads with
+    no Content-Length are capped too.
     """
 
-    def __init__(self, app, max_bytes: int = 2 * 1024 * 1024):
+    def __init__(self, app, max_bytes: int = MAX_BODY_BYTES):
         self.app = app
         self.max_bytes = max_bytes
 
@@ -145,40 +149,70 @@ class BodySizeLimitMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
 
-        def too_large():
-            return JSONResponse(status_code=413, content={"detail": "Request body too large."})
-
         for name, value in scope.get("headers", []):
             if name == b"content-length":
                 try:
-                    if int(value) > self.max_bytes:
-                        return await too_large()(scope, receive, send)
+                    too_big = int(value) > self.max_bytes
                 except ValueError:
-                    return await JSONResponse(status_code=400, content={"detail": "Bad Content-Length."})(scope, receive, send)
+                    too_big = True
+                if too_big:
+                    for msg in _json_body(413, "Request body too large."):
+                        await send(msg)
+                    return
 
         received = 0
+        overflow = False
+        started = False
 
         async def limited_receive():
-            nonlocal received
+            nonlocal received, overflow
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > self.max_bytes:
-                    raise _BodyTooLarge()
+                    overflow = True
+                    # FastAPI turns any error while reading the body into a
+                    # 400, so the 413 is substituted on the way out instead.
+                    raise RuntimeError("request body too large")
             return message
 
+        async def guarded_send(message):
+            nonlocal started
+            if overflow:
+                # Swap whatever error response the app produced for a 413.
+                if message["type"] == "http.response.start" and not started:
+                    started = True
+                    start, body = _json_body(413, "Request body too large.")
+                    await send(start)
+                    await send(body)
+                return
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
         try:
-            await self.app(scope, limited_receive, send)
-        except _BodyTooLarge:
-            # Only safe if no response has started; handlers read the body
-            # before responding, so this holds for every route here.
-            await too_large()(scope, receive, send)
+            await self.app(scope, limited_receive, guarded_send)
+        except Exception as exc:
+            if started:
+                raise
+            if overflow:
+                start, body = _json_body(413, "Request body too large.")
+            else:
+                # Log the type only; never send exception text to clients.
+                print(f"[Unhandled] {scope.get('method')} {scope.get('path')}: {type(exc).__name__}")
+                start, body = _json_body(500, "Internal server error.")
+            await send(start)
+            await send(body)
 
 
-class _BodyTooLarge(Exception):
-    pass
+# Order matters: middleware added later wraps earlier ones. SafetyNet first,
+# CORS last, so CORS is outermost and decorates every response.
+app.add_middleware(SafetyNetMiddleware, max_bytes=MAX_BODY_BYTES)
 
-
+# CORS: explicit origins only. The frontend sends a Bearer token header, not
+# cookies, so credentials stay off (a wildcard plus credentials would let any
+# site make authenticated calls). No wildcard regex: anyone can create a
+# Vercel project whose name starts with ours. Add preview URLs to CORS_ORIGINS.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -187,9 +221,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["X-Response-Time-ms"],
 )
-# Added last so it wraps everything (outermost): oversized bodies are refused
-# before any route or the activity logger touches them.
-app.add_middleware(BodySizeLimitMiddleware, max_bytes=2 * 1024 * 1024)
 
 # Include all API Routers
 app.include_router(instruments_router)
