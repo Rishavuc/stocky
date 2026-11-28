@@ -14,7 +14,7 @@ services:
     startCommand: |
       mkdir -p backend/data
       cd backend
-      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
 
     envVars:
       - key: PYTHON_VERSION
@@ -22,6 +22,11 @@ services:
       - key: APP_ENV
         value: production
       - key: DEBUG
+        value: false
+      - key: FRONTEND_URL
+        value: https://stockvista-analysis-platform.vercel.app
+      # The frontend is on Vercel; the API never serves repo files in production.
+      - key: SERVE_FRONTEND
         value: false
       - key: DATABASE_URL
         value: sqlite+aiosqlite:////opt/render/project/src/backend/data/investors_eye.db
@@ -33,5 +38,6 @@ services:
         sync: false
       - key: ZERODHA_API_SECRET
         sync: false
-      - key: ZERODHA_ACCESS_TOKEN
+      # config.py reads KITE_ACCESS_TOKEN (ZERODHA_ACCESS_TOKEN still works as a fallback).
+      - key: KITE_ACCESS_TOKEN
         sync: false

@@ -12,8 +12,13 @@ from app.security import decode_session_token
 
 MAX_ACTIVITIES_PER_USER = 5000
 SENSITIVE_KEY_PARTS = (
-    "password", "passwd", "secret", "token", "authorization", "api_key", "apikey"
+    "password", "passwd", "pwd", "secret", "token", "authorization", "api_key",
+    "apikey", "credential", "cookie", "session", "salt", "hash",
+    "private_key", "signature",
 )
+# Shared demo login: do not keep visitors' IPs/browsers against it.
+SHARED_USER_IDS = {"usr_demo_1001"}
+MAX_DEPTH = 6
 
 
 def resolve_user_id_from_header(authorization: Optional[str]) -> Optional[str]:
@@ -30,18 +35,22 @@ def resolve_user_id_from_header(authorization: Optional[str]) -> Optional[str]:
     return decode_session_token(token.strip())
 
 
-def sanitize_details(value: Any) -> Any:
+def sanitize_details(value: Any, _depth: int = 0) -> Any:
     """Remove secrets before anything is written to the activity table."""
+    if _depth > MAX_DEPTH:
+        return None
     if isinstance(value, dict):
         clean = {}
         for key, item in value.items():
             lowered = str(key).lower()
             if any(part in lowered for part in SENSITIVE_KEY_PARTS):
                 continue
-            clean[str(key)] = sanitize_details(item)
+            clean[str(key)] = sanitize_details(item, _depth + 1)
         return clean
-    if isinstance(value, (list, tuple)):
-        return [sanitize_details(item) for item in value]
+    if isinstance(value, (list, tuple, set)):
+        return [sanitize_details(item, _depth + 1) for item in list(value)[:100]]
+    if isinstance(value, str):
+        return value[:1000]
     return value
 
 
@@ -58,6 +67,9 @@ async def record_activity(
 ) -> None:
     """Persist one audit event. Failures never break the user request."""
     try:
+        if user_id in SHARED_USER_IDS:
+            ip_address = None
+            user_agent = None
         stored_details = None
         if details is not None:
             stored_details = json.dumps(sanitize_details(details), default=str)
@@ -66,11 +78,11 @@ async def record_activity(
             db.add(UserActivity(
                 activity_id=uuid.uuid4().hex,
                 user_id=user_id,
-                event_type=event_type,
+                event_type=(event_type or "")[:50],
                 method=method,
-                path=path,
+                path=(path or "")[:500] or None,
                 status_code=status_code,
-                ip_address=ip_address,
+                ip_address=(ip_address or "")[:64] or None,
                 user_agent=(user_agent or "")[:500] or None,
                 details=stored_details,
                 created_at=datetime.utcnow(),
@@ -94,4 +106,4 @@ async def record_activity(
 
             await db.commit()
     except Exception as exc:
-        print(f"[Activity Logger] Could not record activity: {exc}")
+        print(f"[Activity Logger] Could not record activity: {type(exc).__name__}")

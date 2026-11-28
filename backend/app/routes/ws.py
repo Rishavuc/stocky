@@ -1,37 +1,43 @@
 import asyncio
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services.ws_gateway import ws_gateway
+from app.services.ws_gateway import ws_gateway, snapshot_payload
 from app.services.market_ingest import market_ingest
 
 router = APIRouter(tags=["Real-time Streaming"])
 
+MAX_CLIENT_MESSAGE = 4096  # PING / subscribe commands are tiny
+
+
 @router.websocket("/ws/stream")
 async def websocket_stream_endpoint(websocket: WebSocket):
-    await ws_gateway.connect(websocket)
+    if ws_gateway.is_full:
+        # 1013 = "try again later"; the client reconnects after 5s.
+        await websocket.close(code=1013)
+        return
+
+    await websocket.accept()
     try:
-        # Send initial full quote snapshot
-        initial_quotes = (await asyncio.to_thread(market_ingest.get_tick_snapshot)).values()
-        await websocket.send_text(json.dumps({
-            "type": "INITIAL_SNAPSHOT",
-            "data": [q.model_dump() for q in initial_quotes]
-        }, default=str))
+        # Initial full quote snapshot first, then join the shared broadcaster
+        # (so a TICK never arrives before INITIAL_SNAPSHOT). This handler only
+        # reads commands after that.
+        initial = await asyncio.to_thread(market_ingest.get_tick_snapshot)
+        await websocket.send_text(snapshot_payload("INITIAL_SNAPSHOT", initial.values()))
+        ws_gateway.register(websocket)
 
         while True:
-            # Listen for client messages (e.g. subscribe / unsubscribe) with short timeout
+            data = await websocket.receive_text()
+            if len(data) > MAX_CLIENT_MESSAGE:
+                continue
             try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=1.5)
-                # Client commands if sent
                 msg = json.loads(data)
-                if msg.get("action") == "PING":
-                    await websocket.send_text(json.dumps({"type": "PONG"}))
-            except asyncio.TimeoutError:
-                # Send the authoritative provider snapshot. No simulated drift.
-                ticks = await asyncio.to_thread(market_ingest.get_tick_snapshot)
-                tick_payload = {
-                    "type": "TICK",
-                    "data": [q.model_dump() for q in ticks.values()]
-                }
-                await websocket.send_text(json.dumps(tick_payload, default=str))
-    except (WebSocketDisconnect, Exception):
+            except ValueError:
+                continue  # ignore junk instead of dropping the connection
+            if isinstance(msg, dict) and msg.get("action") == "PING":
+                await websocket.send_text(json.dumps({"type": "PONG"}))
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"[WS Client Warning]: {e}")
+    finally:
         ws_gateway.disconnect(websocket)

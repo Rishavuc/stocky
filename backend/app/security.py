@@ -27,8 +27,10 @@ def check_jwt_config() -> None:
     """Called at startup. Refuses to run production with a weak secret."""
     if settings.JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
         raise RuntimeError(f"JWT_ALGORITHM must be one of {sorted(_ALLOWED_ALGORITHMS)}")
+    if not 0 < settings.ACCESS_TOKEN_EXPIRE_MINUTES <= 7 * 24 * 60:
+        raise RuntimeError("ACCESS_TOKEN_EXPIRE_MINUTES must be between 1 and 10080 (7 days)")
     weak = settings.JWT_SECRET_KEY in _KNOWN_DEFAULT_SECRETS or len(settings.JWT_SECRET_KEY) < 32
-    if weak and settings.APP_ENV.lower() == "production":
+    if weak and settings.is_production:
         raise RuntimeError(
             "JWT_SECRET_KEY is a default or too short. Set a random value of 32+ characters, "
             'e.g. python -c "import secrets; print(secrets.token_urlsafe(48))"'

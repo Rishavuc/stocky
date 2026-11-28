@@ -1,6 +1,6 @@
 import math
 from typing import Dict, List, Any, Tuple
-from app.services.market_ingest import market_ingest
+from app.services.market_ingest import market_ingest, normalize_symbol
 from app.schemas.schemas import TechnicalAnalysisResponse, IndicatorItem, OptionChainResponse, OptionChainItem
 
 
@@ -115,7 +115,9 @@ def _stochastic(highs: List[float], lows: List[float], closes: List[float],
 
 class AnalysisEngine:
     def get_technical_analysis(self, symbol: str) -> TechnicalAnalysisResponse:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         quote = market_ingest.get_quote(sym)
         if not quote:
             raise ValueError(f"No verified market data available for {sym}")
@@ -285,7 +287,9 @@ class AnalysisEngine:
 
     def get_option_chain(self, underlying: str = "NIFTY") -> OptionChainResponse:
         """Return only verified spot data. No broker options feed is connected."""
-        und = underlying.upper().strip()
+        und = normalize_symbol(underlying)
+        if not und:
+            raise ValueError("Invalid underlying symbol")
         quote = market_ingest.get_quote(und)
         if not quote:
             raise ValueError(f"No verified spot quote available for {und}")
@@ -300,7 +304,9 @@ class AnalysisEngine:
         )
 
     def get_fund_analysis(self, code: str = "PPFCF") -> Dict[str, Any]:
-        key = str(code or "").strip()
+        key = str(code or "").strip()[:64]
+        if not key:
+            raise ValueError("Fund code is required")
         fund = market_ingest.get_mutual_fund(key)
         if not fund:
             match = next(
@@ -319,7 +325,9 @@ class AnalysisEngine:
         return detail
 
     def get_crypto_analysis(self, symbol: str = "BTCINR") -> Dict[str, Any]:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         quote = market_ingest.get_quote(sym)
         if not quote:
             raise ValueError(f"No verified market data available for {sym}")

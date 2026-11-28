@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from app.services.market_ingest import market_ingest
+from app.services.market_ingest import market_ingest, normalize_symbol
 from app.schemas.schemas import PredictionResponse, PredictionPoint
 
 # ----- Optional PyTorch (real neural network) -----
@@ -103,11 +103,28 @@ def _pinball_loss(pred, target, quantiles=QUANTILES):
     return torch.stack(losses, dim=1).mean()
 
 
+def _json_safe(value: Any) -> Any:
+    """Replace NaN/inf (which JSON cannot encode) with None, recursively."""
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (float, np.floating)):
+        return float(value) if math.isfinite(float(value)) else None
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    return value
+
+
 class LSTMPredictionEngine:
     WINDOW = 60           # lookback bars fed to the network (per Untitled.md spec)
     MIN_SAMPLES = 90      # minimum history required to train an LSTM
     MODEL_TTL = 900.0     # seconds before a trained model is refreshed
     RESULT_TTL = 60.0     # seconds a prediction result is cached
+    MAX_MODELS = 6        # trained networks kept in memory at once
+    MAX_RESULTS = 128     # cached prediction responses
 
     def __init__(self):
         self._architectures = {
@@ -119,6 +136,9 @@ class LSTMPredictionEngine:
         self._model_cache: Dict[str, Tuple[Any, Dict[str, Any], float]] = {}
         self._result_cache: Dict[str, Tuple[PredictionResponse, float]] = {}
         self._lock = threading.Lock()
+        # One training job at a time: parallel requests for different symbols
+        # would otherwise each hold a model, optimiser and tensors in memory.
+        self._train_lock = threading.Lock()
 
     def _arch_spec(self, label: str, bidirectional: bool, cell: str) -> Dict[str, Any]:
         first = cell + (" (bidirectional)" if bidirectional else "")
@@ -175,7 +195,9 @@ class LSTMPredictionEngine:
     # PUBLIC API
     # ========================================================
     def predict_symbol(self, symbol: str, horizon_days: int = 7, model: str = "lstm") -> PredictionResponse:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         model = (model or "lstm").lower().strip()
         if model not in self._architectures:
             model = "lstm"
@@ -187,13 +209,25 @@ class LSTMPredictionEngine:
             if cached and (time.time() - cached[1]) < self.RESULT_TTL:
                 return cached[0]
 
-        result = self._compute_prediction(sym, horizon_days, model)
+        try:
+            result = self._compute_prediction(sym, horizon_days, model)
+        except (OverflowError, FloatingPointError, ZeroDivisionError) as exc:
+            raise ValueError(f"Estimate for {sym} is numerically unstable: {exc}")
         with self._lock:
-            self._result_cache[cache_key] = (result, time.time())
+            now = time.time()
+            self._result_cache[cache_key] = (result, now)
+            if len(self._result_cache) > self.MAX_RESULTS:
+                for k in [k for k, v in self._result_cache.items() if now - v[1] >= self.RESULT_TTL]:
+                    self._result_cache.pop(k, None)
+                while len(self._result_cache) > self.MAX_RESULTS:
+                    oldest = min(self._result_cache, key=lambda k: self._result_cache[k][1])
+                    self._result_cache.pop(oldest, None)
         return result
 
     def get_backtest_scorecard(self, symbol: str, model: str = "lstm") -> Dict[str, Any]:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         model = (model or "lstm").lower().strip()
         if model not in self._architectures:
             model = "lstm"
@@ -265,6 +299,9 @@ class LSTMPredictionEngine:
         metrics["probability_confidence"] = confidence
         metrics["history_bars"] = int(len(closes))
         metrics["history_years"] = round(max(0, len(closes) - 1) / 252.0, 1)
+        metrics = _json_safe(metrics)
+        if not all(math.isfinite(v) for v in (target_price, expected_return, current_price)):
+            raise ValueError(f"Estimate for {sym} produced non-finite values; try again later.")
 
         return PredictionResponse(
             symbol=sym,
@@ -292,21 +329,42 @@ class LSTMPredictionEngine:
     # ========================================================
     def _get_or_train(self, sym: str, model_type: str, closes: np.ndarray) -> Optional[Tuple[Any, Dict[str, Any]]]:
         cache_key = f"{sym}:{model_type}:{len(closes)}"
-        with self._lock:
-            cached = self._model_cache.get(cache_key)
-            if cached and (time.time() - cached[2]) < self.MODEL_TTL:
-                return cached[0], cached[1]
-        try:
-            trained = self._train_model(closes, model_type)
-        except Exception as e:  # pragma: no cover
-            print(f"[LSTM Training Error] {sym}: {e}")
+
+        def _cached():
+            with self._lock:
+                hit = self._model_cache.get(cache_key)
+                if hit and (time.time() - hit[2]) < self.MODEL_TTL:
+                    return hit[0], hit[1]
             return None
+
+        hit = _cached()
+        if hit:
+            return hit
+        with self._train_lock:
+            hit = _cached()  # another request may have trained it meanwhile
+            if hit:
+                return hit
+            try:
+                trained = self._train_model(closes, model_type)
+            except Exception as e:  # pragma: no cover
+                print(f"[LSTM Training Error] {sym}: {e}")
+                return None
         if trained is None:
             return None
         model, scale, holdout, epochs = trained
         meta = {"scale": scale, "holdout": holdout, "epochs": epochs}
         with self._lock:
-            self._model_cache[cache_key] = (model, meta, time.time())
+            now = time.time()
+            # The key includes the bar count, so yesterday's model for the same
+            # symbol would otherwise live forever next to today's.
+            prefix = f"{sym}:{model_type}:"
+            for k in [k for k, v in self._model_cache.items()
+                      if k.startswith(prefix) or now - v[2] >= self.MODEL_TTL]:
+                self._model_cache.pop(k, None)
+            self._model_cache[cache_key] = (model, meta, now)
+            while len(self._model_cache) > self.MAX_MODELS:
+                oldest = min(self._model_cache, key=lambda k: self._model_cache[k][2])
+                self._model_cache.pop(oldest, None)
         return model, meta
 
     def _train_model(self, closes: np.ndarray, model_type: str = "lstm"):

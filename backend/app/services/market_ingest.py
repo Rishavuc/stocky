@@ -111,6 +111,52 @@ CRYPTO_BASE_PRICES: Dict[str, float] = {
 }
 
 
+# ========================================================
+# INPUT LIMITS & JSON-SAFE NUMBERS
+# ========================================================
+# Real symbols use letters, digits, spaces ("NIFTY 50"), "&" ("M&M"), "-"
+# ("BAJAJ-AUTO"), "." (".NS") and "^" (Yahoo index tickers). Anything else is
+# rejected before it reaches a provider URL or a cache key.
+SYMBOL_RE = re.compile(r"^[A-Z0-9][A-Z0-9 .&\-^=/]{0,31}$")
+ALLOWED_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d", "1w", "1mo"}
+MAX_CANDLE_LIMIT = 1000
+
+# Memory guards for the 512 MB free instance.
+MAX_DYNAMIC_SYMBOLS = 25        # each one joins every batch download and tick
+MAX_DYNAMIC_MISSING = 500       # negative-lookup memo for unknown symbols
+MAX_QUOTE_CACHE = 600
+MAX_CANDLE_CACHE = 300
+PROVIDER_FAILURE_BACKOFF = 30.0  # seconds before retrying a failed provider call
+FEED_FAILURE_BACKOFF = 120.0     # FX / FII / mutual-fund feeds
+
+
+def normalize_symbol(symbol: Any) -> Optional[str]:
+    """Upper-case and validate a user-supplied symbol; None when invalid."""
+    sym = str(symbol or "").upper().strip()
+    if not sym or not SYMBOL_RE.match(sym):
+        return None
+    return sym
+
+
+def _finite(value: Any, default: float = 0.0) -> float:
+    """Float that is safe to JSON-encode (NaN/inf become ``default``)."""
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return default
+    return num if math.isfinite(num) else default
+
+
+def _prune_cache(cache: Dict[str, Any], times: Dict[str, float], max_entries: int) -> None:
+    """Drop the oldest entries once a cache grows past ``max_entries``."""
+    if len(cache) <= max_entries:
+        return
+    oldest = sorted(cache.keys(), key=lambda k: times.get(k, 0.0))
+    for key in oldest[: len(cache) - max_entries]:
+        cache.pop(key, None)
+        times.pop(key, None)
+
+
 def _stable_seed(symbol: str) -> int:
     """Deterministic 32-bit seed derived from a symbol name."""
     return int(hashlib.sha256(symbol.encode("utf-8")).hexdigest(), 16) % (2 ** 32)
@@ -233,7 +279,42 @@ class MarketIngestService:
         self._fx_cache_time: float = 0.0
         self._mf_cache: List[Dict[str, Any]] = []
         self._mf_cache_time: float = 0.0
+        self._fii_fail_time: float = 0.0
+        self._mf_fail_time: float = 0.0
         self._feed_lock = threading.RLock()
+        # Last failure time per provider cache key, so an outage costs one
+        # timeout per backoff window instead of one per request.
+        self._provider_fail_time: Dict[str, float] = {}
+        self._cache_lock = threading.RLock()
+
+    # ========================================================
+    # CACHE HELPERS
+    # ========================================================
+    def _recently_failed(self, key: str) -> bool:
+        failed_at = self._provider_fail_time.get(key)
+        return bool(failed_at) and (time.time() - failed_at) < PROVIDER_FAILURE_BACKOFF
+
+    def _mark_failed(self, key: str) -> None:
+        with self._cache_lock:
+            self._provider_fail_time[key] = time.time()
+            if len(self._provider_fail_time) > MAX_QUOTE_CACHE:
+                cutoff = time.time() - PROVIDER_FAILURE_BACKOFF
+                for k in [k for k, t in self._provider_fail_time.items() if t < cutoff]:
+                    self._provider_fail_time.pop(k, None)
+
+    def _store_quote(self, key: str, value: Any, now: float) -> None:
+        with self._cache_lock:
+            self._quote_cache[key] = value
+            self._quote_cache_time[key] = now
+            self._provider_fail_time.pop(key, None)
+            _prune_cache(self._quote_cache, self._quote_cache_time, MAX_QUOTE_CACHE)
+
+    def _store_candles(self, key: str, value: Any, now: float) -> None:
+        with self._cache_lock:
+            self._candle_cache[key] = value
+            self._candle_cache_time[key] = now
+            self._provider_fail_time.pop(key, None)
+            _prune_cache(self._candle_cache, self._candle_cache_time, MAX_CANDLE_CACHE)
 
     # ========================================================
     # DYNAMIC VERIFIED SYMBOL DISCOVERY
@@ -265,7 +346,7 @@ class MarketIngestService:
         Returns None when no provider can verify the symbol, so callers can
         return 404/422 rather than fabricate a quote or candle series.
         """
-        if not sym or sym in CURRENCIES_MAP:
+        if not sym or sym in CURRENCIES_MAP or not SYMBOL_RE.match(sym):
             return None
         if sym in INDIAN_STOCKS_MAP:
             return INDIAN_STOCKS_MAP[sym]
@@ -286,11 +367,15 @@ class MarketIngestService:
             missing_at = self._dynamic_missing.get(sym)
             if missing_at and (time.time() - missing_at) < 300:
                 return None
+            # Every dynamic symbol joins the universe batch download and the
+            # websocket tick, so the set is capped to protect the instance.
+            if len(self._dynamic_symbols) >= MAX_DYNAMIC_SYMBOLS:
+                return None
 
             for candidate in self._candidate_yfinance_tickers(sym):
                 try:
                     df = yf.Ticker(candidate).history(
-                        period="5d", interval="1d"
+                        period="5d", interval="1d", timeout=8
                     ).dropna(subset=["Close"])
                     if df.empty:
                         continue
@@ -316,7 +401,15 @@ class MarketIngestService:
                 except Exception:
                     continue
 
-            self._dynamic_missing[sym] = time.time()
+            now = time.time()
+            if len(self._dynamic_missing) >= MAX_DYNAMIC_MISSING:
+                for k in [k for k, t in self._dynamic_missing.items() if now - t >= 300]:
+                    self._dynamic_missing.pop(k, None)
+                if len(self._dynamic_missing) >= MAX_DYNAMIC_MISSING:
+                    oldest = sorted(self._dynamic_missing, key=self._dynamic_missing.get)
+                    for k in oldest[: len(oldest) // 2]:
+                        self._dynamic_missing.pop(k, None)
+            self._dynamic_missing[sym] = now
             return None
 
     # ========================================================
@@ -328,61 +421,75 @@ class MarketIngestService:
         now = time.time()
         if cache_key in self._quote_cache and (now - self._quote_cache_time.get(cache_key, 0)) < self._cache_ttl:
             return self._quote_cache[cache_key]
+        if not re.fullmatch(r"[A-Z0-9]{2,20}", pair or "") or self._recently_failed(cache_key):
+            return self._quote_cache.get(cache_key)
 
         try:
-            url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={pair}"
+            url = "https://api.binance.com/api/v3/ticker/24hr?" + urllib.parse.urlencode({"symbol": pair})
             headers = {}
             if self.binance_key:
                 headers["X-MBX-APIKEY"] = self.binance_key
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                self._quote_cache[cache_key] = data
-                self._quote_cache_time[cache_key] = now
-                return data
+            if not isinstance(data, dict) or not math.isfinite(_finite(data.get("lastPrice"), float("nan"))):
+                raise ValueError("unexpected ticker payload")
+            self._store_quote(cache_key, data, now)
+            return data
         except Exception as e:
             print(f"[Binance Ticker Error] {pair}: {e}")
+            self._mark_failed(cache_key)
             return self._quote_cache.get(cache_key)
 
     def fetch_binance_candles(self, pair: str = "BTCUSDT", interval: str = "1d", limit: int = 30) -> List[CandleResponse]:
         """Fetch real live candlestick data from Binance API"""
-        cache_key = f"binance_candles_{pair}_{interval}_{limit}"
-        now = time.time()
-        if cache_key in self._candle_cache and (now - self._candle_cache_time.get(cache_key, 0)) < 60.0:
-            return self._candle_cache[cache_key]
-
+        limit = max(1, min(int(limit or 30), MAX_CANDLE_LIMIT))
         binance_interval_map = {
             "1m": "1m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h",
             "1d": "1d", "1w": "1w"
         }
         b_interval = binance_interval_map.get(interval, "1d")
+        # Fetch in a few fixed sizes and slice, so arbitrary ``limit`` values
+        # cannot create an unbounded number of cache entries.
+        fetch_limit = next(n for n in (100, 500, MAX_CANDLE_LIMIT) if n >= limit)
+        cache_key = f"binance_candles_{pair}_{b_interval}_{fetch_limit}"
+        now = time.time()
+        if cache_key in self._candle_cache and (now - self._candle_cache_time.get(cache_key, 0)) < 60.0:
+            return self._candle_cache[cache_key][-limit:]
+        if not re.fullmatch(r"[A-Z0-9]{2,20}", pair or "") or self._recently_failed(cache_key):
+            return self._candle_cache.get(cache_key, [])[-limit:]
 
         try:
-            url = f"https://api.binance.com/api/v3/klines?symbol={pair}&interval={b_interval}&limit={limit}"
+            url = "https://api.binance.com/api/v3/klines?" + urllib.parse.urlencode(
+                {"symbol": pair, "interval": b_interval, "limit": fetch_limit}
+            )
             headers = {}
             if self.binance_key:
                 headers["X-MBX-APIKEY"] = self.binance_key
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=5) as resp:
                 klines = json.loads(resp.read().decode("utf-8"))
-                candles = []
-                for k in klines:
-                    time_str = datetime.utcfromtimestamp(k[0] / 1000).strftime("%Y-%m-%d %H:%M" if interval != "1d" else "%Y-%m-%d")
-                    candles.append(CandleResponse(
-                        time=time_str,
-                        open=round(float(k[1]), 2),
-                        high=round(float(k[2]), 2),
-                        low=round(float(k[3]), 2),
-                        close=round(float(k[4]), 2),
-                        volume=round(float(k[5]), 2),
-                        source="binance_live",
-                    ))
-                self._candle_cache[cache_key] = candles
-                self._candle_cache_time[cache_key] = now
-                return candles
+            candles = []
+            for k in klines:
+                close = _finite(k[4], float("nan"))
+                if not math.isfinite(close):
+                    continue
+                time_str = datetime.utcfromtimestamp(k[0] / 1000).strftime("%Y-%m-%d %H:%M" if b_interval != "1d" else "%Y-%m-%d")
+                candles.append(CandleResponse(
+                    time=time_str,
+                    open=round(_finite(k[1], close), 2),
+                    high=round(_finite(k[2], close), 2),
+                    low=round(_finite(k[3], close), 2),
+                    close=round(close, 2),
+                    volume=round(_finite(k[5]), 2),
+                    source="binance_live",
+                ))
+            self._store_candles(cache_key, candles, now)
+            return candles[-limit:]
         except Exception as e:
             print(f"[Binance Candles Error] {pair}: {e}")
-            return self._candle_cache.get(cache_key, [])
+            self._mark_failed(cache_key)
+            return self._candle_cache.get(cache_key, [])[-limit:]
 
     def get_binance_account_status(self) -> Dict[str, Any]:
         """Verify authenticated Binance account using HMAC-SHA256 signature"""
@@ -419,6 +526,12 @@ class MarketIngestService:
 
     def set_kite_access_token(self, access_token: str):
         """Set active Kite access token and persist to .env"""
+        token = str(access_token or "")
+        # Validated here, in the writer itself: a newline would inject extra
+        # .env lines (e.g. JWT_SECRET_KEY=...) and backslashes broke re.sub.
+        if not re.fullmatch(r"[A-Za-z0-9]{8,128}", token):
+            raise ValueError("Invalid Kite access token format")
+        access_token = token
         self.kite_access_token = access_token
         if self.kite_client:
             try:
@@ -431,9 +544,13 @@ class MarketIngestService:
             if os.path.exists(env_path):
                 with open(env_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                import re
-                if "KITE_ACCESS_TOKEN=" in content:
-                    content = re.sub(r"KITE_ACCESS_TOKEN=.*", f"KITE_ACCESS_TOKEN={access_token}", content)
+                if re.search(r"(?m)^KITE_ACCESS_TOKEN=", content):
+                    # Lambda replacement: the token is inserted literally.
+                    content = re.sub(
+                        r"(?m)^KITE_ACCESS_TOKEN=.*",
+                        lambda _m: f"KITE_ACCESS_TOKEN={access_token}",
+                        content,
+                    )
                 else:
                     content += f"\nKITE_ACCESS_TOKEN={access_token}\n"
                 with open(env_path, "w", encoding="utf-8") as f:
@@ -506,8 +623,7 @@ class MarketIngestService:
                     source="kite_live",
                     as_of=datetime.utcnow(),
                 )
-                self._quote_cache[cache_key] = q
-                self._quote_cache_time[cache_key] = now
+                self._store_quote(cache_key, q, now)
                 return q
         except Exception as e:
             # Token might be expired or symbol format differs
@@ -564,8 +680,7 @@ class MarketIngestService:
                         volume=round(float(r["volume"]), 2),
                         source="kite_live",
                     ))
-                self._candle_cache[cache_key] = candles
-                self._candle_cache_time[cache_key] = now
+                self._store_candles(cache_key, candles, now)
                 return candles
         except Exception as e:
             print(f"[Kite Candles Error] {symbol}: {e}")
@@ -582,13 +697,19 @@ class MarketIngestService:
 
         if not YFINANCE_AVAILABLE:
             return None
+        if self._recently_failed(cache_key):
+            return self._quote_cache.get(cache_key)
 
         try:
             ticker = yf.Ticker(ticker_sym)
-            daily = ticker.history(period="5d", interval="1d").dropna(subset=["Close"])
-            intraday = ticker.history(period="1d", interval="1m").dropna(subset=["Close"])
+            daily = ticker.history(period="5d", interval="1d", timeout=8).dropna(subset=["Close"])
+            intraday = (
+                ticker.history(period="1d", interval="1m", timeout=8).dropna(subset=["Close"])
+                if intraday else daily.iloc[0:0]
+            )
             if daily.empty and intraday.empty:
-                return None
+                self._mark_failed(cache_key)
+                return self._quote_cache.get(cache_key)
 
             # Prefer the newest verified intraday close; fall back to daily EOD.
             source = "yfinance_delayed" if not intraday.empty else "yfinance_eod"
@@ -605,8 +726,11 @@ class MarketIngestService:
                 prev = df.iloc[-2] if len(df) > 1 else latest
                 prev_close = round(float(prev["Close"]), 2)
 
-            price = round(float(latest["Close"]), 2)
-            change = round(price - prev_close, 2)
+            price = round(_finite(latest["Close"]), 2)
+            prev_close = _finite(prev_close)
+            if price <= 0:
+                raise ValueError("non-positive close")
+            change = round(price - prev_close, 2) if prev_close else 0.0
             change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
             q = QuoteResponse(
@@ -615,57 +739,70 @@ class MarketIngestService:
                 price=price,
                 change=change,
                 change_pct=change_pct,
-                high_24h=round(float(latest.get("High", price)), 2),
-                low_24h=round(float(latest.get("Low", price)), 2),
-                volume=int(latest.get("Volume", 0) or 0),
+                high_24h=round(_finite(latest.get("High", price), price), 2),
+                low_24h=round(_finite(latest.get("Low", price), price), 2),
+                volume=int(_finite(latest.get("Volume", 0))),
                 timestamp=datetime.utcnow(),
                 source=source,
                 as_of=datetime.utcnow(),
             )
-            self._quote_cache[cache_key] = q
-            self._quote_cache_time[cache_key] = now
+            self._store_quote(cache_key, q, now)
             return q
         except Exception as e:
             print(f"[YFinance Quote Error] {symbol} ({ticker_sym}): {e}")
+            self._mark_failed(cache_key)
             return self._quote_cache.get(cache_key)
 
     def fetch_yfinance_candles(self, ticker_sym: str, timeframe: str = "1d", limit: int = 30) -> List[CandleResponse]:
-        cache_key = f"yf_candles_{ticker_sym}_{timeframe}_{limit}"
+        limit = max(1, min(int(limit or 30), MAX_CANDLE_LIMIT))
+        # One cache entry per (ticker, timeframe) holding the whole fetched
+        # period; callers get a slice. Keying on ``limit`` let a client fill
+        # memory by walking limit=1..1000.
+        cache_key = f"yf_candles_{ticker_sym}_{timeframe}"
         now = time.time()
         if cache_key in self._candle_cache and (now - self._candle_cache_time.get(cache_key, 0)) < 120.0:
-            return self._candle_cache[cache_key]
+            return self._candle_cache[cache_key][-limit:]
 
         if not YFINANCE_AVAILABLE:
             return []
+        if self._recently_failed(cache_key):
+            return self._candle_cache.get(cache_key, [])[-limit:]
 
         try:
-            period_map = {"1d": "2y", "1w": "5y", "1mo": "5y", "5m": "5d", "15m": "1mo", "1h": "1mo"}
+            period_map = {"1d": "2y", "1w": "5y", "1mo": "5y", "1m": "5d", "5m": "5d",
+                          "15m": "1mo", "1h": "1mo", "4h": "3mo"}
             yf_period = period_map.get(timeframe, "3mo")
-            yf_interval = "1d" if timeframe in ["1d", "1w", "1mo"] else timeframe
+            # Yahoo has no 4h bars; 1h keeps the request valid.
+            yf_interval = "1d" if timeframe in ["1d", "1w", "1mo"] else ("1h" if timeframe == "4h" else timeframe)
 
             ticker = yf.Ticker(ticker_sym)
-            df = ticker.history(period=yf_period, interval=yf_interval).dropna(subset=["Close"])
+            df = ticker.history(period=yf_period, interval=yf_interval, timeout=8).dropna(subset=["Close"])
             if df.empty:
-                return []
+                self._mark_failed(cache_key)
+                return self._candle_cache.get(cache_key, [])[-limit:]
 
             candles = []
-            for idx, row in df.tail(limit).iterrows():
+            for idx, row in df.tail(MAX_CANDLE_LIMIT).iterrows():
+                close = _finite(row["Close"], float("nan"))
+                if not math.isfinite(close) or close <= 0:
+                    continue
                 time_str = idx.strftime("%Y-%m-%d %H:%M" if "m" in yf_interval or "h" in yf_interval else "%Y-%m-%d")
                 candles.append(CandleResponse(
                     time=time_str,
-                    open=round(float(row["Open"]), 2),
-                    high=round(float(row["High"]), 2),
-                    low=round(float(row["Low"]), 2),
-                    close=round(float(row["Close"]), 2),
-                    volume=round(float(row.get("Volume", 0)), 2),
+                    open=round(_finite(row.get("Open"), close), 2),
+                    high=round(_finite(row.get("High"), close), 2),
+                    low=round(_finite(row.get("Low"), close), 2),
+                    close=round(close, 2),
+                    volume=round(_finite(row.get("Volume", 0)), 2),
                     source="yfinance_delayed" if yf_interval != "1d" else "yfinance_eod",
                 ))
-            self._candle_cache[cache_key] = candles
-            self._candle_cache_time[cache_key] = now
-            return candles
+            del df
+            self._store_candles(cache_key, candles, now)
+            return candles[-limit:]
         except Exception as e:
             print(f"[YFinance Candles Error] {ticker_sym}: {e}")
-            return self._candle_cache.get(cache_key, [])
+            self._mark_failed(cache_key)
+            return self._candle_cache.get(cache_key, [])[-limit:]
 
     def fetch_yfinance_universe_batch(self, force: bool = False) -> Dict[str, QuoteResponse]:
         """Fetch verified batched EOD quotes for catalog and dynamic symbols.
@@ -682,7 +819,11 @@ class MarketIngestService:
 
         with self._batch_lock:
             now = time.time()
-            if not force and self._universe_batch and (now - self._universe_batch_time) < self._batch_ttl:
+            # No ``self._universe_batch`` truthiness check here: when Yahoo is
+            # down the batch stays empty, and every get_quote() in a 100-symbol
+            # loop used to start a fresh full-universe download. The reserved
+            # refresh time below doubles as the failure backoff.
+            if not force and (now - self._universe_batch_time) < self._batch_ttl:
                 return self._universe_batch
             # Reserve the refresh window before the slow network call so parallel
             # ticks do not launch duplicate downloads.
@@ -721,6 +862,7 @@ class MarketIngestService:
                     progress=False,
                     threads=True,
                     auto_adjust=False,
+                    timeout=10,
                 )
             except Exception as e:
                 print(f"[YFinance Daily Batch Error]: {e}")
@@ -733,8 +875,10 @@ class MarketIngestService:
                     if series is None or series.empty:
                         continue
 
-                    price = round(float(series.iloc[-1]), 2)
-                    prev_close = round(float(series.iloc[-2]), 2) if len(series) > 1 else price
+                    price = round(_finite(series.iloc[-1]), 2)
+                    if price <= 0:
+                        continue
+                    prev_close = round(_finite(series.iloc[-2], price), 2) if len(series) > 1 else price
                     change = round(price - prev_close, 2)
                     change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
@@ -754,14 +898,14 @@ class MarketIngestService:
                         price=price,
                         change=change,
                         change_pct=change_pct,
-                        high_24h=round(float(highs.iloc[-1]), 2) if len(highs) else price,
-                        low_24h=round(float(lows.iloc[-1]), 2) if len(lows) else price,
-                        volume=float(vols.iloc[-1]) if len(vols) else 0.0,
+                        high_24h=round(_finite(highs.iloc[-1], price), 2) if len(highs) else price,
+                        low_24h=round(_finite(lows.iloc[-1], price), 2) if len(lows) else price,
+                        volume=_finite(vols.iloc[-1]) if len(vols) else 0.0,
                         timestamp=datetime.utcnow(),
                         source="yfinance_eod",
                         as_of=datetime.utcnow(),
                     )
-                    spark = [round(float(s), 2) for s in series.tail(12)]
+                    spark = [round(_finite(v, price), 2) for v in series.tail(12)]
                     if spark:
                         self._universe_sparklines[sym] = spark
                         self._universe_sparkline_times[sym] = [
@@ -770,18 +914,23 @@ class MarketIngestService:
                 except Exception:
                     continue
 
+            del daily
             if out:
                 self._universe_batch = out
                 for sym, q in out.items():
-                    self._quote_cache[f"yf_quote_{sym}"] = q
-                    self._quote_cache_time[f"yf_quote_{sym}"] = now
+                    self._store_quote(f"yf_quote_{sym}", q, now)
+            else:
+                # Retry sooner than the full TTL, but never once per caller.
+                self._universe_batch_time = now - self._batch_ttl + PROVIDER_FAILURE_BACKOFF
             return self._universe_batch
 
     # ========================================================
     # UNIFIED PUBLIC METHODS
     # ========================================================
     def get_quote(self, symbol: str, prefer_intraday: bool = False) -> Optional[QuoteResponse]:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            return None
 
         # 1. Primary for Indian Equities / Indices: Zerodha Kite Connect API
         if (sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP) and self.kite_access_token:
@@ -808,11 +957,11 @@ class MarketIngestService:
             pair = info["pair"] if info else sym
             b_data = self.fetch_binance_ticker(pair)
             if b_data:
-                usdt_price = float(b_data["lastPrice"])
-                high_usdt = float(b_data["highPrice"])
-                low_usdt = float(b_data["lowPrice"])
-                change_pct = round(float(b_data["priceChangePercent"]), 2)
-                vol = float(b_data["volume"])
+                usdt_price = _finite(b_data.get("lastPrice"))
+                high_usdt = _finite(b_data.get("highPrice"), usdt_price)
+                low_usdt = _finite(b_data.get("lowPrice"), usdt_price)
+                change_pct = round(_finite(b_data.get("priceChangePercent")), 2)
+                vol = _finite(b_data.get("volume"))
 
                 is_inr = sym.endswith("INR") or (info and info["quote"] == "INR")
                 multiplier = USD_INR_RATE if is_inr else 1.0
@@ -847,6 +996,10 @@ class MarketIngestService:
         #    intraday history so its price keeps moving during market hours.
         if sym not in INDIAN_STOCKS_MAP and sym not in INDICES_MAP:
             meta = self._dynamic_symbols.get(sym) or self._ensure_dynamic_symbol(sym)
+            if meta and not prefer_intraday and sym in self._universe_batch:
+                # Bulk callers (catalog, ticks, breadth) reuse the batched EOD
+                # quote instead of two Yahoo requests per dynamic symbol.
+                return self._universe_batch[sym]
             if meta:
                 dynamic_quote = self.fetch_yfinance_quote(sym, meta["ticker"], meta["name"])
                 if dynamic_quote:
@@ -892,7 +1045,12 @@ class MarketIngestService:
         )
 
     def get_candles(self, symbol: str, timeframe: str = "1d", limit: int = 30) -> List[CandleResponse]:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            return []
+        if timeframe not in ALLOWED_TIMEFRAMES:
+            timeframe = "1d"
+        limit = max(1, min(int(limit or 30), MAX_CANDLE_LIMIT))
         known = (sym in INDIAN_STOCKS_MAP or sym in INDICES_MAP
                  or sym in CRYPTO_MAP or sym in CURRENCIES_MAP
                  or sym in self._dynamic_symbols
@@ -913,7 +1071,9 @@ class MarketIngestService:
         # 2. Crypto Candles (Binance API)
         if sym in CRYPTO_MAP or sym.endswith("USDT") or sym.endswith("INR"):
             info = CRYPTO_MAP.get(sym)
-            pair = info["pair"] if info else ("BTCUSDT" if "BTC" in sym else "ETHUSDT")
+            # Unknown pairs are fetched as themselves. The old fallback served
+            # ETH (or BTC) history under any unrecognised *USDT symbol.
+            pair = info["pair"] if info else sym
             b_candles = self.fetch_binance_candles(pair, timeframe, limit)
             if b_candles:
                 is_inr = sym.endswith("INR") or (info and info["quote"] == "INR")
@@ -1049,7 +1209,7 @@ class MarketIngestService:
         return rows
 
     @staticmethod
-    def _fetch_text(url: str, timeout: float = 20.0) -> str:
+    def _fetch_text(url: str, timeout: float = 8.0) -> str:
         req = urllib.request.Request(url, headers={
             "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"),
@@ -1059,7 +1219,7 @@ class MarketIngestService:
             return resp.read().decode("utf-8", "replace")
 
     @classmethod
-    def _fetch_json(cls, url: str, timeout: float = 20.0) -> Any:
+    def _fetch_json(cls, url: str, timeout: float = 8.0) -> Any:
         return json.loads(cls._fetch_text(url, timeout))
 
     @staticmethod
@@ -1125,12 +1285,19 @@ class MarketIngestService:
         with self._feed_lock:
             if self._fii_cache and (time.time() - self._fii_cache_time) < 900:
                 return dict(self._fii_cache)
-        data = self._fetch_fii_dii()
+            recently_failed = (time.time() - self._fii_fail_time) < FEED_FAILURE_BACKOFF
+        data = None if recently_failed else self._fetch_fii_dii()
         if data:
             with self._feed_lock:
                 self._fii_cache = data
                 self._fii_cache_time = time.time()
             return dict(data)
+        if not recently_failed:
+            with self._feed_lock:
+                self._fii_fail_time = time.time()
+        if self._fii_cache:
+            # Stale but verified beats "unavailable".
+            return dict(self._fii_cache)
         return {
             "available": False,
             "message": "FII / DII feed unavailable right now",
@@ -1195,13 +1362,21 @@ class MarketIngestService:
     def get_currencies_catalog(self) -> List[Dict[str, Any]]:
         """Return live FX crosses; never show fabricated static rates."""
         with self._feed_lock:
-            if self._fx_cache and (time.time() - self._fx_cache_time) < 1800:
+            age = time.time() - self._fx_cache_time
+            # Empty results are cached for a short backoff; previously an empty
+            # cache meant two 20s HTTP calls on every websocket tick.
+            if age < (1800 if self._fx_cache else FEED_FAILURE_BACKOFF):
                 return [dict(x) for x in self._fx_cache]
+            self._fx_cache_time = time.time()  # reserve: one refresh at a time
         rows = self._fetch_forex_rates()
         with self._feed_lock:
-            self._fx_cache = rows
+            if rows:
+                self._fx_cache = rows
             self._fx_cache_time = time.time()
-        return [dict(x) for x in rows]
+            if not rows and self._fx_cache:
+                # Keep the stale verified rows but retry after the backoff.
+                self._fx_cache_time = time.time() - 1800 + FEED_FAILURE_BACKOFF
+            return [dict(x) for x in self._fx_cache]
 
     def get_usd_inr_rate(self) -> Optional[float]:
         """Return a verified USD/INR rate from FX or Binance cross-rates."""
@@ -1223,6 +1398,8 @@ class MarketIngestService:
         except Exception as e:
             print(f"[Mutual Fund {code} Warning]: {e}")
             return None
+        if not isinstance(payload, dict):
+            return None
         meta = payload.get("meta") or {}
         series: List[tuple] = []
         for item in payload.get("data") or []:
@@ -1230,6 +1407,8 @@ class MarketIngestService:
                 day = datetime.strptime(item["date"], "%d-%m-%Y").date()
                 nav = float(item["nav"])
             except (KeyError, TypeError, ValueError):
+                continue
+            if not math.isfinite(nav) or nav <= 0:
                 continue
             series.append((day, nav))
         if not series:
@@ -1269,19 +1448,26 @@ class MarketIngestService:
         with self._feed_lock:
             if self._mf_cache and (time.time() - self._mf_cache_time) < 1800:
                 return [dict(x) for x in self._mf_cache]
+            if (time.time() - self._mf_fail_time) < FEED_FAILURE_BACKOFF:
+                return [dict(x) for x in self._mf_cache]
+            self._mf_fail_time = time.time()  # reserve: one refresh at a time
         with ThreadPoolExecutor(max_workers=5) as pool:
             rows = list(pool.map(self._fetch_mutual_fund, MUTUAL_FUND_SCHEMES))
         clean = [r for r in rows if r]
         clean.sort(key=lambda r: r["return_1y"], reverse=True)
         with self._feed_lock:
-            self._mf_cache = clean
-            self._mf_cache_time = time.time()
-        return [dict(x) for x in clean]
+            if clean:
+                self._mf_cache = clean
+                self._mf_cache_time = time.time()
+                self._mf_fail_time = 0.0
+            return [dict(x) for x in self._mf_cache]
 
     def get_mutual_fund(self, code: Any) -> Optional[Dict[str, Any]]:
         try:
             code_int = int(code)
         except (TypeError, ValueError):
+            return None
+        if not 0 < code_int < 10_000_000:  # AMFI scheme codes are <= 6 digits
             return None
         for row in self.get_mutual_funds_catalog():
             if row.get("scheme_code") == code_int:
@@ -1315,7 +1501,7 @@ class MarketIngestService:
         return out
 
     def search_mutual_funds(self, query: str) -> List[Dict[str, Any]]:
-        q = (query or "").strip()
+        q = (query or "").strip()[:64]
         if not q:
             return []
         try:
@@ -1332,8 +1518,10 @@ class MarketIngestService:
             return []
 
     def search_instruments(self, query: str) -> List[Dict]:
-        q = query.upper().strip()
+        q = (query or "").upper().strip()[:32]
         results = []
+        if not q:
+            return results
         # Search Indian Stocks
         for sym, item in INDIAN_STOCKS_MAP.items():
             if q in sym or q in item["name"].upper():
@@ -1371,7 +1559,7 @@ class MarketIngestService:
 
         # On-demand verified symbol: any real ticker not in the static catalog.
         exact = {item["symbol"].upper() for item in results}
-        if len(q) >= 2 and q not in exact:
+        if len(q) >= 2 and q not in exact and normalize_symbol(q):
             meta = self._ensure_dynamic_symbol(q)
             if meta:
                 quote = self.fetch_yfinance_quote(q, meta["ticker"], meta["name"])
