@@ -74,6 +74,14 @@ def _finite(value):
     return value
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Last resort: log the type server-side, return JSON (the frontend parses
+    # every error body) and never leak the exception text to the client.
+    print(f"[Unhandled] {request.method} {request.url.path}: {type(exc).__name__}")
+    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     # Same 422 shape as FastAPI's default, minus the echoed raw input: it can

@@ -577,7 +577,9 @@ async def get_user_activity(
     # current_user_id verifies the signed token, so a user can only ever
     # read their own trail (IPs and user agents included).
     limit = max(1, min(limit, 200))
-    offset = max(0, offset)
+    # Upper bound too: SQLite/Postgres OFFSET must fit in int64, and a
+    # bigger value crashed the query with OverflowError (HTTP 500).
+    offset = max(0, min(offset, 1_000_000))
 
     stmt = (
         select(UserActivity)

@@ -78,6 +78,13 @@ with TestClient(m.app) as c:
     r = c.get("/v1/quotes/%5ENSEI")
     check("^NSEI not rejected as invalid symbol", r.status_code != 422, r.status_code)
 
+# 7b. Huge pagination offset is clamped, not a 500.
+with TestClient(m.app, raise_server_exceptions=False) as c:
+    tok = c.post("/v1/auth/login", json={"username_or_email": "demo", "password": "demo"},
+                 headers={"X-Forwarded-For": "192.0.2.90"}).json()["access_token"]
+    r = c.get("/v1/auth/activity?offset=9223372036854775808", headers={"Authorization": f"Bearer {tok}"})
+    check("huge activity offset no 500", r.status_code == 200, r.status_code)
+
 # 8. Google sign-in disables a password someone else pre-registered.
 import app.routes.auth as auth
 auth.google_id_token.verify_oauth2_token = lambda cred, req, aud: {
