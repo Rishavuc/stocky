@@ -715,9 +715,9 @@ class MarketIngestService:
 
         try:
             ticker = yf.Ticker(ticker_sym)
-            daily = ticker.history(period="5d", interval="1d", timeout=8).dropna(subset=["Close"])
+            daily = ticker.history(period="5d", interval="1d", timeout=8, auto_adjust=False).dropna(subset=["Close"])
             intraday = (
-                ticker.history(period="1d", interval="1m", timeout=8).dropna(subset=["Close"])
+                ticker.history(period="1d", interval="1m", timeout=8, auto_adjust=False).dropna(subset=["Close"])
                 if intraday else daily.iloc[0:0]
             )
             if daily.empty and intraday.empty:
@@ -789,7 +789,10 @@ class MarketIngestService:
             yf_interval = "1d" if timeframe in ["1d", "1w", "1mo"] else ("1h" if timeframe == "4h" else timeframe)
 
             ticker = yf.Ticker(ticker_sym)
-            df = ticker.history(period=yf_period, interval=yf_interval, timeout=8).dropna(subset=["Close"])
+            # Unadjusted, like the quote path, so 52-week high/low and the live price
+            # are on the same basis (dividend-adjusted history made the range
+            # position exceed 0-100%).
+            df = ticker.history(period=yf_period, interval=yf_interval, timeout=8, auto_adjust=False).dropna(subset=["Close"])
             if df.empty:
                 self._mark_failed(cache_key)
                 return self._candle_cache.get(cache_key, [])[-limit:]
@@ -977,7 +980,7 @@ class MarketIngestService:
                 vol = _finite(b_data.get("volume"))
 
                 is_inr = sym.endswith("INR") or (info and info["quote"] == "INR")
-                multiplier = USD_INR_RATE if is_inr else 1.0
+                multiplier = self.usd_inr_or_fallback() if is_inr else 1.0
 
                 price = round(usdt_price * multiplier, 2)
                 high = round(high_usdt * multiplier, 2)
@@ -1091,15 +1094,16 @@ class MarketIngestService:
             if b_candles:
                 is_inr = sym.endswith("INR") or (info and info["quote"] == "INR")
                 if is_inr:
-                    # Convert USDT to INR
+                    # Convert USDT to INR at the same live rate quotes use.
+                    fx = self.usd_inr_or_fallback()
                     inr_candles = []
                     for c in b_candles:
                         inr_candles.append(CandleResponse(
                             time=c.time,
-                            open=round(c.open * USD_INR_RATE, 2),
-                            high=round(c.high * USD_INR_RATE, 2),
-                            low=round(c.low * USD_INR_RATE, 2),
-                            close=round(c.close * USD_INR_RATE, 2),
+                            open=round(c.open * fx, 2),
+                            high=round(c.high * fx, 2),
+                            low=round(c.low * fx, 2),
+                            close=round(c.close * fx, 2),
                             volume=c.volume,
                             source="binance_live",
                         ))
@@ -1392,18 +1396,25 @@ class MarketIngestService:
             return [dict(x) for x in self._fx_cache]
 
     def get_usd_inr_rate(self) -> Optional[float]:
-        """Return a verified USD/INR rate from FX or Binance cross-rates."""
-        for row in self.get_currencies_catalog():
-            if row.get("symbol") == "USDINR" and row.get("price"):
-                return float(row["price"])
+        """Return a verified USD/INR rate from the FX feed, else None.
+
+        There is no Binance cross-rate fallback: BTCINR is itself derived from
+        BTCUSDT times this rate, so BTCINR / BTCUSDT would just hand back the
+        fallback constant labelled as verified (and would recurse).
+        """
         try:
-            inr = self.get_quote("BTCINR")
-            usdt = self.get_quote("BTCUSDT")
-            if inr and usdt and usdt.price and not inr.is_synthetic and not usdt.is_synthetic:
-                return float(inr.price) / float(usdt.price)
+            for row in self.get_currencies_catalog():
+                if row.get("symbol") == "USDINR" and row.get("price"):
+                    rate = float(row["price"])
+                    if math.isfinite(rate) and rate > 0:
+                        return rate
         except Exception:
             pass
         return None
+
+    def usd_inr_or_fallback(self) -> float:
+        """Live USD/INR for conversions, else the fixed USD_INR_RATE."""
+        return self.get_usd_inr_rate() or USD_INR_RATE
 
     def _fetch_mutual_fund(self, code: int) -> Optional[Dict[str, Any]]:
         try:

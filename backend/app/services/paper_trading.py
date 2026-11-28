@@ -205,9 +205,13 @@ class PaperTradingEngine:
             if not self._limit_reached(order["side"], ltp, order["price"]):
                 still_pending.append(order)
                 continue
+            # A limit fills at the limit OR BETTER: if the market gapped
+            # through it (buy limit 95, price now 80), the fill is at 80.
+            limit_price = order["price"]
+            fill_price = min(ltp, limit_price) if order["side"] == "BUY" else max(ltp, limit_price)
             try:
                 self._fill(order["symbol"], order["side"], order["product"], order["qty"],
-                           order["price"], status="EXECUTED", order_type="LIMIT")
+                           fill_price, status="EXECUTED", order_type="LIMIT")
             except ValueError as e:
                 self.orders.insert(0, {**order, "status": "REJECTED", "reason": str(e), "pnl": None,
                                        "time": datetime.utcnow().strftime("%I:%M %p")})

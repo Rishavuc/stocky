@@ -135,9 +135,8 @@ class AnalysisEngine:
         lows = [float(c.low) for c in candles]
         volumes = [float(c.volume) for c in candles]
 
-        is_crypto = ("USDT" in sym or sym.endswith("INR")
-                     or sym.startswith("BTC") or sym.startswith("ETH") or sym.startswith("SOL"))
-        curr = "$" if is_crypto else "₹"
+        # Only USDT pairs are priced in dollars; INR crypto pairs are rupees.
+        curr = "$" if sym.endswith("USDT") else "₹"
 
         # ---- RSI (14, Wilder) ----
         rsi_val = round(_rsi_wilder(closes, 14), 1)

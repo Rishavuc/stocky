@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from app.services.market_ingest import market_ingest, normalize_symbol
+from app.services.market_ingest import market_ingest, normalize_symbol, CRYPTO_MAP
 from app.schemas.schemas import PredictionResponse, PredictionPoint
 
 # ----- Optional PyTorch (real neural network) -----
@@ -54,8 +54,17 @@ except Exception:  # pragma: no cover - environment without torch
 QUANTILES = (0.1, 0.5, 0.9)
 
 
-def _business_days(last_date: Optional[str], horizon: int) -> List[str]:
-    """Return ISO business-day labels starting after the last historical bar."""
+def _trades_24x7(sym: str) -> bool:
+    """Crypto pairs trade every day, so their forecast steps are calendar days."""
+    return sym in CRYPTO_MAP or sym.endswith("USDT")
+
+
+def _business_days(last_date: Optional[str], horizon: int, every_day: bool = False) -> List[str]:
+    """Return ISO date labels starting after the last historical bar.
+
+    Stocks step over weekends (one step = one trading day). Crypto bars are
+    24/7, so with every_day=True each step is one calendar day.
+    """
     try:
         current = datetime.strptime(last_date[:10], "%Y-%m-%d") if last_date else datetime.utcnow()
     except (ValueError, TypeError):
@@ -63,7 +72,7 @@ def _business_days(last_date: Optional[str], horizon: int) -> List[str]:
     dates = []
     while len(dates) < horizon:
         current += timedelta(days=1)
-        if current.weekday() < 5:
+        if every_day or current.weekday() < 5:
             dates.append(current.strftime("%Y-%m-%d"))
     return dates
 
@@ -508,7 +517,7 @@ class LSTMPredictionEngine:
         cum_log = 0.0
         cum_var = 0.0
         points: List[PredictionPoint] = []
-        forecast_dates = _business_days(times[-1] if times else None, horizon)
+        forecast_dates = _business_days(times[-1] if times else None, horizon, every_day=_trades_24x7(sym))
 
         for step in range(1, horizon + 1):
             q = self._predict_quantiles(model, np.array(recent[-self.WINDOW:]))[0] * scale
@@ -578,11 +587,11 @@ class LSTMPredictionEngine:
 
         # Quantile path from empirical h-step return distribution
         last_price = current_price
-        forecast_dates = _business_days(times[-1] if times else None, horizon)
+        forecast_dates = _business_days(times[-1] if times else None, horizon, every_day=_trades_24x7(sym))
         points: List[PredictionPoint] = []
         for step in range(1, horizon + 1):
             if len(returns) > step + 5:
-                h_returns = np.array([returns[i:i + step].sum() for i in range(0, len(returns) - step)])
+                h_returns = np.array([returns[i:i + step].sum() for i in range(0, len(returns) - step + 1)])
                 q10, q50, q90 = np.percentile(h_returns, [10, 50, 90])
             else:
                 drift = float(np.median(returns))
@@ -637,7 +646,8 @@ class LSTMPredictionEngine:
 
         avg_correct = float(np.mean(correct_moves)) if correct_moves else 0.0
         avg_wrong = float(np.mean(wrong_moves)) if wrong_moves else 0.0
-        win_loss = round(avg_correct / avg_wrong, 2) if avg_wrong > 0 else float(max(1.0, len(correct_moves)))
+        # No wrong calls means the ratio is undefined (it used to report the win count).
+        win_loss = round(avg_correct / avg_wrong, 2) if avg_wrong > 0 else None
 
         strat = np.array(strat_returns, dtype=np.float64)
         if len(strat) > 1 and np.std(strat) > 0:
@@ -658,10 +668,9 @@ class LSTMPredictionEngine:
             "baseline_moving_average_mae": round(ma_mae, 2),
             "beats_moving_average_baseline": mae < ma_mae,
             "improvement_over_baseline_pct": improvement,
-            "training_samples": int(len(abs_errs)),
             "validation_samples": int(len(abs_errs)),
             "last_retrained": datetime.utcnow().strftime("%Y-%m-%d"),
-            "validation_method": "Walk-forward holdout (tail 20%), train-window scaling, no shuffling across time",
+            "validation_method": "Walk-forward holdout on the most recent bars, train-window scaling, no shuffling across time",
             "backtest": {
                 "win_loss_ratio": win_loss,
                 "sharpe_ratio": sharpe,
@@ -670,17 +679,22 @@ class LSTMPredictionEngine:
         }
 
     def _confidence(self, metrics: Dict[str, Any]) -> float:
+        """How much the backtest supports the forecast, on a 0-100 scale.
+
+        50 means "no better than a coin flip". The score is built only from
+        the measured EDGE: directional accuracy above 50%, and error versus
+        the naive last-value baseline. Price-level R^2 is deliberately left
+        out: it is ~0.95 for any forecast that stays near the last price, so
+        it inflated every score by several points.
+        """
         dir_acc = metrics.get("directional_accuracy_pct")
         improvement = metrics.get("improvement_over_baseline_pct")
-        r2 = metrics.get("r2_score")
         if dir_acc is None:
-            return 55.0
-        score = 50.0 + 0.35 * float(dir_acc)
+            return 50.0
+        score = 50.0 + max(-25.0, min(30.0, float(dir_acc) - 50.0))
         if improvement is not None:
-            score += max(-5.0, min(8.0, float(improvement) * 0.2))
-        if r2 is not None:
-            score += max(-3.0, min(5.0, float(r2) * 5.0))
-        return round(max(50.0, min(97.0, score)), 1)
+            score += max(-10.0, min(8.0, float(improvement) * 0.5))
+        return round(max(5.0, min(95.0, score)), 1)
 
 
 ml_service = LSTMPredictionEngine()

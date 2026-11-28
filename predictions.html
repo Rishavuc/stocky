@@ -560,11 +560,11 @@
                 || (latestCandlesData && latestCandlesData.length > 0
                     ? latestCandlesData[latestCandlesData.length - 1].close
                     : pts[0].predicted);
-            const baseConfidence = latestPredictionData?.confidence_score || 70;
+            const baseConfidence = latestPredictionData?.confidence_score ?? 50;
 
             tbody.innerHTML = pts.map((p, idx) => {
                 const pct = (((p.predicted - baseClose) / baseClose) * 100);
-                const confidence = Math.max(50, Math.round(baseConfidence - idx * 1.5));
+                const confidence = Math.max(0, Math.round(baseConfidence - idx * 1.5));
                 return `<tr>
                     <td>${p.day} <span class="predicted-tag">${currentModel.toUpperCase()}</span></td>
                     <td style="font-family:var(--ff-mono); font-weight:600;">${prefix}${p.predicted.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -681,7 +681,7 @@
                     </div>
                     <div>
                         <div class="sip-res-item__label">Win / Loss</div>
-                        <div class="sip-res-item__val" style="color:var(--c-accent);">${data.win_loss_ratio}x</div>
+                        <div class="sip-res-item__val" style="color:var(--c-accent);">${data.win_loss_ratio == null ? 'n/a' : data.win_loss_ratio + 'x'}</div>
                     </div>
                     <div>
                         <div class="sip-res-item__label">Max Drawdown</div>
