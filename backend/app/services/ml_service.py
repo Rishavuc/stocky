@@ -340,7 +340,13 @@ class LSTMPredictionEngine:
         hit = _cached()
         if hit:
             return hit
-        with self._train_lock:
+        # Training takes seconds and hundreds of MB. If another request is
+        # already training, do not queue behind it (queued requests pin the
+        # shared threadpool and stall login and every other sync route):
+        # return None so the caller serves the cheap empirical estimate.
+        if not self._train_lock.acquire(timeout=1.0):
+            return None
+        try:
             hit = _cached()  # another request may have trained it meanwhile
             if hit:
                 return hit
@@ -349,6 +355,8 @@ class LSTMPredictionEngine:
             except Exception as e:  # pragma: no cover
                 print(f"[LSTM Training Error] {sym}: {e}")
                 return None
+        finally:
+            self._train_lock.release()
         if trained is None:
             return None
         model, scale, holdout, epochs = trained

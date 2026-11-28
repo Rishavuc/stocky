@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     # Seed the shared demo@investorseye.com / "demo" account used by the
     # login page's 1-click demo button. It is public by design.
     DEMO_USERS_ENABLED: bool = True
+    # Read the client IP from the rightmost X-Forwarded-For entry (the one a
+    # reverse proxy appends). Defaults to on when running on Render.
+    TRUST_PROXY_HEADERS: Optional[bool] = None
+    # Comma-separated user ids allowed to change server-wide broker sessions
+    # (Kite token, Binance account view). Empty means nobody can.
+    ADMIN_USER_IDS: str = ""
+    # Accept Zerodha's redirect to /kite/callback. Off by default in
+    # production: anyone with a Zerodha login could swap the shared session.
+    KITE_CALLBACK_ENABLED: Optional[bool] = None
     
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./investors_eye.db"
@@ -76,11 +85,19 @@ class Settings(BaseSettings):
             self.KITE_ACCESS_TOKEN = self.ZERODHA_ACCESS_TOKEN
         if self.SERVE_FRONTEND is None:
             self.SERVE_FRONTEND = not self.is_production
+        if self.TRUST_PROXY_HEADERS is None:
+            self.TRUST_PROXY_HEADERS = os.getenv("RENDER", "").lower() == "true"
+        if self.KITE_CALLBACK_ENABLED is None:
+            self.KITE_CALLBACK_ENABLED = not self.is_production
         return self
 
     @property
     def is_production(self) -> bool:
         return self.APP_ENV.strip().lower() in ("production", "prod")
+
+    @property
+    def admin_user_ids(self) -> set:
+        return {u.strip() for u in self.ADMIN_USER_IDS.split(",") if u.strip()}
 
     @property
     def cors_origins(self) -> List[str]:

@@ -9,4 +9,8 @@
  *
  * Keep this file committed; it contains no secrets.
  */
-window.SV_BACKEND_URL = "https://stockvista-api.onrender.com";
+// Local pages talk to the local backend: the Render API only allows the
+// deployed Vercel origin (CORS), so pointing localhost at it would fail.
+window.SV_BACKEND_URL = ["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+    ? ""
+    : "https://stockvista-api.onrender.com";

@@ -117,7 +117,7 @@ CRYPTO_BASE_PRICES: Dict[str, float] = {
 # Real symbols use letters, digits, spaces ("NIFTY 50"), "&" ("M&M"), "-"
 # ("BAJAJ-AUTO"), "." (".NS") and "^" (Yahoo index tickers). Anything else is
 # rejected before it reaches a provider URL or a cache key.
-SYMBOL_RE = re.compile(r"^[A-Z0-9][A-Z0-9 .&\-^=/]{0,31}$")
+SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9 .&\-^=/]{0,31}$")
 ALLOWED_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d", "1w", "1mo"}
 MAX_CANDLE_LIMIT = 1000
 
@@ -266,6 +266,7 @@ class MarketIngestService:
         # provider returns actual history for it.
         self._dynamic_symbols: Dict[str, Dict[str, Any]] = {}
         self._dynamic_missing: Dict[str, float] = {}
+        self._dynamic_last_used: Dict[str, float] = {}
         self._dynamic_lock = threading.RLock()
         self._batch_lock = threading.RLock()
         self._snapshot_lock = threading.RLock()
@@ -328,8 +329,8 @@ class MarketIngestService:
         """
         if not sym or sym in CURRENCIES_MAP:
             return []
-        if sym.endswith(".NS") or sym.endswith(".BO"):
-            return [sym]
+        if sym.endswith(".NS") or sym.endswith(".BO") or sym.startswith("^"):
+            return [sym]  # exchange-suffixed or a Yahoo index ticker as-is
         if sym.endswith("USDT") or sym.endswith("INR"):
             return []
 
@@ -352,8 +353,10 @@ class MarketIngestService:
             return INDIAN_STOCKS_MAP[sym]
         if sym in INDICES_MAP:
             return INDICES_MAP[sym]
-        if sym in self._dynamic_symbols:
-            return self._dynamic_symbols[sym]
+        hit = self._dynamic_symbols.get(sym)
+        if hit:
+            self._dynamic_last_used[sym] = time.time()
+            return hit
         if not YFINANCE_AVAILABLE:
             return None
 
@@ -361,47 +364,52 @@ class MarketIngestService:
         if missing_at and (time.time() - missing_at) < 300:
             return None
 
-        with self._dynamic_lock:
-            if sym in self._dynamic_symbols:
-                return self._dynamic_symbols[sym]
-            missing_at = self._dynamic_missing.get(sym)
-            if missing_at and (time.time() - missing_at) < 300:
-                return None
-            # Every dynamic symbol joins the universe batch download and the
-            # websocket tick, so the set is capped to protect the instance.
-            if len(self._dynamic_symbols) >= MAX_DYNAMIC_SYMBOLS:
-                return None
-
-            for candidate in self._candidate_yfinance_tickers(sym):
-                try:
-                    df = yf.Ticker(candidate).history(
-                        period="5d", interval="1d", timeout=8
-                    ).dropna(subset=["Close"])
-                    if df.empty:
-                        continue
-
-                    if candidate.endswith(".NS"):
-                        exchange = "NSE"
-                    elif candidate.endswith(".BO"):
-                        exchange = "BSE"
-                    else:
-                        exchange = "GLOBAL"
-
-                    meta = {
-                        "ticker": candidate,
-                        "name": sym,
-                        "segment": "EQ",
-                        "exchange": exchange,
-                        "sector": "Equities",
-                        "dynamic": True,
-                    }
-                    self._dynamic_symbols[sym] = meta
-                    self._dynamic_missing.pop(sym, None)
-                    return meta
-                except Exception:
+        # Probe Yahoo WITHOUT holding the lock: up to three 8s calls under a
+        # global lock would stall every other symbol lookup behind one bad one.
+        meta = None
+        for candidate in self._candidate_yfinance_tickers(sym):
+            try:
+                df = yf.Ticker(candidate).history(
+                    period="5d", interval="1d", timeout=8
+                ).dropna(subset=["Close"])
+                if df.empty:
                     continue
+                if candidate.endswith(".NS"):
+                    exchange = "NSE"
+                elif candidate.endswith(".BO"):
+                    exchange = "BSE"
+                else:
+                    exchange = "GLOBAL"
+                meta = {
+                    "ticker": candidate,
+                    "name": sym,
+                    "segment": "EQ",
+                    "exchange": exchange,
+                    "sector": "Equities",
+                    "dynamic": True,
+                }
+                break
+            except Exception:
+                continue
 
+        with self._dynamic_lock:
             now = time.time()
+            if sym in self._dynamic_symbols:
+                self._dynamic_last_used[sym] = now
+                return self._dynamic_symbols[sym]
+            if meta is not None:
+                # Every dynamic symbol joins the batch download and websocket
+                # tick, so the set is capped. Evict the least recently used one
+                # instead of refusing new symbols forever.
+                while len(self._dynamic_symbols) >= MAX_DYNAMIC_SYMBOLS:
+                    victim = min(self._dynamic_symbols, key=lambda k: self._dynamic_last_used.get(k, 0.0))
+                    self._dynamic_symbols.pop(victim, None)
+                    self._dynamic_last_used.pop(victim, None)
+                self._dynamic_symbols[sym] = meta
+                self._dynamic_last_used[sym] = now
+                self._dynamic_missing.pop(sym, None)
+                return meta
+
             if len(self._dynamic_missing) >= MAX_DYNAMIC_MISSING:
                 for k in [k for k, t in self._dynamic_missing.items() if now - t >= 300]:
                     self._dynamic_missing.pop(k, None)
@@ -834,7 +842,7 @@ class MarketIngestService:
                 tickers[meta["ticker"]] = (sym, meta["name"])
             for sym, meta in INDICES_MAP.items():
                 tickers[meta["ticker"]] = (sym, meta["name"])
-            for sym, meta in self._dynamic_symbols.items():
+            for sym, meta in list(self._dynamic_symbols.items()):
                 tickers[meta["ticker"]] = (sym, meta["name"])
 
             def _series(df, field, ticker):
@@ -1616,7 +1624,7 @@ class MarketIngestService:
                 print(f"[Kite Batch Quote Error]: {e}")
 
         catalog = dict(INDIAN_STOCKS_MAP)
-        for sym, meta in self._dynamic_symbols.items():
+        for sym, meta in list(self._dynamic_symbols.items()):
             catalog[sym] = {
                 "ticker": meta["ticker"],
                 "name": meta["name"],

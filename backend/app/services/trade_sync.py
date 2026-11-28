@@ -3,6 +3,9 @@ import csv
 import io
 import itertools
 import math
+import re
+
+_CSV_SYMBOL_RE = re.compile(r"[A-Z0-9][A-Z0-9.&_-]{0,29}")
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.schemas.schemas import UnifiedTradeItem
@@ -84,11 +87,14 @@ class TradeSyncService:
         sym = (row.get("Symbol") or row.get("symbol") or "").strip().upper()
         side = (row.get("Side") or row.get("side") or "BUY").strip().upper()
         try:
-            qty = int(float(row.get("Qty") or row.get("qty") or 0))
+            raw_qty = float(row.get("Qty") or row.get("qty") or 0)
             price = float(row.get("Price") or row.get("price") or 0.0)
-        except (TypeError, ValueError):
+            if not math.isfinite(raw_qty) or raw_qty > 1e9:
+                return None  # int(inf) raises OverflowError and aborted the import
+            qty = int(raw_qty)
+        except (TypeError, ValueError, OverflowError):
             return None
-        if not sym or len(sym) > 30 or side not in ("BUY", "SELL"):
+        if not _CSV_SYMBOL_RE.fullmatch(sym) or side not in ("BUY", "SELL"):
             return None
         if qty <= 0 or not math.isfinite(price) or price <= 0:
             return None

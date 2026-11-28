@@ -206,7 +206,11 @@ async def kite_callback(request_token: str = None, action: str = None, status: s
     from app.services.market_ingest import market_ingest
     success = False
     message = "No request token received."
-    if request_token and _KITE_TOKEN_RE.fullmatch(request_token):
+    if request_token and not settings.KITE_CALLBACK_ENABLED:
+        # Unauthenticated by nature (Zerodha redirects the browser here), so
+        # in production it is off unless the admin turns it on for a login.
+        message = "Kite callback is disabled on this server. Ask the administrator to enable KITE_CALLBACK_ENABLED."
+    elif request_token and _KITE_TOKEN_RE.fullmatch(request_token):
         # Kite's SDK does blocking HTTP; keep it off the event loop.
         res = await run_in_threadpool(market_ingest.generate_kite_session, request_token)
         if res.get("success"):

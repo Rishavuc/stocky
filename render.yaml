@@ -14,7 +14,10 @@ services:
     startCommand: |
       mkdir -p backend/data
       cd backend
-      uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+      # No --forwarded-allow-ips='*': uvicorn would then trust the client-set
+      # left end of X-Forwarded-For. The app reads the rightmost entry itself
+      # (TRUST_PROXY_HEADERS, on when RENDER=true).
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --ws-max-size 65536 --limit-concurrency 200 --timeout-keep-alive 20
 
     envVars:
       - key: PYTHON_VERSION
@@ -39,5 +42,8 @@ services:
       - key: ZERODHA_API_SECRET
         sync: false
       # config.py reads KITE_ACCESS_TOKEN (ZERODHA_ACCESS_TOKEN still works as a fallback).
+      # Comma-separated user ids allowed to change the shared Kite session.
+      - key: ADMIN_USER_IDS
+        sync: false
       - key: KITE_ACCESS_TOKEN
         sync: false

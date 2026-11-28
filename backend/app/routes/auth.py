@@ -107,8 +107,18 @@ class SlidingWindowLimiter:
         with self._lock:
             now = time.monotonic()
             self._prune(key, now).append(now)
-            if len(self._hits) > 50_000:  # bound memory under a flood
-                self._hits.clear()
+            if len(self._hits) > 50_000:
+                self._sweep(now)
+
+    def _sweep(self, now: float) -> None:
+        # Bound memory under a flood without wiping live lockouts (a blanket
+        # clear() would reset every account's failure counter).
+        for k in [k for k, q in self._hits.items() if not q or now - q[-1] > self.window]:
+            del self._hits[k]
+        if len(self._hits) > 50_000:
+            oldest = sorted(self._hits, key=lambda k: self._hits[k][-1])
+            for k in oldest[: len(oldest) // 2]:
+                del self._hits[k]
 
     def reset(self, key: str) -> None:
         with self._lock:
@@ -116,11 +126,29 @@ class SlidingWindowLimiter:
 
 # Failed password attempts: per IP and per account. Sign-up/Google: per IP.
 _login_ip_limiter = SlidingWindowLimiter(limit=20, window=15 * 60)
+# Per (account, IP): one attacker cannot lock the real owner out from
+# another address. Per account (loose): backstop against spread-out guessing.
 _login_account_limiter = SlidingWindowLimiter(limit=10, window=15 * 60)
+_login_account_total_limiter = SlidingWindowLimiter(limit=100, window=15 * 60)
+DEMO_EMAIL = "demo@investorseye.com"
 _signup_ip_limiter = SlidingWindowLimiter(limit=10, window=60 * 60)
 _google_ip_limiter = SlidingWindowLimiter(limit=30, window=15 * 60)
+# Backstop if per-IP keys are rotated: total sign-ups per hour, all clients.
+_signup_global_limiter = SlidingWindowLimiter(limit=300, window=60 * 60)
 
 def client_ip(request: Request) -> str:
+    """Best-effort client address for rate limiting.
+
+    Behind Render's proxy the socket peer is the proxy, so read
+    X-Forwarded-For. Only the RIGHTMOST entry is trusted: it is the one the
+    proxy appended. Anything to its left was sent by the client and can be
+    forged to dodge the limiter.
+    """
+    if settings.TRUST_PROXY_HEADERS:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        last = forwarded.split(",")[-1].strip() if forwarded else ""
+        if last:
+            return last[:64]
     return request.client.host if request.client else "unknown"
 
 def _too_many() -> HTTPException:
@@ -202,9 +230,10 @@ async def ensure_demo_users(db: AsyncSession):
 @router.post("/register", response_model=AuthResponse)
 async def register(req: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
     ip_key = client_ip(request)
-    if _signup_ip_limiter.blocked(ip_key):
+    if _signup_ip_limiter.blocked(ip_key) or _signup_global_limiter.blocked("all"):
         raise _too_many()
     _signup_ip_limiter.hit(ip_key)
+    _signup_global_limiter.hit("all")
 
     clean_email = req.email.lower().strip()
     clean_name = req.name.strip()
@@ -314,7 +343,14 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
         identifier = "demo@investorseye.com"
 
     ip_key = client_ip(request)
-    if _login_ip_limiter.blocked(ip_key) or _login_account_limiter.blocked(identifier):
+    account_ip_key = f"{identifier}|{ip_key}"
+    # The demo password is public, so locking it out would only let strangers
+    # break the 1-click demo for everyone.
+    limit_account = identifier != DEMO_EMAIL
+    if _login_ip_limiter.blocked(ip_key) or (limit_account and (
+        _login_account_limiter.blocked(account_ip_key)
+        or _login_account_total_limiter.blocked(identifier)
+    )):
         raise _too_many()
 
     # 1. Find the account
@@ -330,7 +366,9 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
 
     if not is_valid:
         _login_ip_limiter.hit(ip_key)
-        _login_account_limiter.hit(identifier)
+        if limit_account:
+            _login_account_limiter.hit(account_ip_key)
+            _login_account_total_limiter.hit(identifier)
         await record_activity(
             user_id=user.user_id if user else None,
             event_type="login_failed",
@@ -341,7 +379,7 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
         )
         raise HTTPException(status_code=401, detail=INVALID_LOGIN)
 
-    _login_account_limiter.reset(identifier)
+    _login_account_limiter.reset(account_ip_key)
 
     # 3. Upgrade legacy hashes, update last login timestamp
     if needs_rehash(user.salt):

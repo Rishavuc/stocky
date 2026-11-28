@@ -79,3 +79,12 @@ venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Then open `http://localhost:8000/`.
+
+## Security settings (backend)
+
+- In production the backend serves **no static files** (`SERVE_FRONTEND=false`); Vercel hosts the frontend.
+- CORS allows only the Vercel production URL, `FRONTEND_URL`, and any extra origins in `CORS_ORIGINS` (comma-separated). Add Vercel preview URLs there if previews need the API.
+- `ADMIN_USER_IDS`: comma-separated user ids allowed to set the shared Kite session or view the Binance account. Empty means nobody.
+- `KITE_CALLBACK_ENABLED`: off by default in production. Turn it on only while the admin re-authorizes Kite.
+- Rate limits read the client IP from the rightmost `X-Forwarded-For` entry on Render. Do not add `--forwarded-allow-ips='*'` to the start command.
+- Security regression checks: `cd backend && ../.venv/bin/python tests/security_checks.py`
