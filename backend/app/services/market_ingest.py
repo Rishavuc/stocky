@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import re
 import math
@@ -120,6 +121,10 @@ CRYPTO_BASE_PRICES: Dict[str, float] = {
 SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9 .&\-^=/]{0,31}$")
 ALLOWED_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d", "1w", "1mo"}
 MAX_CANDLE_LIMIT = 1000
+
+# Mutual-fund lookup cache (see MarketIngestService._mf_cache_get).
+_MF_CACHE: "OrderedDict[str, Any]" = OrderedDict()
+_MF_CACHE_LOCK = threading.Lock()
 
 # Memory guards for the 512 MB free instance.
 MAX_DYNAMIC_SYMBOLS = 25        # each one joins every batch download and tick
@@ -1470,6 +1475,32 @@ class MarketIngestService:
                 self._mf_fail_time = 0.0
             return [dict(x) for x in self._mf_cache]
 
+    # Bounded TTL cache for per-code and search lookups. Anyone can request
+    # any code, so misses are cached too or random codes hit mfapi every time.
+    _MF_CACHE_MAX = 300
+    _MF_HIT_TTL = 3600.0
+    _MF_MISS_TTL = 600.0
+
+    def _mf_cache_get(self, key: str):
+        with _MF_CACHE_LOCK:
+            entry = _MF_CACHE.get(key)
+            if entry is None:
+                return False, None
+            value, expires = entry
+            if time.time() > expires:
+                _MF_CACHE.pop(key, None)
+                return False, None
+            _MF_CACHE.move_to_end(key)
+            return True, value
+
+    def _mf_cache_put(self, key: str, value: Any) -> None:
+        ttl = self._MF_HIT_TTL if value else self._MF_MISS_TTL
+        with _MF_CACHE_LOCK:
+            _MF_CACHE[key] = (value, time.time() + ttl)
+            _MF_CACHE.move_to_end(key)
+            while len(_MF_CACHE) > self._MF_CACHE_MAX:
+                _MF_CACHE.popitem(last=False)
+
     def get_mutual_fund(self, code: Any) -> Optional[Dict[str, Any]]:
         try:
             code_int = int(code)
@@ -1480,7 +1511,12 @@ class MarketIngestService:
         for row in self.get_mutual_funds_catalog():
             if row.get("scheme_code") == code_int:
                 return dict(row)
-        return self._fetch_mutual_fund(code_int)
+        found, cached = self._mf_cache_get(f"code:{code_int}")
+        if found:
+            return dict(cached) if cached else None
+        fetched = self._fetch_mutual_fund(code_int)
+        self._mf_cache_put(f"code:{code_int}", fetched)
+        return dict(fetched) if fetched else None
 
     def get_growth_mutual_funds(self) -> List[Dict[str, Any]]:
         """Rank verified funds by historical growth momentum, never by forecasts."""
@@ -1512,15 +1548,21 @@ class MarketIngestService:
         q = (query or "").strip()[:64]
         if not q:
             return []
+        key = "search:" + q.lower()
+        found, cached = self._mf_cache_get(key)
+        if found:
+            return list(cached or [])
         try:
             data = self._fetch_json(
                 "https://api.mfapi.in/mf/search?q=" + urllib.parse.quote(q)
             )
-            return [
+            results = [
                 {"scheme_code": x.get("schemeCode"), "scheme_name": x.get("schemeName")}
                 for x in (data or [])[:25]
                 if x.get("schemeCode")
             ]
+            self._mf_cache_put(key, results)
+            return list(results)
         except Exception as e:
             print(f"[Mutual Fund Search Warning]: {e}")
             return []

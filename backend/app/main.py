@@ -121,6 +121,56 @@ async def log_user_activity(request: Request, call_next):
 # cookies, so credentials stay off (a wildcard plus credentials would let any
 # site make authenticated calls). No wildcard regex: anyone can create a
 # Vercel project whose name starts with ours. Add preview URLs to CORS_ORIGINS.
+class BodySizeLimitMiddleware:
+    """Reject request bodies over `max_bytes` (HTTP 413).
+
+    Pure ASGI so it also catches chunked uploads with no Content-Length: it
+    counts bytes as they stream in instead of trusting the header. The CSV
+    import caps itself at 1 MB; nothing else needs more than a few KB.
+    """
+
+    def __init__(self, app, max_bytes: int = 2 * 1024 * 1024):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        def too_large():
+            return JSONResponse(status_code=413, content={"detail": "Request body too large."})
+
+        for name, value in scope.get("headers", []):
+            if name == b"content-length":
+                try:
+                    if int(value) > self.max_bytes:
+                        return await too_large()(scope, receive, send)
+                except ValueError:
+                    return await JSONResponse(status_code=400, content={"detail": "Bad Content-Length."})(scope, receive, send)
+
+        received = 0
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise _BodyTooLarge()
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _BodyTooLarge:
+            # Only safe if no response has started; handlers read the body
+            # before responding, so this holds for every route here.
+            await too_large()(scope, receive, send)
+
+
+class _BodyTooLarge(Exception):
+    pass
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -129,6 +179,9 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["X-Response-Time-ms"],
 )
+# Added last so it wraps everything (outermost): oversized bodies are refused
+# before any route or the activity logger touches them.
+app.add_middleware(BodySizeLimitMiddleware, max_bytes=2 * 1024 * 1024)
 
 # Include all API Routers
 app.include_router(instruments_router)
