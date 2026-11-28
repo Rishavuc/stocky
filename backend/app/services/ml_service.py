@@ -28,14 +28,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from app.services.market_ingest import market_ingest
+from app.services.market_ingest import market_ingest, normalize_symbol, CRYPTO_MAP
 from app.schemas.schemas import PredictionResponse, PredictionPoint
 
 # ----- Optional PyTorch (real neural network) -----
 def _torch_disabled() -> bool:
+    """Explicit STOCKVISTA_DISABLE_TORCH wins; otherwise off on Render (512 MB)."""
     flag = os.getenv("STOCKVISTA_DISABLE_TORCH", "").strip().lower()
-    on_render = os.getenv("RENDER", "").strip().lower() in {"1", "true", "yes"}
-    return flag in {"1", "true", "yes"} or on_render
+    if flag in {"1", "true", "yes"}:
+        return True
+    if flag in {"0", "false", "no"}:
+        return False
+    return os.getenv("RENDER", "").strip().lower() in {"1", "true", "yes"}
 
 
 try:
@@ -54,8 +58,17 @@ except Exception:  # pragma: no cover - environment without torch
 QUANTILES = (0.1, 0.5, 0.9)
 
 
-def _business_days(last_date: Optional[str], horizon: int) -> List[str]:
-    """Return ISO business-day labels starting after the last historical bar."""
+def _trades_24x7(sym: str) -> bool:
+    """Crypto pairs trade every day, so their forecast steps are calendar days."""
+    return sym in CRYPTO_MAP or sym.endswith("USDT")
+
+
+def _business_days(last_date: Optional[str], horizon: int, every_day: bool = False) -> List[str]:
+    """Return ISO date labels starting after the last historical bar.
+
+    Stocks step over weekends (one step = one trading day). Crypto bars are
+    24/7, so with every_day=True each step is one calendar day.
+    """
     try:
         current = datetime.strptime(last_date[:10], "%Y-%m-%d") if last_date else datetime.utcnow()
     except (ValueError, TypeError):
@@ -63,7 +76,7 @@ def _business_days(last_date: Optional[str], horizon: int) -> List[str]:
     dates = []
     while len(dates) < horizon:
         current += timedelta(days=1)
-        if current.weekday() < 5:
+        if every_day or current.weekday() < 5:
             dates.append(current.strftime("%Y-%m-%d"))
     return dates
 
@@ -103,11 +116,28 @@ def _pinball_loss(pred, target, quantiles=QUANTILES):
     return torch.stack(losses, dim=1).mean()
 
 
+def _json_safe(value: Any) -> Any:
+    """Replace NaN/inf (which JSON cannot encode) with None, recursively."""
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (float, np.floating)):
+        return float(value) if math.isfinite(float(value)) else None
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    return value
+
+
 class LSTMPredictionEngine:
     WINDOW = 60           # lookback bars fed to the network (per Untitled.md spec)
     MIN_SAMPLES = 90      # minimum history required to train an LSTM
     MODEL_TTL = 900.0     # seconds before a trained model is refreshed
     RESULT_TTL = 60.0     # seconds a prediction result is cached
+    MAX_MODELS = 6        # trained networks kept in memory at once
+    MAX_RESULTS = 128     # cached prediction responses
 
     def __init__(self):
         self._architectures = {
@@ -119,6 +149,9 @@ class LSTMPredictionEngine:
         self._model_cache: Dict[str, Tuple[Any, Dict[str, Any], float]] = {}
         self._result_cache: Dict[str, Tuple[PredictionResponse, float]] = {}
         self._lock = threading.Lock()
+        # One training job at a time: parallel requests for different symbols
+        # would otherwise each hold a model, optimiser and tensors in memory.
+        self._train_lock = threading.Lock()
 
     def _arch_spec(self, label: str, bidirectional: bool, cell: str) -> Dict[str, Any]:
         first = cell + (" (bidirectional)" if bidirectional else "")
@@ -175,7 +208,9 @@ class LSTMPredictionEngine:
     # PUBLIC API
     # ========================================================
     def predict_symbol(self, symbol: str, horizon_days: int = 7, model: str = "lstm") -> PredictionResponse:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         model = (model or "lstm").lower().strip()
         if model not in self._architectures:
             model = "lstm"
@@ -187,13 +222,25 @@ class LSTMPredictionEngine:
             if cached and (time.time() - cached[1]) < self.RESULT_TTL:
                 return cached[0]
 
-        result = self._compute_prediction(sym, horizon_days, model)
+        try:
+            result = self._compute_prediction(sym, horizon_days, model)
+        except (OverflowError, FloatingPointError, ZeroDivisionError) as exc:
+            raise ValueError(f"Estimate for {sym} is numerically unstable: {exc}")
         with self._lock:
-            self._result_cache[cache_key] = (result, time.time())
+            now = time.time()
+            self._result_cache[cache_key] = (result, now)
+            if len(self._result_cache) > self.MAX_RESULTS:
+                for k in [k for k, v in self._result_cache.items() if now - v[1] >= self.RESULT_TTL]:
+                    self._result_cache.pop(k, None)
+                while len(self._result_cache) > self.MAX_RESULTS:
+                    oldest = min(self._result_cache, key=lambda k: self._result_cache[k][1])
+                    self._result_cache.pop(oldest, None)
         return result
 
     def get_backtest_scorecard(self, symbol: str, model: str = "lstm") -> Dict[str, Any]:
-        sym = symbol.upper().strip()
+        sym = normalize_symbol(symbol)
+        if not sym:
+            raise ValueError("Invalid symbol")
         model = (model or "lstm").lower().strip()
         if model not in self._architectures:
             model = "lstm"
@@ -265,6 +312,9 @@ class LSTMPredictionEngine:
         metrics["probability_confidence"] = confidence
         metrics["history_bars"] = int(len(closes))
         metrics["history_years"] = round(max(0, len(closes) - 1) / 252.0, 1)
+        metrics = _json_safe(metrics)
+        if not all(math.isfinite(v) for v in (target_price, expected_return, current_price)):
+            raise ValueError(f"Estimate for {sym} produced non-finite values; try again later.")
 
         return PredictionResponse(
             symbol=sym,
@@ -292,21 +342,50 @@ class LSTMPredictionEngine:
     # ========================================================
     def _get_or_train(self, sym: str, model_type: str, closes: np.ndarray) -> Optional[Tuple[Any, Dict[str, Any]]]:
         cache_key = f"{sym}:{model_type}:{len(closes)}"
-        with self._lock:
-            cached = self._model_cache.get(cache_key)
-            if cached and (time.time() - cached[2]) < self.MODEL_TTL:
-                return cached[0], cached[1]
-        try:
-            trained = self._train_model(closes, model_type)
-        except Exception as e:  # pragma: no cover
-            print(f"[LSTM Training Error] {sym}: {e}")
+
+        def _cached():
+            with self._lock:
+                hit = self._model_cache.get(cache_key)
+                if hit and (time.time() - hit[2]) < self.MODEL_TTL:
+                    return hit[0], hit[1]
             return None
+
+        hit = _cached()
+        if hit:
+            return hit
+        # Training takes seconds and hundreds of MB. If another request is
+        # already training, do not queue behind it (queued requests pin the
+        # shared threadpool and stall login and every other sync route):
+        # return None so the caller serves the cheap empirical estimate.
+        if not self._train_lock.acquire(timeout=1.0):
+            return None
+        try:
+            hit = _cached()  # another request may have trained it meanwhile
+            if hit:
+                return hit
+            try:
+                trained = self._train_model(closes, model_type)
+            except Exception as e:  # pragma: no cover
+                print(f"[LSTM Training Error] {sym}: {e}")
+                return None
+        finally:
+            self._train_lock.release()
         if trained is None:
             return None
         model, scale, holdout, epochs = trained
         meta = {"scale": scale, "holdout": holdout, "epochs": epochs}
         with self._lock:
-            self._model_cache[cache_key] = (model, meta, time.time())
+            now = time.time()
+            # The key includes the bar count, so yesterday's model for the same
+            # symbol would otherwise live forever next to today's.
+            prefix = f"{sym}:{model_type}:"
+            for k in [k for k, v in self._model_cache.items()
+                      if k.startswith(prefix) or now - v[2] >= self.MODEL_TTL]:
+                self._model_cache.pop(k, None)
+            self._model_cache[cache_key] = (model, meta, now)
+            while len(self._model_cache) > self.MAX_MODELS:
+                oldest = min(self._model_cache, key=lambda k: self._model_cache[k][2])
+                self._model_cache.pop(oldest, None)
         return model, meta
 
     def _train_model(self, closes: np.ndarray, model_type: str = "lstm"):
@@ -442,7 +521,7 @@ class LSTMPredictionEngine:
         cum_log = 0.0
         cum_var = 0.0
         points: List[PredictionPoint] = []
-        forecast_dates = _business_days(times[-1] if times else None, horizon)
+        forecast_dates = _business_days(times[-1] if times else None, horizon, every_day=_trades_24x7(sym))
 
         for step in range(1, horizon + 1):
             q = self._predict_quantiles(model, np.array(recent[-self.WINDOW:]))[0] * scale
@@ -512,11 +591,11 @@ class LSTMPredictionEngine:
 
         # Quantile path from empirical h-step return distribution
         last_price = current_price
-        forecast_dates = _business_days(times[-1] if times else None, horizon)
+        forecast_dates = _business_days(times[-1] if times else None, horizon, every_day=_trades_24x7(sym))
         points: List[PredictionPoint] = []
         for step in range(1, horizon + 1):
             if len(returns) > step + 5:
-                h_returns = np.array([returns[i:i + step].sum() for i in range(0, len(returns) - step)])
+                h_returns = np.array([returns[i:i + step].sum() for i in range(0, len(returns) - step + 1)])
                 q10, q50, q90 = np.percentile(h_returns, [10, 50, 90])
             else:
                 drift = float(np.median(returns))
@@ -571,7 +650,8 @@ class LSTMPredictionEngine:
 
         avg_correct = float(np.mean(correct_moves)) if correct_moves else 0.0
         avg_wrong = float(np.mean(wrong_moves)) if wrong_moves else 0.0
-        win_loss = round(avg_correct / avg_wrong, 2) if avg_wrong > 0 else float(max(1.0, len(correct_moves)))
+        # No wrong calls means the ratio is undefined (it used to report the win count).
+        win_loss = round(avg_correct / avg_wrong, 2) if avg_wrong > 0 else None
 
         strat = np.array(strat_returns, dtype=np.float64)
         if len(strat) > 1 and np.std(strat) > 0:
@@ -592,10 +672,9 @@ class LSTMPredictionEngine:
             "baseline_moving_average_mae": round(ma_mae, 2),
             "beats_moving_average_baseline": mae < ma_mae,
             "improvement_over_baseline_pct": improvement,
-            "training_samples": int(len(abs_errs)),
             "validation_samples": int(len(abs_errs)),
             "last_retrained": datetime.utcnow().strftime("%Y-%m-%d"),
-            "validation_method": "Walk-forward holdout (tail 20%), train-window scaling, no shuffling across time",
+            "validation_method": "Walk-forward holdout on the most recent bars, train-window scaling, no shuffling across time",
             "backtest": {
                 "win_loss_ratio": win_loss,
                 "sharpe_ratio": sharpe,
@@ -604,17 +683,22 @@ class LSTMPredictionEngine:
         }
 
     def _confidence(self, metrics: Dict[str, Any]) -> float:
+        """How much the backtest supports the forecast, on a 0-100 scale.
+
+        50 means "no better than a coin flip". The score is built only from
+        the measured EDGE: directional accuracy above 50%, and error versus
+        the naive last-value baseline. Price-level R^2 is deliberately left
+        out: it is ~0.95 for any forecast that stays near the last price, so
+        it inflated every score by several points.
+        """
         dir_acc = metrics.get("directional_accuracy_pct")
         improvement = metrics.get("improvement_over_baseline_pct")
-        r2 = metrics.get("r2_score")
         if dir_acc is None:
-            return 55.0
-        score = 50.0 + 0.35 * float(dir_acc)
+            return 50.0
+        score = 50.0 + max(-25.0, min(30.0, float(dir_acc) - 50.0))
         if improvement is not None:
-            score += max(-5.0, min(8.0, float(improvement) * 0.2))
-        if r2 is not None:
-            score += max(-3.0, min(5.0, float(r2) * 5.0))
-        return round(max(50.0, min(97.0, score)), 1)
+            score += max(-10.0, min(8.0, float(improvement) * 0.5))
+        return round(max(5.0, min(95.0, score)), 1)
 
 
 ml_service = LSTMPredictionEngine()

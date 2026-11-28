@@ -98,7 +98,9 @@ class ApiClient {
     }
 
     async searchInstruments(query) {
-        return await this._fetchStrict(`/instruments/search?q=${encodeURIComponent(query)}`);
+        // The API caps queries at 32 characters; longer ones would 422.
+        const q = String(query || '').trim().slice(0, 32);
+        return await this._fetchStrict(`/instruments/search?q=${encodeURIComponent(q)}`);
     }
 
     async getTrending() {
@@ -302,7 +304,9 @@ class ApiClient {
     }
 
     async setKiteToken(payload) {
-        return await this._fetch('/integrations/kite/token', {
+        // Strict so the server's reason (sign in, admin only, expired token)
+        // reaches the user instead of a generic failure.
+        return await this._fetchStrict('/integrations/kite/token', {
             method: 'POST',
             body: JSON.stringify(payload)
         });

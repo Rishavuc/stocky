@@ -1,26 +1,30 @@
-fastapi>=0.115.0
-uvicorn>=0.30.0
-pydantic>=2.9.0
-pydantic-settings>=2.0.0
-sqlalchemy>=2.0.30
-aiosqlite>=0.20.0
-httpx>=0.27.0
-requests>=2.31.0
-pandas>=2.2.0
-numpy>=1.26.0
-scipy>=1.12.0
-websockets>=12.0
+fastapi>=0.115.0,<0.166
+# Pinned explicitly: app.main subclasses StaticFiles internals.
+starlette>=0.40,<2
+uvicorn>=0.30.0,<0.55
+pydantic>=2.9.0,<3
+pydantic-settings>=2.0.0,<3
+sqlalchemy>=2.0.30,<2.2
+aiosqlite>=0.20.0,<0.23
+httpx>=0.27.0,<0.29
+requests>=2.31.0,<3
+pandas>=2.2.0,<4
+numpy>=1.26.0,<3
+scipy>=1.12.0,<2
+websockets>=12.0,<18
 # SQLAlchemy's asyncio engine (used for the SQLite/auth layer) needs greenlet.
-greenlet>=3.0
+greenlet>=3.0,<4
 # Live NSE/BSE (and index) price + candle feed.
-yfinance>=0.2.40
-# Real multi-layer LSTM used by the prediction service.
-# CPU build install: pip install torch --index-url https://download.pytorch.org/whl/cpu
-torch>=2.2.0
-python-multipart>=0.0.9
-python-dotenv>=1.0.1
-pyjwt>=2.8.0
-aiofiles>=24.1.0
-google-auth>=2.30.0
+yfinance>=0.2.40,<2
+# PyTorch (LSTM estimates) is optional: see requirements-ml.txt. Without it
+# the estimate endpoint uses its empirical quantile model (always the case on
+# Render's free tier).
+python-multipart>=0.0.9,<0.1
+python-dotenv>=1.0.1,<2
+pyjwt>=2.8.0,<3
+aiofiles>=24.1.0,<26
+google-auth>=2.30.0,<3
 # Parses the verified Groww FII/DII institutional-flow table.
-beautifulsoup4>=4.12.0
+beautifulsoup4>=4.12.0,<5
+# Async Postgres driver, for when DATABASE_URL points at managed Postgres.
+asyncpg>=0.29,<1

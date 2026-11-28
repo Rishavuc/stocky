@@ -1,11 +1,13 @@
 import asyncio
 import itertools
 import json
+import weakref
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, TypeVar
 
 from fastapi.concurrency import run_in_threadpool
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.market_ingest import market_ingest, CRYPTO_MAP, USD_INR_RATE
@@ -17,6 +19,17 @@ T = TypeVar("T")
 
 MIS_LEVERAGE = 5
 QTY_EPSILON = 1e-9  # treat float dust left after selling crypto as zero
+MAX_PENDING_ORDERS = 50  # keeps each saved book small
+
+
+def _money(x: float) -> float:
+    """Cash and P&L are INR: keep them at whole paise so float drift never
+    piles up across thousands of fills."""
+    return round(float(x) + 0.0, 2)
+
+
+class BookConflict(Exception):
+    """Another request saved this user's book first; caller should retry."""
 
 
 def _usd_inr() -> float:
@@ -73,8 +86,8 @@ class PaperTradingEngine:
     def from_state(cls, state: Optional[Dict]) -> "PaperTradingEngine":
         engine = cls()
         if state:
-            engine.cash = float(state.get("cash", engine.initial_capital))
-            engine.realized_pnl = float(state.get("realized_pnl", 0.0))
+            engine.cash = _money(state.get("cash", engine.initial_capital))
+            engine.realized_pnl = _money(state.get("realized_pnl", 0.0))
             engine.positions = dict(state.get("positions", {}))
             engine.orders = list(state.get("orders", []))
             engine.pending_orders = list(state.get("pending_orders", []))
@@ -84,6 +97,13 @@ class PaperTradingEngine:
     # ----------------------------------------------------------------
     # Guards
     # ----------------------------------------------------------------
+    @staticmethod
+    def _cost_inr(pos: Dict) -> float:
+        # Books saved before cost_inr existed: rebuild it at today's FX.
+        if "cost_inr" in pos:
+            return float(pos["cost_inr"])
+        return _money(pos["buy_price"] * pos["qty"] * _fx(pos["symbol"]))
+
     @staticmethod
     def _is_crypto(symbol: str) -> bool:
         return symbol in CRYPTO_MAP
@@ -114,32 +134,41 @@ class PaperTradingEngine:
         profit: Optional[float] = None
 
         if side == "BUY":
-            value_inr = qty * price * fx
-            margin_req = value_inr / MIS_LEVERAGE if prod == "MIS" else value_inr
+            value_inr = _money(qty * price * fx)
+            margin_req = _money(value_inr / MIS_LEVERAGE) if prod == "MIS" else value_inr
             if self.cash < margin_req:
                 raise ValueError(
                     f"Insufficient virtual cash! Required: ₹{margin_req:,.2f}, Available: ₹{self.cash:,.2f}"
                 )
-            self.cash -= margin_req
+            self.cash = _money(self.cash - margin_req)
             existing = self.positions.get(pos_key)
             if existing:
-                new_qty = existing["qty"] + qty
+                old_cost = self._cost_inr(existing)
+                new_qty = round(existing["qty"] + qty, 8)
                 existing["buy_price"] = round(
                     (existing["buy_price"] * existing["qty"] + price * qty) / new_qty, 8
                 )
                 existing["qty"] = new_qty
+                existing["cost_inr"] = _money(old_cost + value_inr)
             else:
-                self.positions[pos_key] = {"symbol": sym, "product": prod, "qty": qty, "buy_price": price}
+                self.positions[pos_key] = {"symbol": sym, "product": prod, "qty": qty,
+                                           "buy_price": price, "cost_inr": value_inr}
         else:  # SELL
             existing = self.positions.get(pos_key)
             if not existing or existing["qty"] + QTY_EPSILON < qty:
                 raise ValueError(f"You do not hold {_fmt_qty(qty)} units of {sym} ({prod}) to sell.")
-            profit = round((price - existing["buy_price"]) * qty * fx, 2)
-            cost_inr = existing["buy_price"] * qty * fx
-            margin_to_return = cost_inr / MIS_LEVERAGE if prod == "MIS" else cost_inr
-            self.cash += margin_to_return + profit
-            self.realized_pnl += profit
-            existing["qty"] -= qty
+            qty = min(qty, existing["qty"])  # never sell the epsilon we tolerated
+            held_cost = self._cost_inr(existing)
+            # Cost basis in INR at the FX rate paid, so a crypto sale's P&L
+            # matches the cash that actually comes back.
+            cost_portion = _money(held_cost * qty / existing["qty"])
+            proceeds_inr = _money(qty * price * fx)
+            profit = _money(proceeds_inr - cost_portion)
+            margin_to_return = _money(cost_portion / MIS_LEVERAGE) if prod == "MIS" else cost_portion
+            self.cash = _money(self.cash + margin_to_return + profit)
+            self.realized_pnl = _money(self.realized_pnl + profit)
+            existing["qty"] = round(existing["qty"] - qty, 8)
+            existing["cost_inr"] = _money(held_cost - cost_portion)
             if existing["qty"] <= QTY_EPSILON:
                 del self.positions[pos_key]
 
@@ -176,9 +205,13 @@ class PaperTradingEngine:
             if not self._limit_reached(order["side"], ltp, order["price"]):
                 still_pending.append(order)
                 continue
+            # A limit fills at the limit OR BETTER: if the market gapped
+            # through it (buy limit 95, price now 80), the fill is at 80.
+            limit_price = order["price"]
+            fill_price = min(ltp, limit_price) if order["side"] == "BUY" else max(ltp, limit_price)
             try:
                 self._fill(order["symbol"], order["side"], order["product"], order["qty"],
-                           order["price"], status="EXECUTED", order_type="LIMIT")
+                           fill_price, status="EXECUTED", order_type="LIMIT")
             except ValueError as e:
                 self.orders.insert(0, {**order, "status": "REJECTED", "reason": str(e), "pnl": None,
                                        "time": datetime.utcnow().strftime("%I:%M %p")})
@@ -199,7 +232,7 @@ class PaperTradingEngine:
             quote = market_ingest.get_quote(sym)
             ltp = quote.price if quote and not quote.is_synthetic else buy_price
 
-            cost_inr = buy_price * qty * fx
+            cost_inr = self._cost_inr(pos)
             value_inr = ltp * qty * fx
             pnl = value_inr - cost_inr
 
@@ -250,6 +283,8 @@ class PaperTradingEngine:
             }
 
         # Resting LIMIT order: check it could fill today, then park it.
+        if len(self.pending_orders) >= MAX_PENDING_ORDERS:
+            raise ValueError(f"You already have {MAX_PENDING_ORDERS} pending orders. Cancel some first.")
         if side == "SELL":
             held = self.positions.get(f"{sym}_{prod}", {}).get("qty", 0)
             if held + QTY_EPSILON < qty:
@@ -312,31 +347,78 @@ class PaperTradingEngine:
 # --------------------------------------------------------------------
 # Per-user books: load from the DB, run one operation, save it back.
 # --------------------------------------------------------------------
-_user_locks: Dict[str, asyncio.Lock] = {}
+# Weak values: a user's lock disappears once no request holds it, so the
+# map can't grow forever with every user who ever traded.
+_user_locks: "weakref.WeakValueDictionary[str, asyncio.Lock]" = weakref.WeakValueDictionary()
+
+SAVE_ATTEMPTS = 3
 
 
 def _lock_for(user_id: str) -> asyncio.Lock:
     # One lock per user so two quick clicks can't both read the old cash
     # and overwrite each other's trade (a lost update).
-    return _user_locks.setdefault(user_id, asyncio.Lock())
+    lock = _user_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _user_locks[user_id] = lock
+    return lock
+
+
+async def _run_once(db: AsyncSession, user_id: str, operation: Callable[[PaperTradingEngine], T],
+                    save: bool) -> T:
+    res = await db.execute(select(PaperBook).where(PaperBook.user_id == user_id))
+    row = res.scalars().first()
+    old_state = row.state if row else None
+    engine = PaperTradingEngine.from_state(json.loads(old_state) if old_state else None)
+
+    # Engine methods fetch quotes over the network (blocking), so keep
+    # them off the event loop.
+    result = await run_in_threadpool(operation, engine)
+
+    if not save:
+        await db.rollback()  # end the read transaction
+        return result
+
+    new_state = json.dumps(engine.to_state())
+    if new_state == old_state:
+        await db.rollback()
+        return result
+    try:
+        if row is None:
+            db.add(PaperBook(user_id=user_id, state=new_state))
+            await db.flush()  # unique user_id: a parallel first save fails here
+        else:
+            # Compare-and-swap on the state we read. The asyncio lock only
+            # covers one process; this also stops a second worker (or a
+            # restart overlap) from silently overwriting a trade.
+            upd = await db.execute(
+                update(PaperBook)
+                .where(PaperBook.user_id == user_id, PaperBook.state == old_state)
+                .values(state=new_state, updated_at=datetime.utcnow())
+                .execution_options(synchronize_session=False)
+            )
+            if upd.rowcount != 1:
+                raise BookConflict()
+        await db.commit()
+    except (IntegrityError, BookConflict):
+        await db.rollback()
+        raise BookConflict()
+    except Exception:
+        await db.rollback()
+        raise
+    return result
 
 
 async def run_on_book(db: AsyncSession, user_id: str, operation: Callable[[PaperTradingEngine], T],
                       save: bool = True) -> T:
     async with _lock_for(user_id):
-        res = await db.execute(select(PaperBook).where(PaperBook.user_id == user_id))
-        row = res.scalars().first()
-        engine = PaperTradingEngine.from_state(json.loads(row.state) if row else None)
-
-        # Engine methods fetch quotes over the network (blocking), so keep
-        # them off the event loop.
-        result = await run_in_threadpool(operation, engine)
-
-        if save:
-            state = json.dumps(engine.to_state())
-            if row:
-                row.state = state
-            else:
-                db.add(PaperBook(user_id=user_id, state=state))
-            await db.commit()
-        return result
+        for attempt in range(SAVE_ATTEMPTS):
+            try:
+                return await _run_once(db, user_id, operation, save)
+            except BookConflict:
+                if attempt == SAVE_ATTEMPTS - 1:
+                    raise
+                db.expunge_all()  # re-read the fresh row next time
+            except Exception:
+                await db.rollback()
+                raise

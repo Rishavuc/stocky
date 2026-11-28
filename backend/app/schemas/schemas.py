@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
+import math
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime
 
@@ -115,15 +116,41 @@ class PredictionResponse(BaseModel):
 # ========================================================
 # MOCK / PAPER TRADING SCHEMAS
 # ========================================================
+# Upper-case tickers like RELIANCE, M&M, BAJAJ-AUTO, BTCUSDT.
+SYMBOL_PATTERN = r"^[A-Z0-9][A-Z0-9&._ -]{0,29}$"
+
+
 class PaperOrderRequest(BaseModel):
-    symbol: str = Field(..., min_length=1, max_length=30)
+    # allow_inf_nan=False: "inf"/"nan" must never reach the money maths.
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    symbol: str = Field(..., min_length=1, max_length=30, pattern=SYMBOL_PATTERN)
     side: Literal["BUY", "SELL"]
     product: Literal["CNC", "MIS"] = "CNC"
     order_type: Literal["MARKET", "LIMIT"] = "MARKET"
     # float so crypto can trade fractions (0.01 BTC); the engine still
     # requires whole shares for equities.
-    qty: float = Field(..., gt=0)
-    price: Optional[float] = Field(None, gt=0)
+    qty: float = Field(..., gt=0, le=1e9)
+    price: Optional[float] = Field(None, gt=0, le=1e9)
+
+    @field_validator("qty", "price", mode="before")
+    @classmethod
+    def _finite(cls, v):
+        # FastAPI echoes the bad input in its 422 body; echoing inf/nan makes
+        # that JSON invalid and turns a 422 into a 500. Swap it for 0 so the
+        # normal "must be > 0" error is returned instead.
+        if isinstance(v, float) and not math.isfinite(v):
+            return 0.0
+        return v
+
+    @field_validator("qty")
+    @classmethod
+    def _qty_precision(cls, v):
+        # 8 decimals is the finest crypto lot; anything smaller is dust.
+        v = round(v, 8)
+        if v <= 0:
+            raise ValueError("Quantity is too small")
+        return v
 
     @field_validator("symbol", "side", "product", "order_type", mode="before")
     @classmethod
@@ -164,10 +191,10 @@ class PaperPortfolioResponse(BaseModel):
 # BROKER & UNIFIED TRADE BOOK SCHEMAS
 # ========================================================
 class BrokerConnectRequest(BaseModel):
-    broker_name: str # Zerodha, Upstox, AngelOne
-    client_id: str
-    api_key: Optional[str] = None
-    access_token: Optional[str] = None
+    broker_name: str = Field(..., min_length=1, max_length=50) # Zerodha, Upstox, AngelOne
+    client_id: str = Field(..., min_length=1, max_length=50)
+    api_key: Optional[str] = Field(None, max_length=200)
+    access_token: Optional[str] = Field(None, max_length=500)
 
 class UnifiedTradeItem(BaseModel):
     id: int
@@ -183,10 +210,27 @@ class UnifiedTradeItem(BaseModel):
 # ALERTS SCHEMAS
 # ========================================================
 class AlertCreateRequest(BaseModel):
-    symbol: str
-    condition_type: str
-    target_value: float
-    channels: str = "telegram,email"
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    symbol: str = Field(..., min_length=1, max_length=30, pattern=SYMBOL_PATTERN)
+    condition_type: Literal["PRICE_CROSSES_ABOVE", "PRICE_CROSSES_BELOW", "RSI_OVERSOLD", "PCR_ABOVE"]
+    target_value: float = Field(..., gt=0, le=1e9)
+    channels: str = Field("telegram,email", max_length=100, pattern=r"^[a-z]+(,[a-z]+)*$")
+
+    @field_validator("target_value", mode="before")
+    @classmethod
+    def _finite(cls, v):
+        return 0.0 if isinstance(v, float) and not math.isfinite(v) else v
+
+    @field_validator("symbol", "condition_type", mode="before")
+    @classmethod
+    def _upper(cls, v):
+        return v.strip().upper() if isinstance(v, str) else v
+
+    @field_validator("channels", mode="before")
+    @classmethod
+    def _lower(cls, v):
+        return v.replace(" ", "").lower() if isinstance(v, str) else v
 
 class AlertRuleResponse(BaseModel):
     id: int

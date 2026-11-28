@@ -1,0 +1,6 @@
+# Optional: real PyTorch LSTM for /v1/estimates (local dev or a paid instance).
+# CPU build:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r backend/requirements-ml.txt
+-r requirements.txt
+torch>=2.2.0,<3

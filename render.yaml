@@ -8,13 +8,15 @@ services:
 
     buildCommand: |
       pip install --upgrade pip
-      pip install torch --index-url https://download.pytorch.org/whl/cpu
       pip install -r backend/requirements.txt
 
     startCommand: |
       mkdir -p backend/data
       cd backend
-      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      # No --forwarded-allow-ips='*': uvicorn would then trust the client-set
+      # left end of X-Forwarded-For. The app reads the rightmost entry itself
+      # (TRUST_PROXY_HEADERS, on when RENDER=true).
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --ws-max-size 65536 --limit-concurrency 200 --timeout-keep-alive 20
 
     envVars:
       - key: PYTHON_VERSION
@@ -22,6 +24,11 @@ services:
       - key: APP_ENV
         value: production
       - key: DEBUG
+        value: false
+      - key: FRONTEND_URL
+        value: https://stockvista-analysis-platform.vercel.app
+      # The frontend is on Vercel; the API never serves repo files in production.
+      - key: SERVE_FRONTEND
         value: false
       - key: DATABASE_URL
         value: sqlite+aiosqlite:////opt/render/project/src/backend/data/investors_eye.db
@@ -33,5 +40,9 @@ services:
         sync: false
       - key: ZERODHA_API_SECRET
         sync: false
-      - key: ZERODHA_ACCESS_TOKEN
+      # config.py reads KITE_ACCESS_TOKEN (ZERODHA_ACCESS_TOKEN still works as a fallback).
+      # Comma-separated user ids allowed to change the shared Kite session.
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: KITE_ACCESS_TOKEN
         sync: false

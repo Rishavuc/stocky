@@ -1,10 +1,19 @@
+import html as html_lib
+import json
 import os
+import re
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+import math
+
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from starlette.concurrency import run_in_threadpool
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.database import init_db
@@ -37,6 +46,11 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     print("Shutting down StockVista Analysis Platform API...")
+    try:
+        from app.services.ws_gateway import ws_gateway
+        await ws_gateway.shutdown()
+    except Exception as exc:
+        print(f"WebSocket gateway shutdown warning: {type(exc).__name__}")
 
 app = FastAPI(
     title="StockVista Analysis Platform — Market Analysis & Trading API",
@@ -46,6 +60,33 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Kite request/access tokens are short alphanumeric strings.
+_KITE_TOKEN_RE = re.compile(r"[A-Za-z0-9]{8,128}")
+
+def _finite(value):
+    """Replace inf/nan (not valid JSON) with None, recursively."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {k: _finite(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_finite(v) for v in value]
+    return value
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    # Same 422 shape as FastAPI's default, minus the echoed raw input: it can
+    # hold passwords, and Infinity/NaN in it made the default handler 500.
+    errors = []
+    for err in exc.errors():
+        err = {k: v for k, v in err.items() if k not in ("input", "url")}
+        if isinstance(err.get("ctx"), dict):
+            err["ctx"] = {k: str(v) if isinstance(v, Exception) else v for k, v in err["ctx"].items()}
+        errors.append(err)
+    return JSONResponse(status_code=422, content={"detail": _finite(jsonable_encoder(errors))})
+
 
 MEANINGFUL_GET_PATHS = ("/v1/auth/me", "/v1/auth/activity", "/v1/paper/portfolio")
 
@@ -77,13 +118,108 @@ async def log_user_activity(request: Request, call_next):
             )
     return response
 
-# CORS Middleware
+MAX_BODY_BYTES = 2 * 1024 * 1024  # CSV import caps itself at 1 MB; JSON bodies are tiny
+
+
+def _json_body(status: int, detail: str) -> tuple:
+    body = json.dumps({"detail": detail}).encode()
+    start = {
+        "type": "http.response.start",
+        "status": status,
+        "headers": [(b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode())],
+    }
+    return start, {"type": "http.response.body", "body": body}
+
+
+class SafetyNetMiddleware:
+    """Body-size cap plus a JSON 500 for anything unhandled.
+
+    Pure ASGI and added BEFORE CORSMiddleware, so CORS wraps it and these
+    responses carry CORS headers (otherwise the browser hides them behind a
+    CORS error). Size is counted as bytes stream in, so chunked uploads with
+    no Content-Length are capped too.
+    """
+
+    def __init__(self, app, max_bytes: int = MAX_BODY_BYTES):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        for name, value in scope.get("headers", []):
+            if name == b"content-length":
+                try:
+                    too_big = int(value) > self.max_bytes
+                except ValueError:
+                    too_big = True
+                if too_big:
+                    for msg in _json_body(413, "Request body too large."):
+                        await send(msg)
+                    return
+
+        received = 0
+        overflow = False
+        started = False
+
+        async def limited_receive():
+            nonlocal received, overflow
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    overflow = True
+                    # FastAPI turns any error while reading the body into a
+                    # 400, so the 413 is substituted on the way out instead.
+                    raise RuntimeError("request body too large")
+            return message
+
+        async def guarded_send(message):
+            nonlocal started
+            if overflow:
+                # Swap whatever error response the app produced for a 413.
+                if message["type"] == "http.response.start" and not started:
+                    started = True
+                    start, body = _json_body(413, "Request body too large.")
+                    await send(start)
+                    await send(body)
+                return
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, limited_receive, guarded_send)
+        except Exception as exc:
+            if started:
+                raise
+            if overflow:
+                start, body = _json_body(413, "Request body too large.")
+            else:
+                # Log the type only; never send exception text to clients.
+                print(f"[Unhandled] {scope.get('method')} {scope.get('path')}: {type(exc).__name__}")
+                start, body = _json_body(500, "Internal server error.")
+            await send(start)
+            await send(body)
+
+
+# Order matters: middleware added later wraps earlier ones. SafetyNet first,
+# CORS last, so CORS is outermost and decorates every response.
+app.add_middleware(SafetyNetMiddleware, max_bytes=MAX_BODY_BYTES)
+
+# CORS: explicit origins only. The frontend sends a Bearer token header, not
+# cookies, so credentials stay off (a wildcard plus credentials would let any
+# site make authenticated calls). No wildcard regex: anyone can create a
+# Vercel project whose name starts with ours. Add preview URLs to CORS_ORIGINS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["X-Response-Time-ms"],
 )
 
 # Include all API Routers
@@ -112,57 +248,74 @@ async def health_check():
 # Serve root project directory as static files for integrated frontend delivery
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Dedicated HTML route fallbacks
+
 @app.get("/", include_in_schema=False)
 async def serve_index():
     index_file = os.path.join(project_root, "index.html")
-    if os.path.exists(index_file):
+    if settings.SERVE_FRONTEND and os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "StockVista Analysis Platform API is running. Visit /docs for OpenAPI specs."}
+
+
+def _page(name: str) -> FileResponse:
+    if not settings.SERVE_FRONTEND:
+        raise StarletteHTTPException(status_code=404)
+    return FileResponse(os.path.join(project_root, name))
+
 
 @app.get("/login", include_in_schema=False)
 @app.get("/login.html", include_in_schema=False)
 async def serve_login():
-    return FileResponse(os.path.join(project_root, "login.html"))
+    return _page("login.html")
 
 @app.get("/markets.html", include_in_schema=False)
 async def serve_markets():
-    return FileResponse(os.path.join(project_root, "markets.html"))
+    return _page("markets.html")
 
 @app.get("/analysis.html", include_in_schema=False)
 async def serve_analysis():
-    return FileResponse(os.path.join(project_root, "analysis.html"))
+    return _page("analysis.html")
 
 @app.get("/predictions.html", include_in_schema=False)
 async def serve_predictions():
-    return FileResponse(os.path.join(project_root, "predictions.html"))
+    return _page("predictions.html")
 
 @app.get("/estimates.html", include_in_schema=False)
 async def serve_estimates():
-    return FileResponse(os.path.join(project_root, "predictions.html"))
+    return _page("predictions.html")
 
 @app.get("/mock-trading.html", include_in_schema=False)
 async def serve_mock_trading():
-    return FileResponse(os.path.join(project_root, "mock-trading.html"))
+    return _page("mock-trading.html")
 
 @app.get("/courses.html", include_in_schema=False)
 async def serve_courses():
-    return FileResponse(os.path.join(project_root, "courses.html"))
+    return _page("courses.html")
 
 @app.get("/kite/callback", include_in_schema=False)
 @app.get("/v1/integrations/kite/callback", include_in_schema=False)
 async def kite_callback(request_token: str = None, action: str = None, status: str = None):
-    from fastapi.responses import HTMLResponse
     from app.services.market_ingest import market_ingest
     success = False
     message = "No request token received."
-    if request_token:
-        res = market_ingest.generate_kite_session(request_token)
+    if request_token and not settings.KITE_CALLBACK_ENABLED:
+        # Unauthenticated by nature (Zerodha redirects the browser here), so
+        # in production it is off unless the admin turns it on for a login.
+        message = "Kite callback is disabled on this server. Ask the administrator to enable KITE_CALLBACK_ENABLED."
+    elif request_token and _KITE_TOKEN_RE.fullmatch(request_token):
+        # Kite's SDK does blocking HTTP; keep it off the event loop.
+        res = await run_in_threadpool(market_ingest.generate_kite_session, request_token)
         if res.get("success"):
             success = True
             message = "Zerodha Kite Connect session activated successfully! Live quotes and historical candles are now running directly through your Kite API key."
         else:
-            message = f"Kite session notice: {res.get('error')}. Fallback NSE live feed remains 100% active."
+            # Log the provider error server-side; never echo it into HTML.
+            print(f"[Kite callback] session exchange failed: {str(res.get('error'))[:200]}")
+            message = "Kite session could not be activated. The fallback NSE live feed remains active."
+    elif request_token:
+        message = "Invalid request token."
+    message = html_lib.escape(message)
+    markets_url = html_lib.escape(f"{settings.FRONTEND_URL.rstrip('/')}/markets.html", quote=True)
 
     status_icon = "✅" if success else "ℹ️"
     status_title = "Kite Connected Successfully!" if success else "Kite Authentication Status"
@@ -171,7 +324,7 @@ async def kite_callback(request_token: str = None, action: str = None, status: s
     <html>
     <head>
         <title>{status_title} — StockVista Analysis Platform</title>
-        <meta http-equiv="refresh" content="3;url=/markets.html" />
+        <meta http-equiv="refresh" content="3;url={markets_url}" />
         <style>
             body {{ font-family: 'Inter', system-ui, sans-serif; background: #0b0e14; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
             .card {{ background: #151922; border: 1px solid {'#00d09c' if success else '#3b82f6'}; border-radius: 16px; padding: 40px; max-width: 480px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }}
@@ -186,13 +339,49 @@ async def kite_callback(request_token: str = None, action: str = None, status: s
             <h1>{status_title}</h1>
             <p>{message}</p>
             <p style="font-size: 13px; color: #64748b;">Redirecting to markets overview in 3 seconds...</p>
-            <a href="/markets.html" class="btn">Go to Dashboard Now</a>
+            <a href="{markets_url}" class="btn">Go to Dashboard Now</a>
         </div>
     </body>
     </html>"""
-    return HTMLResponse(content=html)
+    return HTMLResponse(content=html, headers={
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+    })
 
-# Mount remaining static assets (css, js, pdf, images)
-if os.path.exists(project_root):
-    app.mount("/", StaticFiles(directory=project_root, html=True), name="static")
+class PublicStaticFiles(StaticFiles):
+    """Serve the frontend only: an allowlist of top-level files and asset types.
+
+    The repo root also holds backend source, render.yaml, .env, SQLite
+    databases (backend/data/*.db) and logs, so anything not explicitly a
+    frontend asset is a 404.
+    """
+
+    ALLOWED_SUFFIXES = (
+        ".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg",
+        ".ico", ".webp", ".woff", ".woff2", ".ttf", ".map",
+    )
+    BLOCKED_TOP_DIRS = {
+        "backend", "python_backend", "api", "tools", "presentation", "report",
+        "deliverables", "node_modules", "android", "ios", "linux", "macos",
+        "windows", "data", "build",
+    }
+
+    async def get_response(self, path, scope):
+        parts = [p for p in path.replace("\\", "/").split("/") if p and p != "."]
+        name = parts[-1].lower() if parts else ""
+        if (
+            not parts
+            or any(p.startswith(".") or p == ".." for p in parts)
+            or parts[0].lower() in self.BLOCKED_TOP_DIRS
+            or not name.endswith(self.ALLOWED_SUFFIXES)
+        ):
+            raise StarletteHTTPException(status_code=404)
+        return await super().get_response(path, scope)
+
+
+# Mount the frontend assets (css, js, images) only where the backend hosts the
+# UI (local dev). In production Vercel serves the frontend.
+if settings.SERVE_FRONTEND and os.path.exists(project_root):
+    app.mount("/", PublicStaticFiles(directory=project_root, html=False), name="static")
 

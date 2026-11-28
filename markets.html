@@ -740,7 +740,7 @@
                             </div>
                         </div>
                         <div class="api-banner__actions">
-                            <a href="/kite/login" target="_blank" class="api-banner__btn">
+                            <a href="https://kite.zerodha.com/connect/login" target="_blank" rel="noopener" class="api-banner__btn" data-kite-login>
                                 Authorize Kite Session
                             </a>
                             <a href="https://kite.trade/docs/connect/v3/" target="_blank" class="api-banner__btn">
@@ -1127,6 +1127,23 @@
     <script src="config.js"></script>
     <script src="api-client.js"></script>
     <script src="dashboard.js"></script>
+    <script>
+        // Kite login URL comes from the backend so the api_key lives in one place.
+        document.querySelectorAll('[data-kite-login]').forEach((link) => {
+            link.addEventListener('click', async (event) => {
+                if (!window.apiClient || !window.apiClient.getKiteLoginUrl) return;
+                event.preventDefault();
+                const popup = window.open('about:blank', '_blank');
+                if (popup) popup.opener = null;
+                let url = link.href;
+                try {
+                    const res = await window.apiClient.getKiteLoginUrl();
+                    if (res && typeof res.login_url === 'string' && res.login_url.startsWith('https://kite.zerodha.com/')) url = res.login_url;
+                } catch (err) { /* fall back to the generic Kite login page */ }
+                if (popup) popup.location.href = url; else window.open(url, '_blank', 'noopener');
+            });
+        });
+    </script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // ========================================================
