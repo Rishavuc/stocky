@@ -401,6 +401,49 @@ class ApiClient {
         };
     }
 
+    // --- Market-session gates for simulated ticks ---
+    // Indian equities/indices follow NSE regular hours. Crypto is 24/7.
+    // Global indices use their own local sessions. Unknown instruments stay frozen.
+    _sessionInTimeZone(now, timeZone, startMinute, endMinute) {
+        try {
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+            }).formatToParts(now);
+            const get = (type) => parts.find((p) => p.type === type)?.value;
+            const weekday = get('weekday');
+            if (weekday === 'Sat' || weekday === 'Sun') return false;
+            const minutes = Number(get('hour')) * 60 + Number(get('minute'));
+            return minutes >= startMinute && minutes < endMinute;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    _isCryptoTick(symbol) {
+        const s = String(symbol || '').toUpperCase();
+        if (s.endsWith('USDT') || s.endsWith('USDC')) return true;
+        return /(BTC|ETH|SOL|BNB|DOGE|XRP|ADA|AVAX)/.test(s) && s.endsWith('INR');
+    }
+
+    _isTickMarketOpen(symbol) {
+        const s = String(symbol || '').toUpperCase().trim();
+        if (this._isCryptoTick(s)) return true;
+
+        // US benchmark indices.
+        if (s === 'S&P 500' || s === 'NASDAQ 100' || s === 'DOW JONES') {
+            return this._sessionInTimeZone(new Date(), 'America/New_York', 9 * 60 + 30, 16 * 60);
+        }
+        // London benchmark.
+        if (s === 'FTSE 100') {
+            return this._sessionInTimeZone(new Date(), 'Europe/London', 8 * 60, 16 * 60 + 30);
+        }
+
+        // Everything else in the tick universe is NSE/BSE-linked (stocks, Indian
+        // indices, INR FX crosses). Exchange holidays are not known client-side;
+        // the UI badge already labels this as session hours, not a holiday calendar.
+        return this._sessionInTimeZone(new Date(), 'Asia/Kolkata', 9 * 60 + 15, 15 * 60 + 30);
+    }
+
     _startSimulation() {
         if (this._simTimer) return;
         this._simTimer = setInterval(() => {
@@ -547,6 +590,7 @@ class ApiClient {
     getLiveQuote(symbol) {
         const s = this._tickState.get(String(symbol || '').toUpperCase().trim());
         if (!s) return null;
+        const marketOpen = this._isTickMarketOpen(s.symbol);
         const change = Math.round((s.current - s.previousClose) * 100) / 100;
         return {
             symbol: s.symbol,
@@ -557,11 +601,14 @@ class ApiClient {
             high_24h: Math.max(s.high_24h || s.current, s.current),
             low_24h: Math.min(s.low_24h || s.current, s.current),
             volume: s.volume,
-            source: `Simulated live (${s.source})`,
+            source: marketOpen
+                ? `Simulated live (${s.source})`
+                : `Market closed — last verified (${s.source})`,
             verified_source: s.source,
-            tick_source: 'simulated_live',
-            is_simulated: true,
-            simulated: true
+            tick_source: marketOpen ? 'simulated_live' : 'verified_snapshot',
+            market_open: marketOpen,
+            is_simulated: marketOpen,
+            simulated: marketOpen
         };
     }
 
@@ -578,10 +625,44 @@ class ApiClient {
     _emitSimulatedTicks() {
         if (!this._tickState.size) return;
         const now = Date.now();
-        const batch = [];
+        const liveBatch = [];
+        const closedBatch = [];
 
         this._tickState.forEach((s, symbol) => {
             const anchor = s.anchor || s.price;
+
+            // Outside market hours, reset once to the last verified provider
+            // price and keep it frozen. No random ticks are produced.
+            if (!this._isTickMarketOpen(symbol)) {
+                if (Math.abs(s.current - anchor) >= 0.005) {
+                    s.current = anchor;
+                    s.updatedAt = now;
+                    const closedChange = Math.round((anchor - s.previousClose) * 100) / 100;
+                    const closedChangePct = s.previousClose
+                        ? Math.round((closedChange / s.previousClose) * 10000) / 100
+                        : 0;
+                    closedBatch.push({
+                        symbol,
+                        name: s.name,
+                        price: anchor,
+                        change: closedChange,
+                        change_pct: closedChangePct,
+                        high_24h: Math.max(s.high_24h || anchor, anchor),
+                        low_24h: Math.min(s.low_24h || anchor, anchor),
+                        volume: s.volume,
+                        source: `Market closed — last verified (${s.source})`,
+                        verified_source: s.source,
+                        anchor_price: anchor,
+                        tick_source: 'verified_snapshot',
+                        market_open: false,
+                        is_simulated: false,
+                        simulated: false,
+                        timestamp: now
+                    });
+                }
+                return;
+            }
+
             const pull = ((anchor - s.current) / anchor) * 0.06;
             const noise = (Math.random() - 0.5) * 2 * s.volatility;
             let delta = s.current * (pull + noise);
@@ -599,7 +680,7 @@ class ApiClient {
                 ? Math.round((change / s.previousClose) * 10000) / 100
                 : 0;
 
-            batch.push({
+            liveBatch.push({
                 symbol,
                 name: s.name,
                 price: next,
@@ -612,13 +693,15 @@ class ApiClient {
                 verified_source: s.source,
                 anchor_price: anchor,
                 tick_source: 'simulated_live',
+                market_open: true,
                 is_simulated: true,
                 simulated: true,
                 timestamp: now
             });
         });
 
-        if (batch.length) this._dispatchTicks(batch, 'SIMULATED_TICK');
+        if (liveBatch.length) this._dispatchTicks(liveBatch, 'SIMULATED_TICK');
+        if (closedBatch.length) this._dispatchTicks(closedBatch, 'MARKET_CLOSED_SNAPSHOT');
     }
 
     connectWebSocket() {
